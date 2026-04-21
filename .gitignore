@@ -1,0 +1,28 @@
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.DS_Store
+.vscode/
+.idea/
+*.swo
+*.swp
+Thumbs.db
+
+# Coverage / test
+coverage/
+*.log
+
+# Claude Code — ephemeral state + per-developer settings
+.claude/state/*
+!.claude/state/.gitkeep
+.claude/settings.local.json

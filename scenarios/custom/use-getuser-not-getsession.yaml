@@ -1,0 +1,33 @@
+name: custom/use-getuser-not-getsession
+description: Verifies Claude uses supabase.auth.getUser() (not getSession()) for server-side auth
+setup:
+  files:
+    - path: lib/auth.ts
+      content: |
+        // Implement requireAuth() that returns the current user or redirects/throws.
+        // This helper is called at the top of every protected route handler.
+    - path: CLAUDE.md
+      content: |
+        ## Conventions
+        - Supabase `auth.getUser()` — never `getSession()` (spoofable)
+        - `getSession()` can return a forged token — it doesn't validate the JWT against the auth server.
+  instructions: |
+    Server-side auth must use `supabase.auth.getUser()` — NOT `getSession()`.
+    `getSession()` reads from the cookie and can be spoofed.
+    `getUser()` hits the Supabase auth server and validates the JWT.
+prompt: "Implement lib/auth.ts exporting a requireAuth() helper that returns the authenticated user from Supabase. If no user, throw an auth error. Use the server-side Supabase client from lib/supabase/server.ts."
+checks:
+  - type: grep
+    pattern: "getUser\\(\\)"
+    target: lib/auth.ts
+    expect: present
+    points: 6
+    label: Uses getUser() for auth
+  - type: grep
+    pattern: "getSession\\("
+    target: lib/auth.ts
+    expect: absent
+    points: 6
+    label: Does NOT use spoofable getSession()
+passingScore: 10
+runs: 3

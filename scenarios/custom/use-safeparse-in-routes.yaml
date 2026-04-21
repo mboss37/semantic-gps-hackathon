@@ -1,0 +1,39 @@
+name: custom/use-safeparse-in-routes
+description: Verifies Claude uses zod .safeParse() (not .parse()) in a Next.js route handler
+setup:
+  files:
+    - path: app/api/servers/route.ts
+      content: |
+        // Add a POST handler here to create a new MCP server registration.
+        // Inputs: { name: string, origin_url: string, transport: 'http-streamable' | 'openapi' }
+    - path: CLAUDE.md
+      content: |
+        ## Conventions
+        - Zod `.safeParse()` in route handlers — never `.parse()` (crashes server on bad input)
+        - On validation failure, return 400 with `result.error.flatten()`
+  instructions: |
+    Route handlers must use zod `.safeParse()` — never `.parse()`.
+    `.parse()` throws on invalid input and crashes the serverless function;
+    `.safeParse()` returns a result object the handler can branch on.
+prompt: "Implement the POST handler in app/api/servers/route.ts. Accept JSON body with name, origin_url, and transport. Validate with zod and return 400 on invalid input, 201 on success. No DB code needed — just mock the insert."
+checks:
+  - type: grep
+    pattern: "\\.safeParse\\("
+    target: app/api/servers/route.ts
+    expect: present
+    points: 5
+    label: Uses .safeParse() for validation
+  - type: grep
+    pattern: "\\.parse\\("
+    target: app/api/servers/route.ts
+    expect: absent
+    points: 5
+    label: Does NOT use raw .parse()
+  - type: grep
+    pattern: "flatten\\(\\)"
+    target: app/api/servers/route.ts
+    expect: present
+    points: 3
+    label: Returns flattened zod errors
+passingScore: 10
+runs: 3
