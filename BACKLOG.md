@@ -73,6 +73,9 @@ Repo topics + license + branch protection done in Sprint 1. Remaining polish for
 ## [P2] Cosmetic cleanup
 - [ ] `components/ui/button.tsx` — shadcn ships without semicolons; our `.prettierrc` wants them. Run `pnpm exec prettier --write components/ui` to normalize next time it's touched.
 
+## [P2] Harden SSRF guard against DNS-rebinding
+`lib/security/ssrf-guard.ts` validates DNS on entry but `fetchWithTimeout` re-resolves on the actual request — a malicious authoritative server can return a public IP first (passes the check) and a private IP on the hot fetch. Acceptable for hackathon scope (guard still blocks the obvious attacks) but the canonical fix is to pin the pre-validated IP into a custom `undici.Agent` with a fixed `lookup` function so the request hits the exact address we verified. Pull in when we wire real third-party MCP server imports.
+
 <!-- Add deferred features here. Format:
 ## [P1] Feature Name
 One-line description. Context for why it was deferred and when to revisit.

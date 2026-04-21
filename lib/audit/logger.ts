@@ -1,0 +1,78 @@
+import { createServiceClient } from '@/lib/supabase/service';
+
+export type PolicyDecision = {
+  policy_name: string;
+  decision: 'allow' | 'block' | 'redact';
+  mode: 'shadow' | 'enforce';
+  reason?: string;
+};
+
+export type McpEventStatus =
+  | 'ok'
+  | 'blocked_by_policy'
+  | 'origin_error'
+  | 'fallback_triggered'
+  | 'invalid_input'
+  | 'unauthorized';
+
+export type McpEvent = {
+  trace_id: string;
+  server_id?: string | null;
+  tool_name?: string | null;
+  method: string;
+  policy_decisions?: PolicyDecision[];
+  status: McpEventStatus;
+  latency_ms?: number;
+  payload?: unknown;
+};
+
+const SECRET_KEY_RE = /(authorization|api[_-]?key|secret|token|password|cookie|bearer)/i;
+const BEARER_RE = /\b(Bearer|Basic)\s+[A-Za-z0-9._\-+=/]+/gi;
+const LONG_TOKEN_RE = /\b(sk-|sb_secret_|sb_publishable_|xox[baprs]-|ghp_|gho_|ghu_|ghs_)[A-Za-z0-9_\-]{16,}\b/g;
+const JWT_RE = /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g;
+
+export const redactPayload = (input: unknown, depth = 0): unknown => {
+  if (depth > 6) return '[redacted:depth]';
+  if (input == null) return input;
+  if (typeof input === 'string') {
+    return input
+      .replace(BEARER_RE, '$1 [redacted]')
+      .replace(LONG_TOKEN_RE, '[redacted:token]')
+      .replace(JWT_RE, '[redacted:jwt]');
+  }
+  if (typeof input !== 'object') return input;
+  if (Array.isArray(input)) return input.map((v) => redactPayload(v, depth + 1));
+
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+    if (SECRET_KEY_RE.test(k)) {
+      out[k] = '[redacted]';
+      continue;
+    }
+    out[k] = redactPayload(v, depth + 1);
+  }
+  return out;
+};
+
+export const logMCPEvent = (event: McpEvent): void => {
+  const row = {
+    trace_id: event.trace_id,
+    server_id: event.server_id ?? null,
+    tool_name: event.tool_name ?? null,
+    method: event.method,
+    policy_decisions: event.policy_decisions ?? [],
+    status: event.status,
+    latency_ms: event.latency_ms ?? null,
+    payload_redacted: event.payload === undefined ? null : redactPayload(event.payload),
+  };
+
+  const client = createServiceClient();
+  void client
+    .from('mcp_events')
+    .insert(row)
+    .then(({ error }) => {
+      if (error) {
+        console.error('[audit] insert failed', { method: event.method, err: error.message });
+      }
+    });
+};
