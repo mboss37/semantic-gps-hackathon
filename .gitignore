@@ -1,5 +1,14 @@
-# Node / Next.js
+# Dependencies
 node_modules/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Next.js / build output
 .next/
 out/
 dist/
@@ -21,6 +30,14 @@ Thumbs.db
 # Coverage / test
 coverage/
 *.log
+
+# TypeScript / Next
+*.tsbuildinfo
+next-env.d.ts
+
+# Misc
+*.pem
+.vercel
 
 # Claude Code — ephemeral state + per-developer settings
 .claude/state/*

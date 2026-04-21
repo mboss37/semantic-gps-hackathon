@@ -6,7 +6,8 @@
 ## Completed Sprints
 
 ## Current: Sprint 1 — Setup
-- [ ] **Project base setup** — Next.js 16 scaffold (App Router, TS strict, Tailwind, ESLint, no src/); install core deps (`@supabase/supabase-js`, `@supabase/ssr`, `zod`, `@modelcontextprotocol/sdk`, `@anthropic-ai/sdk`) + devDeps (`vitest`, `@vitest/ui`); Radix/shadcn UI primitives; Supabase project provisioned with `.env.local` (Supabase keys + `CREDENTIALS_ENCRYPTION_KEY`); `pnpm dev/test/lint/tsc` all green. Full scope in `docs/ARCHITECTURE.md` Day-1 Checklist.
+- [x] **Project base setup** — Next.js 16.2.4 + React 19.2.4 + Tailwind 4 + ESLint 9 scaffolded; core deps (`@supabase/supabase-js`, `@supabase/ssr`, `zod`, `@modelcontextprotocol/sdk`, `@anthropic-ai/sdk`) and devDeps (`vitest`, `@vitest/ui`, `prettier` + `prettier-plugin-tailwindcss`, `supabase` CLI) installed; shadcn initialized (Button, lib/utils, components.json, CSS vars in globals.css); `supabase init` scaffold done; `.env.example` documented; `pnpm test/lint/tsc` all green.
 
 ## Session Log
-- 2026-04-21 — Scaffolded docs, Claude Code config, hooks, code-reviewer subagent, initial commit on `main`. License added. Sprint 1 opened with project-base-setup WP.
+- 2026-04-21 — Scaffolded docs, Claude Code config, hooks, code-reviewer subagent. License added. Initial repo pushed to `github.com/mboss37/semantic-gps-hackathon`.
+- 2026-04-21 — Sprint 1 WP complete: Next.js scaffold + deps + shadcn + supabase + vitest smoke test; all quality gates green.
