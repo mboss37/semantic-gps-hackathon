@@ -1,0 +1,88 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CustomerCloud CRM",
+    "version": "2026.1.0",
+    "description": "Branded demo API used by the Semantic GPS hackathon build. Exposes customer records, orders, and outbound communication endpoints — PII by design so the hero policy-swap demo has something to redact."
+  },
+  "servers": [
+    { "url": "https://api.customercloud.demo.semantic-gps.dev/v1" }
+  ],
+  "paths": {
+    "/customers/search": {
+      "get": {
+        "operationId": "searchCustomers",
+        "summary": "Search customers by name or email substring.",
+        "parameters": [
+          { "name": "query", "in": "query", "required": true, "description": "Substring matched case-insensitively against name + email.", "schema": { "type": "string", "minLength": 2 } },
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 } }
+        ]
+      }
+    },
+    "/customers/{customerId}": {
+      "get": {
+        "operationId": "getCustomer",
+        "summary": "Fetch a single customer record (includes PII).",
+        "parameters": [
+          { "name": "customerId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ]
+      }
+    },
+    "/customers/{customerId}/orders": {
+      "get": {
+        "operationId": "listCustomerOrders",
+        "summary": "List recent orders for a customer.",
+        "parameters": [
+          { "name": "customerId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "since", "in": "query", "required": false, "description": "ISO 8601 timestamp — orders placed on or after this moment.", "schema": { "type": "string", "format": "date-time" } }
+        ]
+      }
+    },
+    "/tickets": {
+      "post": {
+        "operationId": "createSupportTicket",
+        "summary": "Open a support ticket for a customer.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["customerId", "subject", "body"],
+                "properties": {
+                  "customerId": { "type": "string", "format": "uuid" },
+                  "subject": { "type": "string", "maxLength": 200 },
+                  "body": { "type": "string" },
+                  "priority": { "type": "string", "enum": ["low", "normal", "high"], "default": "normal" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/emails": {
+      "post": {
+        "operationId": "sendEmail",
+        "summary": "Send a transactional email from the CRM on behalf of an operator.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["to", "subject", "body"],
+                "properties": {
+                  "to": { "type": "string", "format": "email" },
+                  "subject": { "type": "string", "maxLength": 200 },
+                  "body": { "type": "string" },
+                  "templateId": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

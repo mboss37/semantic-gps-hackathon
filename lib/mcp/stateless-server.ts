@@ -1,6 +1,11 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { logMCPEvent } from '@/lib/audit/logger';
+import { discoverRelationships, findWorkflowPath } from '@/lib/mcp/trel-handlers';
+import {
+  DiscoverRelationshipsRequestSchema,
+  FindWorkflowPathRequestSchema,
+} from '@/lib/mcp/trel-schemas';
 
 // Fresh McpServer per request. No in-memory session state — every invocation
 // reconstructs, connects to the transport, handles one request, disposes.
@@ -41,6 +46,36 @@ export const createStatelessServer = ({ traceId }: CreateServerOpts): McpServer 
       return result;
     },
   );
+
+  server.server.setRequestHandler(DiscoverRelationshipsRequestSchema, async (req) => {
+    const started = performance.now();
+    const result = await discoverRelationships(req.params);
+    logMCPEvent({
+      trace_id: traceId,
+      method: 'discover_relationships',
+      status: 'ok',
+      latency_ms: Math.round(performance.now() - started),
+      payload: {
+        params: req.params,
+        node_count: result.nodes.length,
+        edge_count: result.edges.length,
+      },
+    });
+    return result;
+  });
+
+  server.server.setRequestHandler(FindWorkflowPathRequestSchema, async (req) => {
+    const started = performance.now();
+    const result = await findWorkflowPath(req.params);
+    logMCPEvent({
+      trace_id: traceId,
+      method: 'find_workflow_path',
+      status: 'ok',
+      latency_ms: Math.round(performance.now() - started),
+      payload: { params: req.params, path_length: result.path.length, rationale: result.rationale },
+    });
+    return result;
+  });
 
   return server;
 };
