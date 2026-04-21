@@ -12,7 +12,7 @@ Companion to `PROJECT.md` (scope, features, demo plan).
 |---|---|---|
 | Web framework | **Next.js 16 (App Router)** | Server Components + Route Handlers in one codebase; zero-config Vercel deploy |
 | Language | **TypeScript (strict mode)** | No `any`, no `@ts-ignore`. Fix the type. |
-| Database | **Supabase (Postgres)** | Hosted Postgres + Auth + realtime in one dashboard. Free tier is enough for hackathon. |
+| Database | **Supabase (Postgres)** | Local-first dev via `pnpm supabase start` (Docker stack); hosted for prod. Auth + realtime in one dashboard. Free tier is enough for hackathon. |
 | Auth | **Supabase Auth (email/password)** | `getUser()` server-side. Never `getSession()`. |
 | MCP SDK | **@modelcontextprotocol/sdk** | HTTP-Streamable transport. SSE is deprecated — don't use it. |
 | Validation | **Zod** | `.safeParse()` at every boundary. Never `.parse()` in routes. |
@@ -363,14 +363,19 @@ For Vercel deploy, set these in the project settings — never commit them.
 ```bash
 # One-time
 pnpm install
-pnpm supabase start                 # Or use hosted Supabase project
-pnpm supabase db reset              # Apply migrations
+pnpm supabase login                 # Browser OAuth, caches token
+pnpm supabase link --project-ref <ref>  # Wire CLI to hosted project (deploy path)
 
 # Daily
+pnpm supabase start                 # Local Docker stack on :54321 (required — never dev against hosted)
+pnpm supabase db reset              # Re-apply all migrations against local DB
 pnpm dev                            # Next.js on :3000 (Turbopack)
 pnpm test                           # Vitest suite
 pnpm lint                           # ESLint
 pnpm exec tsc --noEmit              # Type check
+
+# Deploy only
+pnpm supabase db push               # Apply pending migrations to hosted (run deliberately, not per-iteration)
 ```
 
 ---
@@ -396,8 +401,9 @@ File convention: `__tests__/*.vitest.ts`. Run with `pnpm test`.
 
 ## Deployment
 
-- **Web:** Vercel. Zero config for Next.js. Link the Supabase integration via the Marketplace for auto-injected env vars.
-- **DB:** Supabase hosted (Free tier is fine for hackathon traffic).
+- **Web:** Vercel — live at https://semantic-gps-hackathon.vercel.app/. Auto-deploy on push to `main`.
+- **Env injection:** Supabase Marketplace integration on Vercel auto-syncs `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` from the linked hosted project. `ANTHROPIC_API_KEY`, `CREDENTIALS_ENCRYPTION_KEY`, `NEXT_PUBLIC_APP_URL` are added manually in Vercel project settings (all environments).
+- **DB:** Supabase hosted (`cgvxeurmulnlbevinmzj`, Central EU). Free tier is fine for hackathon traffic. Push migrations via `pnpm supabase db push` — only before a real deploy.
 - **Demo agent:** Can run locally pointing at the deployed gateway, or embedded in the dashboard as a "try it" panel.
 
 ---
@@ -416,6 +422,10 @@ Things that will silently bite if not explicitly called out:
 8. **Origin URLs are SSRF vectors.** User pastes `http://169.254.169.254/` and you leak cloud credentials. Run every URL through the guard.
 9. **Next.js caches GET handlers by default.** `export const dynamic = 'force-dynamic'` on anything user-specific.
 10. **React 19 requires `useRef(null)`.** The old `useRef()` signature is gone.
+11. **Never develop against hosted Supabase.** `.env.local` gets values from `pnpm supabase start`, not from the hosted dashboard. Hosted is prod; schema churn belongs on the local Docker stack. Push to hosted via `supabase db push` only before a real deploy.
+12. **Supabase 2026 key format parity.** Local `supabase start` emits the same `sb_publishable_*` / `sb_secret_*` format as hosted projects. Use canonical env names (`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`); the legacy `ANON_KEY` / `SERVICE_ROLE_KEY` names still work but are deprecated.
+13. **Port 54322 conflict = another Supabase stack running.** `pnpm supabase stop --project-id <other>` stops it without data loss (Docker volumes persist). Don't change ports unless you need both stacks concurrently.
+14. **Infra setup belongs in sprint 1, not demo day.** Vercel + Marketplace integration is one-shot and <30 min. Deploying early surfaces prod-only failures during iteration, not at submission.
 
 ---
 
@@ -427,8 +437,10 @@ Before writing any business logic:
 - [ ] `pnpm add @supabase/supabase-js @supabase/ssr zod @modelcontextprotocol/sdk @anthropic-ai/sdk`
 - [ ] `pnpm add -D vitest @vitest/ui`
 - [ ] Install shadcn-ui or hand-roll Radix primitives in `components/ui/`
-- [ ] Create Supabase project, paste keys into `.env.local`
-- [ ] Generate `CREDENTIALS_ENCRYPTION_KEY` with `openssl rand -hex 32` and paste into `.env.local`
+- [ ] Create hosted Supabase project (production target) + run `pnpm supabase start` locally (dev target). Paste **local** stack keys into `.env.local`
+- [ ] Generate `CREDENTIALS_ENCRYPTION_KEY` with `openssl rand -base64 32` and paste into `.env.local`
+- [ ] `pnpm supabase link --project-ref <ref>` to wire the CLI to hosted for eventual deploy
+- [ ] Link Vercel to the GitHub repo + install Supabase Marketplace integration for auto-injected env vars
 - [ ] Apply schema migration from this doc
 - [ ] Write `lib/supabase/{server,client,service}.ts`
 - [ ] Write `lib/auth.ts` with `requireAuth()` helper

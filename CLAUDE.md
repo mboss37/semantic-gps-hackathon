@@ -11,18 +11,20 @@ Semantic GPS — MCP control plane for agentic workflows. 5-day hackathon build.
 
 ## Stack
 - **Next.js 16** (App Router, Server Components default, Turbopack) + TypeScript strict
-- **Supabase** (Postgres + Auth) — hosted
+- **Supabase** (Postgres + Auth) — local-first dev via `pnpm supabase start`, hosted for prod (`cgvxeurmulnlbevinmzj`)
 - **@modelcontextprotocol/sdk** — HTTP-Streamable transport (SSE is deprecated)
 - **Zod** for validation, **Radix + Tailwind** for UI, **React Flow** for graph viz
 - **Vitest** for tests, **pnpm** for packages, **Vercel** for hosting
 - Full stack rationale in `docs/ARCHITECTURE.md`
 
 ## Commands
+- `pnpm supabase start` — spin up local Docker stack on :54321 (required before dev)
 - `pnpm dev` — Next.js on :3000 (Turbopack)
 - `pnpm test` — Vitest suite (`__tests__/*.vitest.ts`)
 - `pnpm lint` — ESLint
-- `pnpm exec tsc --noEmit` — type check
-- `pnpm supabase db reset` — apply migrations
+- `pnpm typecheck` — `tsc --noEmit`
+- `pnpm supabase db reset` — re-apply all migrations against local DB
+- `pnpm supabase db push` — apply pending migrations to hosted (deploy-only; run deliberately)
 
 ## Architecture & Scope Docs
 These are the source of truth for the build — read them before writing code, and consult them whenever a decision feels ambiguous.
