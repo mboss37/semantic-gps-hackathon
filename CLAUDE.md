@@ -55,6 +55,25 @@ If `docs/ARCHITECTURE.md` and this file ever disagree, architecture wins — ope
 - When all tasks complete, commit via the review flow below.
 - **Completed sprints persist in `TASKS.md` with their WPs listed (one line each), not collapsed to a single-line summary.** Historical record of what shipped matters.
 
+## Work Packages — Plan First (hard rule)
+Every WP starts with a plan, NOT with code. No exceptions, even for "obviously small" WPs. Plans take 2–3 minutes and catch demo-killing bugs before they land (see the CC-regex UUID false-positive in WP-3.4 — the kind of thing a plan review surfaces for free).
+
+On WP kickoff, before any `Write`/`Edit`:
+1. Read the relevant spec: `docs/ARCHITECTURE.md`, `docs/PROJECT.md`, active rules in `.claude/rules/*.md`, the WP line in `TASKS.md`.
+2. Sanity-check SDK / API assumptions — skim installed type defs, `context7` for framework docs, grep the existing codebase for the pattern.
+3. Present the plan via `ExitPlanMode` (or a clearly-framed plan message when plan mode isn't available). Must include:
+   - Files to create/modify (with one-line intent each)
+   - Key design decisions (schema shapes, algorithm choice, error paths)
+   - Test coverage plan (what cases, which vitest file)
+   - Cut / stretch line items (what's explicitly NOT in this WP)
+   - Risk flags (SDK version pitfalls, edge cases, perf concerns)
+4. **Wait for explicit user approval.** Silence is not approval. Auto mode is not blanket approval.
+5. Only then execute. Deviation from the approved plan needs a check-in, not a fait accompli.
+
+Rule applies equally to WP kickoff, WP resumption after a pause, and pulling a fresh WP mid-sprint. If a plan was approved yesterday and the WP resumes today, a 30-second "here's what I'm about to do — confirm still good?" counts as the plan re-check.
+
+No plan → no code. Not a heuristic — the rule.
+
 ## Code Review (pre-commit gate)
 Every commit containing `.ts`/`.tsx` changes is **blocked** until:
 1. The `code-reviewer` subagent has approved the current staged diff (writes a marker file at `.claude/state/last-review-<hash>`)
