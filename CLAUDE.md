@@ -44,11 +44,14 @@ If `docs/ARCHITECTURE.md` and this file ever disagree, architecture wins — ope
 - When a feature is discussed but deferred, add it to `BACKLOG.md` immediately
 - Never leave future ideas only in `TASKS.md` or conversation — they get lost
 - `BACKLOG.md` is the single source of truth for parked features
+- **When a WP is pulled from `BACKLOG.md` into a sprint, remove it from `BACKLOG.md` in the same edit.** Backlog is parked work only; active/completed work lives in `TASKS.md`.
+- If a sprint WP gets cancelled mid-sprint (not completed), return it to `BACKLOG.md` with updated notes.
 
 ## Sprints
 - Sweet spot: 3-6 work packages per sprint. Not 10+ (chaos), not 1-2 (microsprint).
 - On sprint start, pull items from `BACKLOG.md` — a hook warns if the current sprint is over/under sized.
 - When all tasks complete, commit via the review flow below.
+- **Completed sprints persist in `TASKS.md` with their WPs listed (one line each), not collapsed to a single-line summary.** Historical record of what shipped matters.
 
 ## Code Review (pre-commit gate)
 Every commit containing `.ts`/`.tsx` changes is **blocked** until:
@@ -106,6 +109,7 @@ Wait for all agents to return, synthesize their findings, then act.
 - Never skip `invalidateManifest()` after mutating servers/tools/policies/relationships
 - Never log raw MCP payloads — use `redactPayload()` first
 - Never add scope from the "What Not To Touch" list in `docs/ARCHITECTURE.md` (RLS, SSO, i18n, etc.)
+- **Never develop against the hosted Supabase project.** Local dev uses `pnpm supabase start` (Docker stack) — `.env.local` gets local URLs + local keys. The hosted project is production. Migration workflow is **apply to local, iterate, `supabase db reset` freely, push to hosted only before the first real deploy.** Proposing hosted creds for local dev is an anti-pattern — do not repeat it.
 
 ## Key Decisions
 - **MCP gateway is stateless** — fresh `McpServer` per request; no in-memory session state

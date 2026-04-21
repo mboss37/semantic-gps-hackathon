@@ -339,10 +339,10 @@ Even for a hackathon — a single embarrassing incident kills the pitch.
 Create `.env.local` (gitignored) with:
 
 ```bash
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
-SUPABASE_SERVICE_ROLE_KEY=<service-role-key>  # Server only — never expose
+# Supabase (new 2026 key format: sb_publishable_* / sb_secret_*)
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+SUPABASE_SECRET_KEY=sb_secret_...            # Server only — never expose
 
 # Anthropic for demo agent
 ANTHROPIC_API_KEY=<your-key>
@@ -350,8 +350,8 @@ ANTHROPIC_API_KEY=<your-key>
 # App
 NEXT_PUBLIC_APP_URL=http://localhost:3000    # Used for invite links, callbacks
 
-# Credential encryption — AES-256-GCM for stored server auth_config
-CREDENTIALS_ENCRYPTION_KEY=<64-char-hex>     # Generate once: `openssl rand -hex 32`
+# Credential encryption — AES-256-GCM key for stored server auth_config
+CREDENTIALS_ENCRYPTION_KEY=<base64-32-bytes> # Generate once: `openssl rand -base64 32`
 ```
 
 For Vercel deploy, set these in the project settings — never commit them.

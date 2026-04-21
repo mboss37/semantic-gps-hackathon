@@ -3,29 +3,24 @@
 > Features discussed but deferred. Pick up when relevant.
 > Priority: P0 = next sprint, P1 = soon, P2 = when relevant.
 
-## [P0] GitHub remote setup
-Mostly done — README replacement is the only remaining item (required for submission).
+## [P1] README replacement — do after first real feature lands
+Default CNA `README.md` still in repo. Required for submission but pointless to write before there's a real quickstart to document. Revisit once auth + gateway skeleton exists.
 
-- [x] `git remote add origin <url>` + `git push -u origin main`
-- [x] Make repo **public** (hackathon rules require OSS visibility)
-- [x] Enable branch protection on `main` — CI status check required, force-push + delete disabled
-- [x] Verify `.github/workflows/ci.yml` runs green
-- [x] Add repo topics (`mcp`, `agents`, `nextjs`, `claude`, `opus-4-7`, `hackathon`, `typescript`)
-- [ ] Replace default `README.md` (CNA boilerplate) with project README — quickstart, deploy link, demo video embed. **Required for submission.**
+- [ ] Replace with project README — quickstart, env setup, deploy link, demo video embed (video slots in Day 5). **Required for submission.**
 
-## [P0] Vercel deploy — blocked on Day-5 prep or first real demo
-Auto-deploy main to a stable URL so the dashboard has a live home from day 1.
-
-- [ ] Link Vercel project to GitHub repo (auto-deploy on push)
-- [ ] Install Supabase Marketplace integration on Vercel (auto-injects `NEXT_PUBLIC_SUPABASE_URL`, anon key, service role)
-- [ ] Add `ANTHROPIC_API_KEY` and `CREDENTIALS_ENCRYPTION_KEY` to Vercel project settings
-- [ ] Verify first preview deploy renders landing page
-
-## [P1] Replace CNA boilerplate before demo
+## [P1] Replace CNA landing before demo
 Create-Next-App's defaults leak "Create Next App" branding. Judges see the tab title. Fix before Saturday.
 
 - [ ] `app/layout.tsx` — replace metadata (`title: "Create Next App"`, description)
 - [ ] `app/page.tsx` — replace marketing page with the Semantic GPS landing (or redirect to `/dashboard`)
+
+## [P2] GitHub repo metadata polish — check before demo
+Repo topics + license + branch protection done in Sprint 1. Remaining polish for submission credibility.
+
+- [ ] Repo About section — short description ("MCP control plane for agentic workflows — hackathon build") + website URL (Vercel deploy)
+- [ ] Social preview image — 1280×640 og-image so link unfurls look professional on X / Slack / Discord
+- [ ] Verify `LICENSE` renders correctly on GitHub (should show the license type in the About panel)
+- [ ] Verify repo description + topics still match final scope after build
 
 ## [P2] Cosmetic cleanup
 - [ ] `components/ui/button.tsx` — shadcn ships without semicolons; our `.prettierrc` wants them. Run `pnpm exec prettier --write components/ui` to normalize next time it's touched.
