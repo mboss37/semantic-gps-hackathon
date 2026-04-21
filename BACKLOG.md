@@ -79,6 +79,17 @@ Branch protection on `main` expects a status check named `"Lint · Type-check ·
 - [ ] `.github/workflows/ci.yml` — node 22 + pnpm, cache `~/.pnpm-store`, run the 3 gates
 - [ ] Confirm branch-protection status-check name matches the workflow's job name
 
+## [P2] ReDoS guard on policy config regex
+`lib/policies/built-in.ts::compilePatterns` does `new RegExp(config.patterns[].regex, 'gi')` with no validation — a malicious or sloppy policy config can slip in catastrophic backtracking (`(a+)+$` etc.). Acceptable in single-user MVP. Before multi-tenancy, validate with `safe-regex` or wrap each `runPiiRedaction` scan in a `setTimeout`-based fuse that aborts long matches.
+
+- [ ] Pre-validate user regex on write (`/api/policies` POST/PATCH) with a `safe-regex` check
+- [ ] Or: runtime fuse — wrap each scan in a fuse that rejects beyond N ms
+
+## [P2] Strip internal error text from API responses
+Several routes bubble Supabase error messages through a `details` field (e.g. `{ error: "update failed", details: err.message }`). Matches CLAUDE.md "never expose internal error details" prohibition. Keep detail going to server logs, return only stable error codes to clients.
+
+- [ ] Replace `details: err.message` with `console.error(...)` + opaque `error_code` in the response body across `/api/servers`, `/api/openapi-import`, `/api/policies*`
+
 ## [P2] Harden SSRF guard against DNS-rebinding
 `lib/security/ssrf-guard.ts` validates DNS on entry but `fetchWithTimeout` re-resolves on the actual request — a malicious authoritative server can return a public IP first (passes the check) and a private IP on the hot fetch. Acceptable for hackathon scope (guard still blocks the obvious attacks) but the canonical fix is to pin the pre-validated IP into a custom `undici.Agent` with a fixed `lookup` function so the request hits the exact address we verified. Pull in when we wire real third-party MCP server imports.
 

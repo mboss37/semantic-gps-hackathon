@@ -97,6 +97,6 @@ describe('mcp gateway /api/mcp', () => {
     // MCP SDK returns a tool-level error (isError:true) rather than a JSON-RPC error.
     const result = body.result as { isError?: boolean; content?: Array<{ text: string }> } | undefined;
     expect(result?.isError).toBe(true);
-    expect(result?.content?.[0]?.text ?? '').toMatch(/not found|unknown/i);
+    expect(result?.content?.[0]?.text ?? '').toMatch(/not found|unknown|not registered/i);
   });
 });

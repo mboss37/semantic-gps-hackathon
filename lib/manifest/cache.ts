@@ -67,7 +67,22 @@ export type Manifest = {
 let cached: Manifest | null = null;
 let inflight: Promise<Manifest> | null = null;
 
+const emptyManifest = (): Manifest => ({
+  loadedAt: Date.now(),
+  servers: [],
+  tools: [],
+  relationships: [],
+  policies: [],
+  assignments: [],
+});
+
 const fetchManifest = async (): Promise<Manifest> => {
+  // Graceful degrade in test / CLI envs that don't wire Supabase — gateway
+  // stays functional (no manifest = just the builtin echo tool).
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) {
+    return emptyManifest();
+  }
+
   const supabase = createServiceClient();
   const [servers, tools, relationships, policies, assignments] = await Promise.all([
     supabase.from('servers').select('*'),

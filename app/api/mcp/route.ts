@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { createStatelessServer } from '@/lib/mcp/stateless-server';
 
-// The gateway endpoint. Stateless: every request rebuilds the McpServer,
+// The gateway endpoint. Stateless: every request rebuilds the MCP Server,
 // connects to a fresh transport, handles the request, disposes.
 // HTTP-Streamable transport via Web Standard APIs — works in any runtime
 // that speaks Request/Response (Next.js App Router, Cloudflare Workers, Bun).

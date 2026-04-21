@@ -1,15 +1,22 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import { logMCPEvent } from '@/lib/audit/logger';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+  McpError,
+} from '@modelcontextprotocol/sdk/types.js';
+import { logMCPEvent, redactPayload } from '@/lib/audit/logger';
+import { loadManifest } from '@/lib/manifest/cache';
+import { buildCatalog, mockExecuteTool } from '@/lib/mcp/tool-dispatcher';
 import { discoverRelationships, findWorkflowPath } from '@/lib/mcp/trel-handlers';
 import {
   DiscoverRelationshipsRequestSchema,
   FindWorkflowPathRequestSchema,
 } from '@/lib/mcp/trel-schemas';
+import { runPostCallPolicies, runPreCallPolicies } from '@/lib/policies/enforce';
 
-// Fresh McpServer per request. No in-memory session state — every invocation
-// reconstructs, connects to the transport, handles one request, disposes.
-// Works unchanged on Vercel Fluid Compute and any horizontal-scale target.
+// Low-level Server so tools/list + tools/call can merge the builtin echo with
+// whatever the manifest contains at request time. Still stateless: every call
+// rebuilds, connects, handles, disposes.
 
 const SERVER_INFO = {
   name: 'semantic-gps-gateway',
@@ -20,21 +27,57 @@ type CreateServerOpts = {
   traceId: string;
 };
 
-export const createStatelessServer = ({ traceId }: CreateServerOpts): McpServer => {
-  const server = new McpServer(SERVER_INFO);
+export const createStatelessServer = ({ traceId }: CreateServerOpts): Server => {
+  const server = new Server(SERVER_INFO, {
+    capabilities: { tools: { listChanged: true } },
+  });
 
-  server.registerTool(
-    'echo',
-    {
-      title: 'Echo',
-      description: 'Echoes the provided message back. Used to verify the gateway is alive.',
-      inputSchema: { message: z.string().min(1).describe('Text to echo back') },
-    },
-    async ({ message }) => {
-      const started = performance.now();
-      const result = {
-        content: [{ type: 'text' as const, text: message }],
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    const started = performance.now();
+    const manifest = await loadManifest();
+    const catalog = buildCatalog(manifest);
+    logMCPEvent({
+      trace_id: traceId,
+      method: 'tools/list',
+      status: 'ok',
+      latency_ms: Math.round(performance.now() - started),
+      payload: { tool_count: catalog.length },
+    });
+    return {
+      tools: catalog.map((t) => ({
+        name: t.name,
+        description: t.description,
+        inputSchema: t.input_schema,
+      })),
+    };
+  });
+
+  server.setRequestHandler(CallToolRequestSchema, async (req) => {
+    const started = performance.now();
+    const manifest = await loadManifest();
+    const catalog = buildCatalog(manifest);
+    const name = req.params.name;
+    const args = (req.params.arguments ?? {}) as Record<string, unknown>;
+
+    const entry = catalog.find((t) => t.name === name);
+    if (!entry) {
+      logMCPEvent({
+        trace_id: traceId,
+        tool_name: name,
+        method: 'tools/call',
+        status: 'origin_error',
+        latency_ms: Math.round(performance.now() - started),
+        payload: { reason: 'tool_not_found' },
+      });
+      return {
+        isError: true,
+        content: [{ type: 'text', text: `Tool "${name}" is not registered on this gateway.` }],
       };
+    }
+
+    if (entry.source === 'builtin' && entry.name === 'echo') {
+      const message = typeof args.message === 'string' ? args.message : '';
+      const result = { content: [{ type: 'text', text: message }] };
       logMCPEvent({
         trace_id: traceId,
         tool_name: 'echo',
@@ -44,10 +87,53 @@ export const createStatelessServer = ({ traceId }: CreateServerOpts): McpServer 
         payload: { args: { message }, result },
       });
       return result;
-    },
-  );
+    }
 
-  server.server.setRequestHandler(DiscoverRelationshipsRequestSchema, async (req) => {
+    const policyCtx = {
+      server_id: entry.server_id,
+      tool_id: entry.tool_id,
+      tool_name: entry.name,
+      args,
+    };
+
+    const pre = runPreCallPolicies(policyCtx, manifest);
+    if (pre.action === 'block') {
+      logMCPEvent({
+        trace_id: traceId,
+        server_id: entry.server_id,
+        tool_name: entry.name,
+        method: 'tools/call',
+        status: 'blocked_by_policy',
+        policy_decisions: pre.decisions,
+        latency_ms: Math.round(performance.now() - started),
+        payload: { args: redactPayload(args), reason: pre.reason },
+      });
+      return {
+        isError: true,
+        content: [{ type: 'text', text: `Blocked by policy: ${pre.reason}` }],
+      };
+    }
+
+    const rawResult = mockExecuteTool(entry.name, args);
+    const post = runPostCallPolicies({ ...policyCtx, result: rawResult }, manifest);
+
+    logMCPEvent({
+      trace_id: traceId,
+      server_id: entry.server_id,
+      tool_name: entry.name,
+      method: 'tools/call',
+      status: 'ok',
+      policy_decisions: [...pre.decisions, ...post.decisions],
+      latency_ms: Math.round(performance.now() - started),
+      payload: { args: redactPayload(args), result: redactPayload(post.result) },
+    });
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(post.result, null, 2) }],
+    };
+  });
+
+  server.setRequestHandler(DiscoverRelationshipsRequestSchema, async (req) => {
     const started = performance.now();
     const result = await discoverRelationships(req.params);
     logMCPEvent({
@@ -64,7 +150,7 @@ export const createStatelessServer = ({ traceId }: CreateServerOpts): McpServer 
     return result;
   });
 
-  server.server.setRequestHandler(FindWorkflowPathRequestSchema, async (req) => {
+  server.setRequestHandler(FindWorkflowPathRequestSchema, async (req) => {
     const started = performance.now();
     const result = await findWorkflowPath(req.params);
     logMCPEvent({
@@ -76,6 +162,16 @@ export const createStatelessServer = ({ traceId }: CreateServerOpts): McpServer 
     });
     return result;
   });
+
+  server.onerror = (err: Error) => {
+    // McpError here is a method-not-found or protocol-level fault — audit and move on.
+    logMCPEvent({
+      trace_id: traceId,
+      method: err instanceof McpError ? `jsonrpc:${err.code}` : 'unknown',
+      status: 'origin_error',
+      payload: { message: err.message },
+    });
+  };
 
   return server;
 };
