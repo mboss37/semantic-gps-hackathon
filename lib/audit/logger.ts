@@ -55,6 +55,12 @@ export const redactPayload = (input: unknown, depth = 0): unknown => {
 };
 
 export const logMCPEvent = (event: McpEvent): void => {
+  // Skip when Supabase isn't wired (tests, cold CLI scripts). Audit is
+  // fire-and-forget — never block the gateway response on logging.
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) {
+    return;
+  }
+
   const row = {
     trace_id: event.trace_id,
     server_id: event.server_id ?? null,
