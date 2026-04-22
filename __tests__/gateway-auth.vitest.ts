@@ -31,7 +31,7 @@ type JsonRpcEnvelope = {
   jsonrpc: '2.0';
   id: number | string | null;
   result?: Record<string, unknown>;
-  error?: { code: number; message: string };
+  error?: { code: number; message: string; data?: Record<string, unknown> };
 };
 
 const unwrapJson = async (res: Response): Promise<JsonRpcEnvelope> => {
@@ -65,11 +65,11 @@ describe('gateway bearer auth (WP-D.2)', () => {
     expect(res.status).toBe(401);
     expect(res.headers.get('content-type')).toMatch(/application\/json/);
     const body = await unwrapJson(res);
-    expect(body).toEqual({
-      jsonrpc: '2.0',
-      error: { code: -32001, message: 'unauthorized' },
-      id: null,
-    });
+    expect(body.jsonrpc).toBe('2.0');
+    expect(body.id).toBeNull();
+    expect(body.error?.code).toBe(-32001);
+    const data = body.error?.data as { reason?: string } | undefined;
+    expect(data?.reason).toBe('missing_authorization');
     expect(resolveOrgFromTokenMock).not.toHaveBeenCalled();
   });
 
@@ -92,7 +92,7 @@ describe('gateway bearer auth (WP-D.2)', () => {
 
   it('returns 401 when the bearer token is unknown', async () => {
     resolveOrgFromTokenMock.mockReset();
-    resolveOrgFromTokenMock.mockResolvedValueOnce(null);
+    resolveOrgFromTokenMock.mockResolvedValueOnce({ ok: false, reason: 'not_found' });
 
     const res = await postGateway({
       headers: {
@@ -111,7 +111,7 @@ describe('gateway bearer auth (WP-D.2)', () => {
 
   it('accepts a valid bearer and serves tools/list', async () => {
     resolveOrgFromTokenMock.mockReset();
-    resolveOrgFromTokenMock.mockResolvedValueOnce({ organization_id: ORG_A });
+    resolveOrgFromTokenMock.mockResolvedValueOnce({ ok: true, organization_id: ORG_A });
 
     const res = await postGateway({
       headers: {
@@ -144,7 +144,7 @@ describe('gateway bearer auth (WP-D.2)', () => {
       },
     );
 
-    resolveOrgFromTokenMock.mockResolvedValueOnce({ organization_id: ORG_A });
+    resolveOrgFromTokenMock.mockResolvedValueOnce({ ok: true, organization_id: ORG_A });
     const resA = await probeHandler(
       new Request('http://localhost/api/mcp', {
         method: 'POST',
@@ -158,7 +158,7 @@ describe('gateway bearer auth (WP-D.2)', () => {
     );
     expect(resA.status).toBe(200);
 
-    resolveOrgFromTokenMock.mockResolvedValueOnce({ organization_id: ORG_B });
+    resolveOrgFromTokenMock.mockResolvedValueOnce({ ok: true, organization_id: ORG_B });
     const resB = await probeHandler(
       new Request('http://localhost/api/mcp', {
         method: 'POST',

@@ -74,7 +74,7 @@ vi.mock('@/lib/mcp/auth-token', async () => {
     );
   return {
     ...actual,
-    resolveOrgFromToken: async () => ({ organization_id: uuid(100) }),
+    resolveOrgFromToken: async () => ({ ok: true, organization_id: uuid(100) }),
   };
 });
 

@@ -18,19 +18,28 @@ export const parseBearer = (authHeader: string | undefined): string | null => {
   return token.length > 0 ? token : null;
 };
 
+// Discriminated result so the gateway can distinguish "no matching token"
+// from "couldn't reach the DB" — these produce different JSON-RPC errors
+// at the client (one is an auth problem, the other is a server problem).
+export type ResolveTokenResult =
+  | { ok: true; organization_id: string }
+  | { ok: false; reason: 'not_found' }
+  | { ok: false; reason: 'db_error'; detail: string };
+
 // Fire-and-forget `last_used_at` bump on hit — surfaces rotation candidates
-// without blocking the gateway response. Miss returns null (401 upstream).
+// without blocking the gateway response.
 export const resolveOrgFromToken = async (
   supabase: SupabaseClient,
   plain: string,
-): Promise<{ organization_id: string } | null> => {
+): Promise<ResolveTokenResult> => {
   const hash = hashToken(plain);
   const { data, error } = await supabase
     .from('gateway_tokens')
     .select('id, organization_id')
     .eq('token_hash', hash)
     .maybeSingle();
-  if (error || !data?.organization_id) return null;
+  if (error) return { ok: false, reason: 'db_error', detail: error.message };
+  if (!data?.organization_id) return { ok: false, reason: 'not_found' };
 
   void supabase
     .from('gateway_tokens')
@@ -42,5 +51,5 @@ export const resolveOrgFromToken = async (
       }
     });
 
-  return { organization_id: data.organization_id };
+  return { ok: true, organization_id: data.organization_id };
 };
