@@ -25,6 +25,7 @@ describe.skipIf(!shouldRun)('gateway × anthropic mcp connector', () => {
       max_tokens: 512,
       betas: ['mcp-client-2025-11-20'],
       mcp_servers: [{ name: 'semantic-gps', type: 'url', url: GATEWAY_URL }],
+      tools: [{ type: 'mcp_toolset', mcp_server_name: 'semantic-gps' }],
       messages: [
         {
           role: 'user',
