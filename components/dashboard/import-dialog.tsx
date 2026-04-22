@@ -113,7 +113,13 @@ export const ImportDialog = () => {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
-      toast.success(`Added MCP server "${data.name}"`);
+      const count = typeof data.tool_count === 'number' ? data.tool_count : 0;
+      const msg = `Added MCP server "${data.name}" · ${count} tool${count === 1 ? '' : 's'}`;
+      if (data.warning) {
+        toast.warning(msg, { description: String(data.warning) });
+      } else {
+        toast.success(msg);
+      }
       closeAndReset();
       router.refresh();
     } catch (e) {

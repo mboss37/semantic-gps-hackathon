@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { encrypt } from '@/lib/crypto/encrypt';
 import { invalidateManifest } from '@/lib/manifest/cache';
 import { requireAuth, UnauthorizedError } from '@/lib/auth';
+import { discoverTools, type DiscoverAuth } from '@/lib/mcp/discover-tools';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -81,6 +82,7 @@ export const POST = async (request: Request): Promise<Response> => {
   }
 
   const { name, origin_url, auth } = parsed.data;
+  const discoverAuth: DiscoverAuth = auth?.type === 'bearer' ? auth : { type: 'none' };
   const authConfig =
     auth?.type === 'bearer'
       ? { ciphertext: encrypt(JSON.stringify({ type: 'bearer', token: auth.token })) }
@@ -99,6 +101,30 @@ export const POST = async (request: Request): Promise<Response> => {
     );
   }
 
+  const discovery = await discoverTools(origin_url, discoverAuth);
+  let tool_count = 0;
+  let warning: string | undefined;
+
+  if (discovery.ok && discovery.tools.length > 0) {
+    const rows = discovery.tools.map((t) => ({
+      server_id: server.id,
+      name: t.name,
+      description: t.description ?? null,
+      input_schema: t.inputSchema ?? null,
+    }));
+    const { error: insErr } = await supabase.from('tools').insert(rows);
+    if (insErr) {
+      warning = `server saved, tool insert failed: ${insErr.message}`;
+    } else {
+      tool_count = rows.length;
+    }
+  } else if (!discovery.ok) {
+    warning = `server saved but tool discovery failed: ${discovery.error}`;
+  }
+
   invalidateManifest();
-  return NextResponse.json({ server_id: server.id, name: server.name }, { status: 201 });
+  return NextResponse.json(
+    { server_id: server.id, name: server.name, tool_count, warning },
+    { status: 201 },
+  );
 };
