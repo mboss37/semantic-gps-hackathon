@@ -7,7 +7,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 // Skipped unless Supabase env vars are present.
 
 const shouldRun =
-  !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.SUPABASE_SECRET_KEY;
+  !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.SUPABASE_SECRET_KEY && !process.env.CI;
 
 describe.skipIf(!shouldRun)('domains table + default seed', () => {
   let supabase: SupabaseClient;

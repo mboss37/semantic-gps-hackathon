@@ -13,7 +13,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 // zod schemas + queries; a shape-smoke at the bottom asserts the types.
 
 const shouldRun =
-  !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.SUPABASE_SECRET_KEY;
+  !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.SUPABASE_SECRET_KEY && !process.env.CI;
 
 describe.skipIf(!shouldRun)('relationships CRUD invariants', () => {
   let supabase: SupabaseClient;

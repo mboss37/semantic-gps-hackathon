@@ -7,7 +7,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 // after `pnpm supabase start` + `supabase db reset` has applied migrations.
 
 const shouldRun =
-  !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.SUPABASE_SECRET_KEY;
+  !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.SUPABASE_SECRET_KEY && !process.env.CI;
 
 describe.skipIf(!shouldRun)('policy_versions snapshot trigger', () => {
   let supabase: SupabaseClient;

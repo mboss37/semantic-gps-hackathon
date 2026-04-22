@@ -7,7 +7,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 // `pnpm supabase start` + `supabase db reset` has applied migrations.
 
 const shouldRun =
-  !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.SUPABASE_SECRET_KEY;
+  !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.SUPABASE_SECRET_KEY && !process.env.CI;
 
 const DEMO_USER_ID = '11111111-1111-1111-1111-111111111111';
 

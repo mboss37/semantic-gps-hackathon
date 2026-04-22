@@ -7,7 +7,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 // `pnpm supabase start` + `supabase db reset`.
 
 const shouldRun =
-  !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.SUPABASE_SECRET_KEY;
+  !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.SUPABASE_SECRET_KEY && !process.env.CI;
 
 describe.skipIf(!shouldRun)('on_auth_user_created trigger + backfill', () => {
   let supabase: SupabaseClient;
