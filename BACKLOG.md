@@ -3,6 +3,20 @@
 > Features discussed but deferred. Pick up when relevant.
 > Priority: P0 = next sprint, P1 = soon, P2 = when relevant.
 
+## [P0 Sat AM] Finalize demo narrative — decouple from code
+Code ships regardless of framing. Nail the story Sat morning before recording, once all MCPs + routes + policies are live and we can see what the demo actually looks like on screen.
+
+**Constraint:** avoid positioning Semantic GPS as an Agentforce competitor (Mihael works at Salesforce). Safer angles to evaluate:
+- **"Complements Agentforce"** — Agentforce for in-SF agents, Semantic GPS for cross-surface (GH + Slack + custom). SF is system-of-record; governance happens on the outbound hops (PII redact into GH issues, Slack messages).
+- **AI security / trust angle** — recent news around AI agent leaks, prompt injection, data exfiltration lines up with the gateway's actual capabilities (PII redact, injection-guard, policy enforce, rollback). Natural fit for the "Keep Thinking" $5K side prize.
+- **DevOps-first fallback hero** — GH issue → Linear/Jira → Slack → PagerDuty. SF stays registered for breadth but isn't the protagonist. Lowest-risk framing if the other two still feel close to the line.
+
+**Deliverables once framing is picked:**
+- [ ] One-line pitch (≤15 words) for the video voiceover + README
+- [ ] Left-pane / right-pane script for the Playground A/B beat (what "chaos" looks like vs "governed")
+- [ ] PII policy target (which tool's output gets redacted on enforce)
+- [ ] README positioning paragraph
+
 ## [P0 Sat AM] Record fallback demo clip — CANNOT SLIP
 Hero scenario (Live Policy Swap w/ PII redaction) recorded 5 takes minimum on Saturday morning using the deployed Vercel URL. Mirror-upload to YouTube (unlisted) + Loom + Google Drive. Saturday recording IS the submission video — Sunday is for summary + upload only, not for debugging.
 
