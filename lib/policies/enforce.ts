@@ -3,13 +3,17 @@ import {
   runAllowlist,
   runBasicAuth,
   runClientId,
+  runInjectionGuard,
   runIpAllowlist,
   runPiiRedaction,
+  runRateLimit,
   type AllowlistConfig,
   type ClientIdConfig,
+  type InjectionGuardConfig,
   type IpAllowlistConfig,
   type PiiRedactionConfig,
   type PreCallVerdict,
+  type RateLimitConfig,
 } from '@/lib/policies/built-in';
 
 // The gateway hot-path adapter for policies. Turns an assignment-graph plus
@@ -74,6 +78,18 @@ const applicablePolicies = (
   return manifest.policies.filter((p) => policyIds.has(p.id));
 };
 
+const getHeaderLoose = (
+  headers: Record<string, string> | undefined,
+  name: string,
+): string | undefined => {
+  if (!headers) return undefined;
+  const target = name.toLowerCase();
+  for (const [k, v] of Object.entries(headers)) {
+    if (k.toLowerCase() === target) return v;
+  }
+  return undefined;
+};
+
 const evaluatePreCall = (policy: PolicyRow, ctx: PreCallContext): PreCallVerdict | null => {
   switch (policy.builtin_key) {
     case 'allowlist':
@@ -84,6 +100,16 @@ const evaluatePreCall = (policy: PolicyRow, ctx: PreCallContext): PreCallVerdict
       return runClientId(ctx.headers, policy.config as ClientIdConfig);
     case 'ip_allowlist':
       return runIpAllowlist(ctx.client_ip, policy.config as IpAllowlistConfig);
+    case 'rate_limit': {
+      // Identity preference: post-auth x-org-id header (threaded by gateway
+      // after D.2 token resolve) > client IP > 'anon'. Keeps rate-limit per
+      // caller, not per gateway process.
+      const identity =
+        getHeaderLoose(ctx.headers, 'x-org-id') ?? ctx.client_ip ?? 'anon';
+      return runRateLimit(identity, policy.config as RateLimitConfig);
+    }
+    case 'injection_guard':
+      return runInjectionGuard(ctx.args, policy.config as InjectionGuardConfig);
     default:
       return null;
   }

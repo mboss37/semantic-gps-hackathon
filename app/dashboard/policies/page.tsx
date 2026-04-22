@@ -7,7 +7,14 @@ export const dynamic = 'force-dynamic';
 type PolicyRecord = {
   id: string;
   name: string;
-  builtin_key: 'pii_redaction' | 'rate_limit' | 'allowlist' | 'injection_guard';
+  builtin_key:
+    | 'pii_redaction'
+    | 'rate_limit'
+    | 'allowlist'
+    | 'injection_guard'
+    | 'basic_auth'
+    | 'client_id'
+    | 'ip_allowlist';
   config: Record<string, unknown>;
   enforcement_mode: 'shadow' | 'enforce';
   created_at: string;

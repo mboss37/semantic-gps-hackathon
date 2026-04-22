@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { PolicyConfigForm } from '@/components/dashboard/policy-config-forms';
 
 type Mode = 'shadow' | 'enforce';
 
@@ -39,7 +39,7 @@ type Props = {
 export const PolicyRow = ({ id, name, builtinKey, config, mode, assignments, servers }: Props) => {
   const router = useRouter();
   const [pending, setPending] = useState(false);
-  const [configText, setConfigText] = useState(JSON.stringify(config, null, 2));
+  const [configState, setConfigState] = useState<Record<string, unknown>>(config);
   const [attachServerId, setAttachServerId] = useState<string | undefined>(undefined);
   const serversById = new Map(servers.map((s) => [s.id, s.name]));
 
@@ -70,14 +70,7 @@ export const PolicyRow = ({ id, name, builtinKey, config, mode, assignments, ser
   };
 
   const onSaveConfig = () => {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(configText);
-    } catch {
-      toast.error('Config is not valid JSON');
-      return;
-    }
-    patch({ config: parsed as Record<string, unknown> }, 'Config saved');
+    patch({ config: configState }, 'Config saved');
   };
 
   const onDelete = async () => {
@@ -166,16 +159,13 @@ export const PolicyRow = ({ id, name, builtinKey, config, mode, assignments, ser
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <div>
-          <Label className="text-xs text-muted-foreground">Config (JSON)</Label>
-          <Textarea
-            rows={4}
-            spellCheck={false}
-            value={configText}
-            onChange={(e) => setConfigText(e.target.value)}
-            className="font-mono text-xs"
+        <div className="flex flex-col gap-2">
+          <PolicyConfigForm
+            builtinKey={builtinKey}
+            config={configState}
+            onChange={setConfigState}
           />
-          <Button size="sm" variant="outline" className="mt-2" disabled={pending} onClick={onSaveConfig}>
+          <Button size="sm" variant="outline" className="mt-1 self-start" disabled={pending} onClick={onSaveConfig}>
             <SaveIcon className="size-4" />
             Save config
           </Button>

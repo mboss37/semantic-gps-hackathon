@@ -31,8 +31,12 @@ export type ToolRow = {
   name: string;
   description: string | null;
   input_schema: unknown;
-  display_name: string | null;
-  display_description: string | null;
+  // Semantic rewriting (WP-G.6). Nullable columns that may be absent on
+  // legacy fixtures or pre-migration rows; `?:` reflects both "not present"
+  // and "present but null". Stateless server uses `?? t.name` which handles
+  // both uniformly.
+  display_name?: string | null;
+  display_description?: string | null;
 };
 
 export type RelationshipRow = {

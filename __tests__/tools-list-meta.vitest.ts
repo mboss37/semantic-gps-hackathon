@@ -75,9 +75,7 @@ vi.mock('@/lib/manifest/cache', async () => {
 });
 
 // Bearer-auth stub so the route gets a resolved org without a live DB.
-vi.mock('@/lib/supabase/service', () => ({
-  createServiceClient: () => ({}),
-}));
+// Service client stays real — logMCPEvent's insert is fire-and-forget.
 vi.mock('@/lib/mcp/auth-token', async () => {
   const actual =
     await vi.importActual<typeof import('@/lib/mcp/auth-token')>(

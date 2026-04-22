@@ -8,9 +8,9 @@ const { resolveOrgFromTokenMock } = vi.hoisted(() => ({
   resolveOrgFromTokenMock: vi.fn(),
 }));
 
-vi.mock('@/lib/supabase/service', () => ({
-  createServiceClient: () => ({}),
-}));
+// Don't mock createServiceClient — logMCPEvent fires `.from('mcp_events')`
+// in fire-and-forget mode, so the real client (no network) is tolerant; an
+// empty-object mock would crash on `.from()`.
 vi.mock('@/lib/mcp/auth-token', async () => {
   const actual =
     await vi.importActual<typeof import('@/lib/mcp/auth-token')>(

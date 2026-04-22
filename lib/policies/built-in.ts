@@ -1,3 +1,5 @@
+import { checkRateLimit } from '@/lib/policies/rate-limiter';
+
 // Built-in policy primitives. Pure functions — no DB, no manifest — so the
 // engine layer (lib/policies/enforce.ts) can compose them against assignments
 // and the test suite can exercise them with plain fixtures.
@@ -208,6 +210,78 @@ export const runIpAllowlist = (
   if (cidrs.length === 0) return { ok: false, reason: 'ip_allowlist_empty' };
   if (!cidrs.some((cidr) => matchCidr(clientIp, cidr))) {
     return { ok: false, reason: 'ip_not_in_allowlist' };
+  }
+  return { ok: true };
+};
+
+// ---------------------------------------------------------------------------
+// WP-G.4: rate-limit + injection-guard runners.
+
+export type RateLimitConfig = {
+  max_rpm: number;
+};
+
+export const runRateLimit = (
+  identity: string,
+  config: RateLimitConfig,
+): PreCallVerdict => {
+  const verdict = checkRateLimit(identity, config);
+  return verdict;
+};
+
+// Regex patterns for common LLM prompt-injection / SQL-injection attempts.
+// Tuned for the demo hero scenario — not a comprehensive WAF. Callers can
+// extend via config.patterns; the built-ins always run first.
+export type InjectionPattern = { name: string; regex: RegExp };
+
+export const DEFAULT_INJECTION_PATTERNS: readonly InjectionPattern[] = [
+  {
+    name: 'ignore_prior',
+    regex: /ignore\s+(all\s+)?(previous|prior)\s+(instructions|rules)/i,
+  },
+  {
+    name: 'role_override',
+    regex: /(you\s+are\s+now|act\s+as|pretend\s+to\s+be)\s+/i,
+  },
+  {
+    name: 'im_start',
+    regex: /<\|?im_(start|end)\|?>/i,
+  },
+  {
+    name: 'sql_drop',
+    regex: /drop\s+table|truncate\s+table/i,
+  },
+  {
+    name: 'sql_comment_inject',
+    regex: /(--\s*$|\/\*[^*]*\*\/|;\s*select\s+)/i,
+  },
+];
+
+export type InjectionGuardConfig = {
+  patterns?: Array<{ name: string; regex: string }>;
+};
+
+const compileInjectionPatterns = (
+  config?: InjectionGuardConfig,
+): readonly InjectionPattern[] => {
+  const custom = config?.patterns ?? [];
+  const compiledCustom = custom.map((p) => ({
+    name: p.name,
+    regex: new RegExp(p.regex, 'i'),
+  }));
+  return [...DEFAULT_INJECTION_PATTERNS, ...compiledCustom];
+};
+
+export const runInjectionGuard = (
+  args: unknown,
+  config?: InjectionGuardConfig,
+): PreCallVerdict => {
+  const haystack = JSON.stringify(args ?? {});
+  const patterns = compileInjectionPatterns(config);
+  for (const p of patterns) {
+    if (p.regex.test(haystack)) {
+      return { ok: false, reason: `injection_detected:${p.name}` };
+    }
   }
   return { ok: true };
 };

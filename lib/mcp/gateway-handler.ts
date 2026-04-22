@@ -68,6 +68,12 @@ export const buildGatewayHandler = (resolveScope: ScopeResolver) => {
       return unauthorizedResponse();
     }
 
+    // WP-G.4: expose the authenticated org id to policy runners. rate_limit
+    // keys identity on `x-org-id` > `client_ip` > 'anon'. Sourced from the
+    // resolved gateway token (D.2), not the scope builder — every scope tier
+    // (org/domain/server) sees the same caller identity.
+    headers['x-org-id'] = tokenRow.organization_id;
+
     const scope = await resolveScope(request, tokenRow.organization_id);
     const server = createStatelessServer({ traceId, scope, headers, clientIp });
     const transport = new WebStandardStreamableHTTPServerTransport({

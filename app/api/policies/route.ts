@@ -6,7 +6,15 @@ import { invalidateManifest } from '@/lib/manifest/cache';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const BUILTIN_KEYS = ['pii_redaction', 'rate_limit', 'allowlist', 'injection_guard'] as const;
+const BUILTIN_KEYS = [
+  'pii_redaction',
+  'rate_limit',
+  'allowlist',
+  'injection_guard',
+  'basic_auth',
+  'client_id',
+  'ip_allowlist',
+] as const;
 const MODES = ['shadow', 'enforce'] as const;
 
 const CreateBody = z.object({

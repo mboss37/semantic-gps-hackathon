@@ -24,13 +24,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { PolicyConfigForm } from '@/components/dashboard/policy-config-forms';
 
-const BUILTIN_DEFAULTS: Record<string, string> = {
-  pii_redaction: '{}',
-  allowlist: '{\n  "tool_names": ["getCustomer", "searchCustomers"]\n}',
-  rate_limit: '{\n  "max_rpm": 60\n}',
-  injection_guard: '{}',
+const BUILTIN_DEFAULTS: Record<string, Record<string, unknown>> = {
+  pii_redaction: {},
+  allowlist: { tool_names: ['getCustomer', 'searchCustomers'] },
+  rate_limit: { max_rpm: 60 },
+  injection_guard: {},
+  basic_auth: {},
+  client_id: { allowed_ids: [], header_name: 'x-client-id' },
+  ip_allowlist: { allowed_cidrs: [] },
 };
 
 type Mode = 'shadow' | 'enforce';
@@ -41,28 +44,22 @@ export const PolicyCreateDialog = ({ servers }: { servers: Array<{ id: string; n
   const [pending, setPending] = useState(false);
   const [name, setName] = useState('');
   const [builtinKey, setBuiltinKey] = useState('pii_redaction');
-  const [config, setConfig] = useState(BUILTIN_DEFAULTS.pii_redaction);
+  const [config, setConfig] = useState<Record<string, unknown>>(
+    BUILTIN_DEFAULTS.pii_redaction ?? {},
+  );
   const [mode, setMode] = useState<Mode>('shadow');
   const [attachServerId, setAttachServerId] = useState<string | undefined>(undefined);
 
   const onSubmit = async () => {
     setPending(true);
     try {
-      let parsedConfig: unknown = {};
-      if (config.trim().length > 0) {
-        try {
-          parsedConfig = JSON.parse(config);
-        } catch {
-          throw new Error('Config is not valid JSON');
-        }
-      }
       const res = await fetch('/api/policies', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           name: name.trim() || `${builtinKey} (${mode})`,
           builtin_key: builtinKey,
-          config: parsedConfig,
+          config,
           enforcement_mode: mode,
         }),
       });
@@ -124,7 +121,7 @@ export const PolicyCreateDialog = ({ servers }: { servers: Array<{ id: string; n
               onValueChange={(v) => {
                 if (v === null) return;
                 setBuiltinKey(v);
-                setConfig(BUILTIN_DEFAULTS[v] ?? '{}');
+                setConfig(BUILTIN_DEFAULTS[v] ?? {});
               }}
             >
               <SelectTrigger>
@@ -135,19 +132,19 @@ export const PolicyCreateDialog = ({ servers }: { servers: Array<{ id: string; n
                 <SelectItem value="allowlist">allowlist</SelectItem>
                 <SelectItem value="rate_limit">rate_limit</SelectItem>
                 <SelectItem value="injection_guard">injection_guard</SelectItem>
+                <SelectItem value="basic_auth">basic_auth</SelectItem>
+                <SelectItem value="client_id">client_id</SelectItem>
+                <SelectItem value="ip_allowlist">ip_allowlist</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="policy-config">Config (JSON)</Label>
-            <Textarea
-              id="policy-config"
-              rows={5}
-              spellCheck={false}
-              value={config}
-              onChange={(e) => setConfig(e.target.value)}
-              className="font-mono text-xs"
+            <Label>Config</Label>
+            <PolicyConfigForm
+              builtinKey={builtinKey}
+              config={config}
+              onChange={setConfig}
             />
           </div>
 
