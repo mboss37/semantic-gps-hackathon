@@ -14,37 +14,54 @@
   - Migration pipeline proven end-to-end — `20260421173113_bootstrap.sql` applied to local (`db reset`) + hosted (`db push`)
   - Vercel live at https://semantic-gps-hackathon.vercel.app/ — Supabase Marketplace integration auto-injects URL + publishable + secret; encryption key + Anthropic + app URL added manually
   - Process rules locked in CLAUDE.md: local-first Supabase (Off-Limits); pull-from-backlog removes-from-backlog; completed sprints persist WPs
+- **Sprint 3 — Core build (spine + gateway + policy swap hero) — closed partial:**
+  - 3.1 Spine libs + core schema (6 tables, auth, proxy, SSRF, encrypt, manifest cache, dev-login)
+  - 3.2 MCP gateway skeleton — Inspector-verified on Vercel, echo tool round-trip, opt-in Anthropic SDK test
+  - 3.3 OpenAPI import + servers CRUD + TRel `discover_relationships` / `find_workflow_path`
+  - 3.4 Policy engine + enforce/shadow toggle (PII + allowlist built-ins) + manifest-aware gateway
+  - 3.5 Dashboard (shadcn dashboard-01) + MCP direct-import tool discovery + server-card tool chips
+  - 3.6 Seed + embedded demo agent — **DEFERRED to Sprint 4 WP-4.18**. Reality check on 2026-04-22 vs. the reference architecture at `/projects/semantic-gps/docs` surfaced that shipping a demo on mocked tool execution, a half-built TRel, and zero real integrations would be a vanity win. Scope got re-drawn.
 
-## Current: Sprint 3 — Core build (spine + gateway + policy swap hero)
-Effort estimates are AI wall-clock (~8x faster than human hours). Hard gate: WP-3.2 gateway must be MCP-Inspector-verifiable against Vercel before WP-3.3 starts.
+## Current: Sprint 4 — Day-1 unblockers (Wed 2026-04-22, 6 WPs)
 
-- [x] **3.1 Spine libs + core schema** (~1h) — migration for 6 tables (servers/tools/relationships/policies/policy_assignments/mcp_events); `lib/supabase/{server,client,service}.ts`; `lib/auth.ts` (`requireAuth()`); `proxy.ts` (NOT middleware.ts); `lib/security/ssrf-guard.ts` (RFC1918 + 127/8 + 169.254/16); `lib/crypto/encrypt.ts` AES-256-GCM + round-trip test; `lib/audit/logger.ts` (`logMCPEvent` + `redactPayload`); `lib/manifest/cache.ts` (`loadManifest` + `invalidateManifest`); single SQL-seeded user with auto-login
-- [x] **3.2 MCP gateway skeleton — Inspector-verified** (~45min) — gateway live at https://semantic-gps-hackathon.vercel.app/api/mcp. All 3 MCP methods (initialize / tools/list / tools/call echo) round-trip against prod. Opt-in `@anthropic-ai/sdk` vitest (`d8fffa4`) uses beta `mcp-client-2025-11-20` connector.
-- [x] **3.3 OpenAPI import + servers CRUD** (~45min) — branded CustomerCloud spec + openApiToTools converter (3 tests) + TRel discover_relationships + find_workflow_path BFS (4 tests) + /api/openapi-import (SSRF-guarded + encrypted auth_config + rollback) + /api/servers GET + /api/servers/[id] DELETE. Shipped in `8211a5a`, 16 tests passing.
-- [x] **3.4 Policy engine + enforce/shadow + toggle route** (~45min) — PII (BIN-anchored CC, email, phone, SSN) + allowlist primitives; pre/post `enforceOrShadow` wired into `tools/call` with audit decisions; gateway refactored to raw `Server` so manifest tools blend with builtin echo; mock exec returns PII-rich canned data; `/api/policies` CRUD + assignments + toggle PATCH; 8 policy vitest cases. Shipped in `5f0a031`. 25 tests total.
-- [x] **3.5 Dashboard — shadcn dashboard-01 adapted + MCP tool discovery** (~3h) — 5-page dashboard on the shadcn dashboard-01 block (Overview/Servers/Graph/Policies/Audit), replacing the base-nova draft; async Server Component Overview with Promise.all-batched Supabase counts + recent-50 events; MCP direct-import auto-discovers tools via SSRF-guarded JSON-RPC `tools/list` (JSON or single-event SSE, 6 vitest cases); server cards render tool chips with Tooltip descriptions; RSC boundary bug fixed by moving Zod audit-event schema to `lib/schemas/`. Commits `e79cbe9` (block redo), `9b64e4e` (tool discovery), `d84bdbe` (tool list), `2526971` (chip UX). 31 tests, 1 skipped.
-- [ ] **3.6 Seed + embedded demo agent** (~45min) — `scripts/seed-demo.ts` (2 servers, 6–8 tools, 4–6 relationships covering 4 edge types, 2 policies); embedded "Try it" agent panel in dashboard (Opus 4.7, prompt caching on tools list, scripted prompts for PII policy swap scenario)
+Daily-sprint cadence through Sat (CLAUDE.md sweet spot = 3-6 WPs/sprint). Each morning: pull the next day's WPs from `BACKLOG.md` → `Sprint 4+ queue` using the dep graph to pick what's unblocked.
 
-**Locked scope decisions** (see `BACKLOG.md` for stretches):
-- Hero demo = PII-redaction live-policy-swap (allowlist as secondary)
-- Demo agent = embedded panel, not standalone script
-- OpenAPI source = branded snapshot in `/public/demo-openapi.json`
-- Managed Agents = default cut; re-evaluate Thu after Cohen session
-- Relationship inference via Opus, NL policy author, extended-thinking UI, `validate_workflow`, rate-limit/injection-guard = all stretch (BACKLOG)
+Today's goal: land schema + real proxy foundations so Thu can parallelize against real integrations (E.*) and route orchestration (F.*).
 
-**Hard cuts** (NOT in Sprint 3 or BACKLOG):
-- `evaluate_goal` TRel method
-- Fallback routing / retry logic
-- Session replay UI (audit trace_id filter covers it)
-- Supabase realtime (1s polling instead)
-- Signup page (SQL-seeded user)
+- [ ] **A.1** (M) `organizations` + `memberships` schema; migrate `servers.user_id` → `organization_id`; auto-create org + admin membership on first signup.
+- [ ] **B.1** (S) `domains` table + `servers.domain_id` FK + seed "SalesOps" domain. ← A.1
+- [ ] **B.3** (S) Relationship taxonomy migration — replace CHECK with stories' 8 types (`produces_input_for`, `requires_before`, `suggests_after`, `mutually_exclusive`, `alternative_to`, `validates`, `compensated_by`, `fallback_to`). Update TRel handlers + tests + docs.
+- [ ] **B.4** (S) `policy_versions` table + snapshot trigger on policy mutations.
+- [ ] **C.1** (M) Real OpenAPI HTTP proxy (`lib/mcp/proxy-openapi.ts`) — decrypt `auth_config`, inject auth header, compose path/query/body, SSRF-guard, 5xx retry.
+- [ ] **C.2** (M) Real direct-MCP HTTP-Streamable proxy (`lib/mcp/proxy-http.ts`) — JSON-RPC forward `tools/call` to upstream with decrypted bearer.
+
+### Cadence
+- **Sprint 4** · Wed today · 6 WPs above
+- **Sprint 5** · Thu · pull AM from queue — likely `A.2, B.2, C.3, D.1` + one UI WP
+- **Sprint 6** · Fri · likely `D.2, E.1, E.2, E.3, F.1, G.2, G.4`
+- **Sprint 7** · Sat **last build day** · `F.2, F.3, J.1 hero, I.1, I.2, J.3` + **record demo PM**
+- **Sun** · submission only (README + summary + upload). No debugging.
+
+Queue is aspirational — actual daily pulls pick whatever's unblocked that morning.
+
+### Hero demo
+**Playground A/B** — left pane Claude Opus 4.7 + raw SF/Slack/GitHub MCPs (ungoverned); right pane same Opus 4.7 + `/api/mcp/domain/salesops`. Same scenario, same backends, same agent. Mid-demo PII enforce toggle on right pane only — next run redacts customer email in the Slack post.
+
+### Locked decisions
+- **Taxonomy:** stories' 8 types. `fallback_to` drives fallback execution, `compensated_by` drives rollback execution.
+- **Auth:** Supabase email/pw. First signup auto-creates org + admin. No invites/roles UI.
+- **Salesforce:** `jsforce` username-password.
+- **Policies:** ship built-ins only (PII, allowlist, rate-limit, injection-guard, Basic-auth, client-ID, IP allow/block).
+- **Playground is the hero demo.**
+- **Monitoring:** 3 lean widgets fixed.
+
+### Risks to watch
+- B.3 is the day-1 domino — blocks downstream G.2 + F.2 + F.3. Land it today.
+- E.1 Salesforce needs a Dev-Edition with API access — confirm creds before pulling E.* (Fri).
+- J.1 Playground is L-size + 5 cross-stream deps → highest slip risk; pull no later than Sat AM.
+- Live integration tests burn real API quotas — gate behind `VERIFY_INTEGRATIONS=1`.
 
 ## Session Log
-- 2026-04-21 — Sprint 1 WP complete: Next.js scaffold + deps + shadcn + supabase + vitest smoke test; all quality gates green.
-- 2026-04-21 — Sprint 2 opened: infra foundation (hosted Supabase, env, CLI link, migration pipeline, Vercel + Marketplace integration).
-- 2026-04-21 — Sprint 2 wrapped: 7 WPs shipped, 5 memories harvested (local-first, key parity, port conflict, env deny narrowing, early-infra pattern), ARCHITECTURE + CLAUDE docs updated.
-- 2026-04-21 — Sprint 3 opened + WP-3.1 landed: 6-table core schema + 8 spine libs + proxy.ts + dev-login + AES round-trip test; all gates green, code-reviewer approved.
-- 2026-04-21 — WP-3.2 shipped: stateless MCP gateway on /api/mcp with echo tool, verified against Vercel prod + opt-in Anthropic-SDK vitest. 10 test cases total (1 skipped by default).
-- 2026-04-21 — WP-3.3 shipped: OpenAPI import + /api/servers CRUD + TRel (discover_relationships / find_workflow_path). 16 vitest (+ 1 skipped). Branded CustomerCloud spec seeded for hero demo.
-- 2026-04-21 — WP-3.4 shipped: PII + allowlist built-ins + enforceOrShadow engine + policy CRUD + enforce/shadow toggle + manifest-aware gateway. 24/25 vitest (1 opt-in).
-- 2026-04-22 — WP-3.5 shipped (restart after base-nova draft): shadcn dashboard-01 block adapted, Overview with live Supabase counts, MCP direct-import discovers tools on register, server-card tool chips with tooltips. 31 vitest. 9 follow-ups logged to BACKLOG (rediscover button, chart aggregation, audit realtime, etc.).
+- 2026-04-21 — Sprint 3 opened; WP-3.1 through 3.4 shipped same day (core schema + gateway + TRel discovery + policy engine). Opt-in Anthropic SDK test proves Opus 4.7 drives the deployed gateway via MCP connector.
+- 2026-04-22 — WP-3.5 shipped (shadcn dashboard-01 + MCP direct-import tool discovery). Reality-check vs `/projects/semantic-gps/docs` → 3.6 deferred, Sprint 4 opened. Architect + PO review of USER-STORIES.md produced 42-WP plan + locked decisions + Playground A/B hero.
+- 2026-04-22 — Sprint 4 collapsed to daily-sprint cadence (mega-sprint violated 3-6 sweet spot). Today = 6 day-1 unblockers; other 36 WPs parked in BACKLOG `Sprint 4+ queue` for Thu/Fri/Sat daily pulls. Sat = record demo, Sun = submission only.
