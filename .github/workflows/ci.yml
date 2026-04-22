@@ -37,4 +37,12 @@ jobs:
         run: pnpm exec tsc --noEmit
 
       - name: Test
+        env:
+          # Fake values so route handlers + crypto boot cleanly under test.
+          # All real network calls are mocked per suite; these exist only to
+          # satisfy `createServiceClient` + `lib/crypto/encrypt.ts` env guards.
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_fake
+          SUPABASE_SECRET_KEY: sb_secret_ci_fake
+          CREDENTIALS_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
         run: pnpm test
