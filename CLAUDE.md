@@ -76,12 +76,23 @@ No plan → no code. Not a heuristic — the rule.
 
 ## Code Review (pre-commit gate)
 Every commit containing `.ts`/`.tsx` changes is **blocked** until:
-1. The `code-reviewer` subagent has approved the current staged diff (writes a marker file at `.claude/state/last-review-<hash>`)
+1. A fresh review marker exists at `.claude/state/last-review-<staged-diff-hash>`
 2. `pnpm exec tsc --noEmit` passes
 3. `pnpm lint` passes
 4. `pnpm test` passes
 
-Workflow: stage changes → spawn `code-reviewer` via the Agent tool → fix blockers it flags → re-run reviewer until approved → commit. The hook enforces this; don't try to bypass.
+Workflow — **subagent reviews, human approves, main session writes marker.** This keeps the human in the loop between reviewer findings and the commit gate flipping green.
+
+1. Stage changes (`git add <scope>`).
+2. Spawn `code-reviewer` via the Agent tool. Prompt it to output blocking issues + suggestions + verdict, and **explicitly instruct it NOT to write the marker file**.
+3. Main session relays the reviewer's findings verbatim to the user.
+4. User responds with "approved" (or specific fixes to apply).
+5. On approval, main session writes the marker itself: `mkdir -p .claude/state && touch .claude/state/last-review-<hash>` where `<hash>` is the first 16 hex chars of `git diff --staged | sha1sum`.
+6. Commit. Hook verifies marker + runs gates.
+
+If the reviewer flags blockers, fix them, re-stage, and loop from step 2 — the marker is only written once the user approves the final diff.
+
+**Why this shape:** a subagent writing approval markers trips the tooling's security detector (it can't distinguish a legitimate code-reviewer approval from a bypass attempt). Keeping marker writes in the main session after explicit human acknowledgment eliminates the false positives without weakening the gate.
 
 ## Conventions
 - TypeScript strict — no `any`, no `@ts-ignore`, no `as any`, no `!` non-null assertions
