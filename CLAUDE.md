@@ -80,7 +80,8 @@ Every commit containing `.ts`/`.tsx` changes is **blocked** until:
 1. A fresh review marker exists at `.claude/state/last-review-<staged-diff-hash>`
 2. `pnpm exec tsc --noEmit` passes
 3. `pnpm lint` passes
-4. `pnpm test` passes
+4. `pnpm test` passes — **every applicable headless test must actually run, not just default skips.** If the diff touches code gated behind opt-in vitest flags (e.g. `VERIFY_REAL_PROXY=1`, `VERIFY_ANTHROPIC=1`, `VERIFY_INTEGRATIONS=1`), run those too. If the diff changes routes/pages, run `pnpm exec next build` and curl the changed endpoint. If the diff changes DB schema, run `pnpm supabase db reset` locally and confirm the migration applies clean.
+5. `pnpm exec next build` passes when the diff touches `app/`, `proxy.ts`, or Next.js config (catches Suspense / useSearchParams / generateStaticParams issues that `tsc` + `test` miss)
 
 Workflow — **subagent reviews, human approves, main session writes marker.** This keeps the human in the loop between reviewer findings and the commit gate flipping green.
 
