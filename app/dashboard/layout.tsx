@@ -13,7 +13,7 @@ const DashboardLayout = async ({ children }: { children: React.ReactNode }) => {
     await requireAuth();
   } catch (e) {
     if (e instanceof UnauthorizedError) {
-      redirect('/api/auth/dev-login?next=/dashboard');
+      redirect('/login?next=/dashboard');
     }
     throw e;
   }

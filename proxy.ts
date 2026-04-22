@@ -33,7 +33,7 @@ export const proxy = async (request: NextRequest) => {
 
   if (requiresAuth && !user) {
     const url = request.nextUrl.clone();
-    url.pathname = '/api/auth/dev-login';
+    url.pathname = '/login';
     url.searchParams.set('next', pathname);
     return NextResponse.redirect(url);
   }
