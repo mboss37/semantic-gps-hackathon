@@ -1,7 +1,8 @@
 -- Local-only demo user. Runs after migrations on `pnpm supabase db reset`.
 -- Credentials are intentionally hardcoded (demo@semantic-gps.dev / demo-password-123)
--- and mirrored in app/api/auth/dev-login/route.ts — local Docker stack only.
--- seed.sql is ignored by `supabase db push`, so hosted never sees this row.
+-- for local Docker stack only. Sign in through `/login` with email/password —
+-- dev-login bypass was removed in Sprint 6 WP-A.4. seed.sql is ignored by
+-- `supabase db push`, so hosted never sees this row.
 
 insert into auth.users (
   instance_id, id, aud, role, email,
