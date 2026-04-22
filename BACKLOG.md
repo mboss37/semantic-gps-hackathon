@@ -23,7 +23,7 @@ CNA branding leaks into `app/layout.tsx` tab title + `app/page.tsx` marketing sh
 - [ ] `app/page.tsx` — thin Semantic GPS landing with "Open Dashboard" CTA (or direct redirect to `/dashboard`)
 
 ## [P0 daily-pull] Sprint 4+ queue — 30 WPs remaining (dep-annotated)
-Originally planned as a 42-WP mega-sprint. Collapsed to daily-sprint cadence 2026-04-22 (CLAUDE.md sweet spot = 3-6 WPs/sprint). Shipped: Sprint 4 Day 1 (A.1, B.1, B.3, B.4, C.1, C.2), Sprint 5 Thu (A.2, B.2, C.3, C.5, D.1, G.5), Sprint 6 (A.4, D.2, F.1, G.2, G.4, G.6). Fri/Sat pulls come from here. Dep convention: `← blocked by X` / `→ blocks Y`. Sizes: S <1h, M 1-3h, L >3h. Pull rule: morning picks WPs whose `← blocked by` edges all landed.
+Originally planned as a 42-WP mega-sprint. Collapsed to daily-sprint cadence 2026-04-22 (CLAUDE.md sweet spot = 3-6 WPs/sprint). Shipped: Sprint 4 Day 1 (A.1, B.1, B.3, B.4, C.1, C.2), Sprint 5 Thu (A.2, B.2, C.3, C.5, D.1, G.5), Sprint 6 (A.4, D.2, F.1, G.2, G.4, G.6), Sprint 7 (A.6, F.2, E.1, J.3 + transport CHECK migration + CI hardening). Fri/Sat pulls come from here. Dep convention: `← blocked by X` / `→ blocks Y`. Sizes: S <1h, M 1-3h, L >3h. Pull rule: morning picks WPs whose `← blocked by` edges all landed.
 
 **Projected judge card (all P0 landing):** Impact 9 · Demo 9 · Opus 4.7 Use 8 · Depth 9 → ~87% weighted.
 
@@ -37,12 +37,10 @@ Originally planned as a 42-WP mega-sprint. Collapsed to daily-sprint cadence 202
 - [ ] **C.4** (M) Multi-origin per server + health-driven origin swap. ← C.3, F.4 → F.2
 
 ### E. Real integrations
-- [ ] **E.1** (M) Salesforce via `jsforce` username-password + curated 5 tools (find_account, find_contact, get_opportunity, update_opportunity_stage, create_task). ← C.3, B.1 → F.1 e2e, J.1, J.3
 - [ ] **E.2** (M) Slack hand-authored OpenAPI subset (`chat.postMessage`, `users.lookupByEmail`, `conversations.list`) + Bot Token. ← C.3, B.1 → J.1, J.3
 - [ ] **E.3** (M) GitHub — register official MCP server via HTTP-Streamable direct-MCP federation; PAT auth. ← C.3, B.1 → J.1, J.3
 
 ### F. Routes + stateful orchestration
-- [ ] **F.2** (M) Fallback execution — follows `fallback_to` edges + multi-origin swap; emits `fallback_triggered`. ← F.1, B.3, C.4 → I.2
 - [ ] **F.3** (M) Rollback execution — uses `compensated_by` edges, reverse-order compensation; emits `rollback_executed`. ← F.1, B.3 → I.2
 - [ ] **F.4** (S) Origin health probes (`/api/health/:server_id`, cached flag). ← B.1 → C.4, G.7
 
@@ -66,7 +64,6 @@ Originally planned as a 42-WP mega-sprint. Collapsed to daily-sprint cadence 202
 ### J. Demo + verification
 - [ ] **J.1** (L) **Playground A/B hero** — `/dashboard/playground` with two panes: left = Opus 4.7 + raw SF/Slack/GitHub MCPs; right = Opus 4.7 + `/api/mcp/domain/salesops`. Same scenario button drives both. Mid-demo PII enforce toggle on right pane. Diff view: tool calls, latency, policy events, errors. ← D.1, D.2, E.*, F.1, G.1 → I.1, I.5, J.2, J.3
 - [ ] **J.2** (M) End-to-end verification against Vercel (opt-in Anthropic vitest extended to Playground Route). ← J.1, A.4
-- [ ] **J.3** (S) Real demo seed — domain + 1 Route + 8 relationships + policies referencing REAL tool IDs from E.*. ← E.*, G.2
 
 ### Risks
 - E.1 Salesforce username-password requires a Dev-Edition with API access — confirm creds before Fri.
