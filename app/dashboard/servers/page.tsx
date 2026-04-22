@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { ImportDialog } from '@/components/dashboard/import-dialog';
-import { ServerCard } from '@/components/dashboard/server-card';
+import { ServerCard, type ToolSummary } from '@/components/dashboard/server-card';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +12,12 @@ type ServerRow = {
   created_at: string;
 };
 
+type ToolRow = {
+  server_id: string | null;
+  name: string;
+  description: string | null;
+};
+
 const ServersPage = async () => {
   const supabase = await createClient();
   const [serversRes, toolsRes] = await Promise.all([
@@ -19,15 +25,16 @@ const ServersPage = async () => {
       .from('servers')
       .select('id, name, origin_url, transport, created_at')
       .order('created_at', { ascending: false }),
-    supabase.from('tools').select('server_id'),
+    supabase.from('tools').select('server_id, name, description').order('name'),
   ]);
 
   const servers = (serversRes.data ?? []) as ServerRow[];
-  const toolCounts = new Map<string, number>();
-  for (const t of toolsRes.data ?? []) {
-    const key = t.server_id as string | null;
-    if (!key) continue;
-    toolCounts.set(key, (toolCounts.get(key) ?? 0) + 1);
+  const toolsByServer = new Map<string, ToolSummary[]>();
+  for (const t of (toolsRes.data ?? []) as ToolRow[]) {
+    if (!t.server_id) continue;
+    const bucket = toolsByServer.get(t.server_id) ?? [];
+    bucket.push({ name: t.name, description: t.description });
+    toolsByServer.set(t.server_id, bucket);
   }
 
   return (
@@ -60,7 +67,7 @@ const ServersPage = async () => {
               transport={s.transport}
               originUrl={s.origin_url}
               createdAt={s.created_at}
-              toolCount={toolCounts.get(s.id) ?? 0}
+              tools={toolsByServer.get(s.id) ?? []}
             />
           ))}
         </div>
