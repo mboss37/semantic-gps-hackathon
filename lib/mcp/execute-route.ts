@@ -1,5 +1,5 @@
 import { logMCPEvent, redactPayload } from '@/lib/audit/logger';
-import type { Manifest, RouteStepRow, ToolRow } from '@/lib/manifest/cache';
+import type { Manifest, RelationshipRow, RouteStepRow, ToolRow } from '@/lib/manifest/cache';
 import { buildCatalog, executeTool, type ToolCatalogEntry } from '@/lib/mcp/tool-dispatcher';
 import type {
   ExecuteRouteParams,
@@ -237,6 +237,170 @@ const emitExecStep = (
   };
 };
 
+// Pick the first outgoing fallback_to edge for a tool, sorted by relationship
+// id for determinism. Returns undefined if no edge exists, or if the referenced
+// to_tool_id isn't present in the scoped manifest (unreachable fallback).
+const pickFallbackEdge = (
+  toolId: string,
+  manifest: Manifest,
+): { edge: RelationshipRow; tool: ToolRow } | undefined => {
+  const edges = manifest.relationships
+    .filter((r) => r.from_tool_id === toolId && r.relationship_type === 'fallback_to')
+    .slice()
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  for (const edge of edges) {
+    const tool = manifest.tools.find((t) => t.id === edge.to_tool_id);
+    if (tool) return { edge, tool };
+  }
+  return undefined;
+};
+
+// Execute primary + post-policies and return both the step shape and the raw
+// exec/post outputs. Split out so the fallback path can reuse it against the
+// fallback tool without re-resolving input_mapping or re-running pre-policies.
+const runExecPhase = async (
+  step: RouteStepRow,
+  tool: ToolRow,
+  entry: ToolCatalogEntry,
+  args: Record<string, unknown>,
+  policyCtx: PreCallContext,
+  pre: ReturnType<typeof runPreCallPolicies>,
+  manifest: Manifest,
+  started: number,
+  traceId: string,
+): Promise<{
+  stepResult: ExecuteRouteStep;
+  postResult: unknown;
+  exec: Awaited<ReturnType<typeof executeTool>>;
+}> => {
+  const exec = await executeTool(manifest, entry, args, { traceId });
+  const post = runPostCallPolicies({ ...policyCtx, result: exec.result }, manifest);
+  const stepResult = emitExecStep(step, tool, args, exec, post, pre, started, traceId);
+  return { stepResult, postResult: post.result, exec };
+};
+
+// Handles the fallback_to dance when the primary tool errors. Emits the
+// fallback_triggered audit events and returns the final step shape —
+// either a rewritten ok step with fallback_used, or the original origin_error
+// step annotated with fallback_also_failed=true.
+const attemptFallback = async (
+  primaryStep: ExecuteRouteStep,
+  pair: { step: RouteStepRow; tool: ToolRow },
+  manifest: Manifest,
+  args: Record<string, unknown>,
+  policyCtxBuilder: PolicyContextBuilder,
+  ctx: ExecuteRouteCtx,
+  captureBag: Record<string, unknown>,
+): Promise<ExecuteRouteStep> => {
+  const { step, tool: primaryTool } = pair;
+  const originalError = primaryStep.error ?? 'origin_error';
+
+  const fallback = pickFallbackEdge(primaryTool.id, manifest);
+  if (!fallback) return primaryStep;
+
+  // Resolve the fallback tool against the catalog; if unreachable, keep the
+  // primary error shape — a mis-wired relationship shouldn't silently rewrite
+  // history.
+  const catalog = buildCatalog(manifest);
+  const fallbackEntry = findCatalogEntry(catalog, fallback.tool);
+  if (!fallbackEntry) return primaryStep;
+
+  // Re-run pre-policies against the fallback tool identity so allowlist /
+  // injection-guard decisions reflect the new target. Input args are reused
+  // verbatim — the contract assumes schema compatibility.
+  const fallbackPolicyCtx = policyCtxBuilder(fallbackEntry, args);
+  const fallbackPre = runPreCallPolicies(fallbackPolicyCtx, manifest);
+  const fallbackStarted = performance.now();
+  if (fallbackPre.action === 'block') {
+    const blocked = emitBlockedStep(step, fallback.tool, args, fallbackStarted, fallbackPre, ctx.traceId);
+    logMCPEvent({
+      trace_id: ctx.traceId,
+      server_id: primaryTool.server_id,
+      tool_name: primaryTool.name,
+      method: 'execute_route.fallback',
+      status: 'fallback_triggered',
+      latency_ms: blocked.latency_ms,
+      payload: {
+        step_order: step.step_order,
+        original_tool_id: primaryTool.id,
+        fallback_tool_id: fallback.tool.id,
+        original_error: originalError,
+        fallback_error: blocked.error ?? 'blocked_by_policy',
+      },
+    });
+    return {
+      ...primaryStep,
+      fallback_also_failed: true,
+      error: `${originalError} (fallback ${fallback.tool.name} blocked: ${blocked.error ?? 'blocked_by_policy'})`,
+    };
+  }
+
+  const { stepResult: fallbackStep, postResult: fallbackPostResult } = await runExecPhase(
+    step,
+    fallback.tool,
+    fallbackEntry,
+    args,
+    fallbackPolicyCtx,
+    fallbackPre,
+    manifest,
+    fallbackStarted,
+    ctx.traceId,
+  );
+
+  if (fallbackStep.status === 'ok') {
+    logMCPEvent({
+      trace_id: ctx.traceId,
+      server_id: primaryTool.server_id,
+      tool_name: primaryTool.name,
+      method: 'execute_route.fallback',
+      status: 'fallback_triggered',
+      latency_ms: fallbackStep.latency_ms,
+      payload: {
+        step_order: step.step_order,
+        original_tool_id: primaryTool.id,
+        fallback_tool_id: fallback.tool.id,
+        original_error: originalError,
+      },
+    });
+    if (step.output_capture_key) {
+      captureBag[step.output_capture_key] = fallbackPostResult;
+    }
+    return {
+      step_order: step.step_order,
+      tool_name: primaryTool.name,
+      status: 'ok',
+      latency_ms: fallbackStep.latency_ms,
+      result: fallbackStep.result,
+      fallback_used: {
+        original_tool_name: primaryTool.name,
+        fallback_tool_name: fallback.tool.name,
+        original_error: originalError,
+      },
+    };
+  }
+
+  logMCPEvent({
+    trace_id: ctx.traceId,
+    server_id: primaryTool.server_id,
+    tool_name: primaryTool.name,
+    method: 'execute_route.fallback',
+    status: 'fallback_triggered',
+    latency_ms: fallbackStep.latency_ms,
+    payload: {
+      step_order: step.step_order,
+      original_tool_id: primaryTool.id,
+      fallback_tool_id: fallback.tool.id,
+      original_error: originalError,
+      fallback_error: fallbackStep.error ?? 'origin_error',
+    },
+  });
+  return {
+    ...primaryStep,
+    fallback_also_failed: true,
+    error: `${originalError} (fallback ${fallback.tool.name} failed: ${fallbackStep.error ?? 'origin_error'})`,
+  };
+};
+
 const runSingleStep = async (
   pair: { step: RouteStepRow; tool: ToolRow },
   entry: ToolCatalogEntry,
@@ -266,14 +430,38 @@ const runSingleStep = async (
     return emitBlockedStep(step, tool, args, started, pre, ctx.traceId);
   }
 
-  const execResult = await executeTool(manifest, entry, args, { traceId: ctx.traceId });
-  const post = runPostCallPolicies({ ...policyCtx, result: execResult.result }, manifest);
-  const stepResult = emitExecStep(step, tool, args, execResult, post, pre, started, ctx.traceId);
+  const { stepResult, postResult } = await runExecPhase(
+    step,
+    tool,
+    entry,
+    args,
+    policyCtx,
+    pre,
+    manifest,
+    started,
+    ctx.traceId,
+  );
 
-  if (stepResult.status === 'ok' && step.output_capture_key) {
-    captureBag[step.output_capture_key] = post.result;
+  if (stepResult.status === 'ok') {
+    if (step.output_capture_key) {
+      captureBag[step.output_capture_key] = postResult;
+    }
+    return stepResult;
   }
-  return stepResult;
+
+  // Only origin_error triggers fallback — policy blocks and unauthorized are
+  // governance decisions, not reachability failures.
+  if (stepResult.status !== 'origin_error') return stepResult;
+
+  return attemptFallback(
+    stepResult,
+    pair,
+    manifest,
+    args,
+    policyCtxBuilder,
+    ctx,
+    captureBag,
+  );
 };
 
 // Resolve a plan pair to a catalog entry. Returns either the entry or a

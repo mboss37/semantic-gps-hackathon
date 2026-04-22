@@ -50,6 +50,12 @@ export type ExecuteRouteStepStatus =
   | 'blocked_by_policy'
   | 'unauthorized';
 
+export type ExecuteRouteFallbackUsed = {
+  original_tool_name: string;
+  fallback_tool_name: string;
+  original_error: string;
+};
+
 export type ExecuteRouteStep = {
   step_order: number;
   tool_name: string;
@@ -57,6 +63,8 @@ export type ExecuteRouteStep = {
   latency_ms: number;
   result?: unknown;
   error?: string;
+  fallback_used?: ExecuteRouteFallbackUsed;
+  fallback_also_failed?: boolean;
 };
 
 export type ExecuteRouteResult = {
