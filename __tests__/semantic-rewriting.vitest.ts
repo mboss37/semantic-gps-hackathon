@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Manifest } from '@/lib/manifest/cache';
 
+// Stub service client on CI — loadManifest is mocked below, but the route
+// also fires logMCPEvent through the service client.
+vi.mock('@/lib/supabase/service', async () => {
+  const { stubServiceClientFactory } = await import('./_helpers/supabase-stub');
+  return await stubServiceClientFactory();
+});
+
 // WP-G.6: when a manifest tool row carries `display_name` /
 // `display_description`, `tools/list` must emit those instead of the origin
 // fields. Null display fields fall back to origin. `tools/call` must accept

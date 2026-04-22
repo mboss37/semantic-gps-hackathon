@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Manifest } from '@/lib/manifest/cache';
 
+// Stub service client on CI — loadManifest is mocked below, but the route
+// also fires logMCPEvent through the service client.
+vi.mock('@/lib/supabase/service', async () => {
+  const { stubServiceClientFactory } = await import('./_helpers/supabase-stub');
+  return await stubServiceClientFactory();
+});
+
 // WP-C.5: tools/list must attach `_meta.relationships` to any tool with
 // outgoing edges in the manifest. Mock `loadManifest` so we can seed a
 // deterministic tools+relationships graph without hitting Postgres.

@@ -8,9 +8,13 @@ const { resolveOrgFromTokenMock } = vi.hoisted(() => ({
   resolveOrgFromTokenMock: vi.fn(),
 }));
 
-// Don't mock createServiceClient — logMCPEvent fires `.from('mcp_events')`
-// in fire-and-forget mode, so the real client (no network) is tolerant; an
-// empty-object mock would crash on `.from()`.
+// Stub service client on CI (fake Supabase URL hangs the fire-and-forget
+// logMCPEvent insert); local dev keeps the real client.
+vi.mock('@/lib/supabase/service', async () => {
+  const { stubServiceClientFactory } = await import('./_helpers/supabase-stub');
+  return await stubServiceClientFactory();
+});
+
 vi.mock('@/lib/mcp/auth-token', async () => {
   const actual =
     await vi.importActual<typeof import('@/lib/mcp/auth-token')>(

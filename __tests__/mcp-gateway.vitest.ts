@@ -2,8 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 
 // Gateway smoke — bearer-auth resolver is mocked so the suite works without
 // a live Supabase stack. Real-bearer coverage lives in gateway-auth.vitest.ts.
-// The service client itself stays real: logMCPEvent fires insert-then-ignore
-// so network errors don't propagate.
+// On CI the service client is also stubbed (fake Supabase URL would hang the
+// fire-and-forget logMCPEvent insert); locally the real client stays in play.
+vi.mock('@/lib/supabase/service', async () => {
+  const { stubServiceClientFactory } = await import('./_helpers/supabase-stub');
+  return await stubServiceClientFactory();
+});
+
 vi.mock('@/lib/mcp/auth-token', async () => {
   const actual =
     await vi.importActual<typeof import('@/lib/mcp/auth-token')>(
