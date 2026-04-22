@@ -235,6 +235,32 @@ CREATE TABLE policy_versions (
   UNIQUE (policy_id, version)
 );
 
+-- Routes: named workflow chains scoped to an org (and optionally a domain).
+-- Drives the F.1 `execute_route` MCP method and the Playground A/B demo.
+CREATE TABLE routes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  domain_id UUID REFERENCES domains(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Route steps: ordered tool calls inside a route, with output->input threading,
+-- per-step fallback (alt-route), and compensating rollback tool reference.
+CREATE TABLE route_steps (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  route_id UUID NOT NULL REFERENCES routes(id) ON DELETE CASCADE,
+  step_order INT NOT NULL,
+  tool_id UUID NOT NULL REFERENCES tools(id) ON DELETE RESTRICT,
+  input_mapping JSONB NOT NULL DEFAULT '{}'::jsonb,
+  output_capture_key TEXT,
+  fallback_route_id UUID REFERENCES routes(id) ON DELETE SET NULL,
+  rollback_tool_id UUID REFERENCES tools(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE (route_id, step_order)
+);
+
 -- Audit log: every gateway interaction
 CREATE TABLE mcp_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -263,9 +289,13 @@ CREATE INDEX idx_relationships_to ON relationships(to_tool_id);
 ## API Surface
 
 ### Public (MCP Gateway)
+Three-tier routing, shared handler via `lib/mcp/gateway-handler.ts::buildGatewayHandler(scopeResolver)`.
+
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/api/mcp` | MCP JSON-RPC endpoint. Handles `initialize`, `tools/list`, `tools/call`, plus TRel extensions `discover_relationships`, `find_workflow_path`, `validate_workflow`. |
+| POST | `/api/mcp` | Org-scoped MCP JSON-RPC. Returns the full manifest visible to the caller's org. Handles `initialize`, `tools/list`, `tools/call`, plus TRel extensions `discover_relationships`, `find_workflow_path`, `validate_workflow`. |
+| POST | `/api/mcp/domain/[slug]` | Domain-scoped gateway. Returns only servers whose `domain_id` matches the org's domain with the given slug. Unknown slug → empty manifest + builtin echo, no crash. |
+| POST | `/api/mcp/server/[id]` | Single-server-scoped gateway. Returns one server + its tools + relationships limited to those tools. |
 
 ### Dashboard (auth-gated)
 All endpoints org-scope via `requireAuth()` → `organization_id`. Every read filters by the caller's org, every insert pins the row to it.
@@ -477,6 +507,8 @@ Things that will silently bite if not explicitly called out:
 15. **Anthropic `mcp-client-2025-11-20` beta requires `mcp_toolset` pairing in `tools`.** Defining `mcp_servers` alone returns 400. Add `{ type: 'mcp_toolset', mcp_server_name: '<name>' }` in the `tools` array matching the server name exactly.
 16. **Vitest doesn't auto-load `.env.local`.** Inline a tiny dotenv parser at the top of `vitest.config.ts` (before `defineConfig`) — shell-source can miss vars that fail POSIX parse, and worker processes don't always see main-process env mutations.
 17. **Idempotent migrations unblock first-production `supabase db push`.** `drop constraint if exists`, `where not exists` guards on INSERTs, empty-case-safe DO blocks. Without them, the first push to hosted runs against a partial state and fails loudly.
+18. **Next.js 16 `useSearchParams` requires a Suspense boundary in client pages.** `export const dynamic = 'force-dynamic'` does NOT fix it — v16 is stricter than v15. Canonical fix: split the hook-using form into its own client component, wrap it in `<Suspense>` inside a server page. `tsc --noEmit` + `pnpm test` both pass the broken setup; only `pnpm exec next build` catches it. Always run `next build` on any `app/` page change.
+19. **Run opt-in test flags before committing code they gate.** `VERIFY_REAL_PROXY=1`, `VERIFY_ANTHROPIC=1`, `VERIFY_INTEGRATIONS=1`. Defaults skip them for CI speed, but if the diff touches their scope, the gated tests are the only coverage — skipping them hides regressions until demo day.
 
 ---
 

@@ -152,6 +152,7 @@ Wait for all agents to return, synthesize their findings, then act.
 - **Service role Supabase client** used ONLY in the MCP gateway route; user-scoped everywhere else
 - **TRel methods** (`discover_relationships`, `find_workflow_path`, `validate_workflow`, `evaluate_goal`) are extra JSON-RPC methods on `/api/mcp` — same auth/policy stack as standard MCP methods
 - **Multi-tenant-ready schema with single-admin MVP** — `organizations` + `memberships` exist; `memberships.role` CHECK locked to `'admin'` only. First signup auto-creates org + membership + default SalesOps domain via `on_auth_user_created` trigger. RLS off for now. V2 expands role enum and enables RLS in a deliberate migration.
-- **Real-proxy behind `REAL_PROXY_ENABLED=1` feature flag** — `lib/mcp/proxy-openapi.ts` and `lib/mcp/proxy-http.ts` ship default-off for dev + vitest determinism. Flip to `1` on Vercel for prod routing. C.3 WP will make it default-on.
+- **Real-proxy default-on** — `lib/mcp/proxy-openapi.ts` and `lib/mcp/proxy-http.ts` dispatch via `executeTool()` by default; `REAL_PROXY_ENABLED=0` forces the mock fallback for dev determinism. Production on Vercel routes to real upstreams without extra config. Shipped Sprint 5 WP-C.3.
+- **Three-tier scoped gateway** — `/api/mcp` (org) + `/api/mcp/domain/[slug]` + `/api/mcp/server/[id]`. Shared `buildGatewayHandler(scopeResolver)`. Per-scope manifest cache keyed on a `ManifestScope` discriminated union. Unknown slug/id → empty manifest (no crash). Shipped Sprint 5 WP-D.1.
 - **Single-org MVP** — RLS off, one user per demo. Multi-tenancy is V2.
 - **Demos beat perfect code** — if any of the 4 success criteria breaks on stage, fall back to a recorded clip and ship

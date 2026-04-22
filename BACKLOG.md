@@ -81,6 +81,17 @@ Originally planned as a 42-WP mega-sprint. Collapsed to daily-sprint cadence 202
 - E.1 Salesforce username-password requires a Dev-Edition with API access — confirm creds before Fri.
 - J.1 Playground is L-size with 5 cross-stream deps → highest slip risk; pull no later than Sat AM.
 
+## [P1 post-sprint-5] Sprint 5 follow-up hardening
+Reviewer-flagged items from Sprint 5 Day 2. None gate the demo; all improve robustness. Pull when there's slack or when RLS re-enablement happens V2.
+
+- [ ] `lib/manifest/cache.ts:146` — `fetchOrgManifest` pulls every `route_steps` row (no filter). Align with `fetchDomainManifest`: compute `routeIds` from fetched routes then `.in('route_id', routeIds)` conditional on non-empty. Closes a would-be cross-tenant leak at V2.
+- [ ] `lib/policies/built-in.ts` — `runIpAllowlist` IPv4-only; IPv6 clients silently denied. Add IPv6 CIDR matcher + fix the misleading comment at lines 166-169.
+- [ ] `lib/manifest/cache.ts` — extract `fetchByIds<T>(supabase, table, column, ids)` helper; `fetchOrgManifest` (54 lines) and `fetchDomainManifest` (72 lines) exceed 50-line convention.
+- [ ] `app/api/mcp/domain/[slug]/route.ts` + `app/api/mcp/server/[id]/route.ts` — add Zod `safeParse` on `slug` / `id` route params; returns clean 400 instead of Postgres UUID-format error.
+- [ ] `lib/mcp/gateway-handler.ts:30-41` — `x-forwarded-for` trusted unconditionally. Safe on Vercel (platform rewrites it) but spoofable on non-Vercel deploys. Add `TRUSTED_PROXY_ENABLED` env flag before any self-hosted deploy.
+- [ ] `lib/mcp/stateless-server.ts` — `createStatelessServer` at 180 lines, each request handler block (`ListTools`, `CallTool`, `DiscoverRelationships`, `FindWorkflowPath`) extractable to module-level functions.
+- [ ] `lib/policies/enforce.ts:80,84,86` — `as ClientIdConfig` / `as IpAllowlistConfig` / `as AllowlistConfig` casts inherit pre-existing `as Config` pattern without validating what the DB stored. Add per-`builtin_key` Zod schemas inside `evaluatePreCall`.
+
 ## [P1 Fri–Sat] Managed Agents wrap for demo agent ($5K side prize)
 **Conditional on Thursday decision gate.** Default: cut. Reconsider only if Michael Cohen's Thu 11am session reveals <2h migration cost on top of the raw SDK demo agent (WP-3.6). Apply only to the demo agent, never to the product gateway.
 

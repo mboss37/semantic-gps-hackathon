@@ -29,29 +29,19 @@
   - C.1 Real OpenAPI HTTP proxy (`lib/mcp/proxy-openapi.ts`) — decrypt `auth_config`, bearer/basic/apikey, path+query+body composition, SSRF-guarded safeFetch, 5xx retry
   - C.2 Real direct-MCP HTTP-Streamable proxy (`lib/mcp/proxy-http.ts`) — JSON-RPC `tools/call` forward, `application/json` or single-event SSE, Zod boundary validation
   - Validations: hosted Supabase migrated via `db push`; Tier 2 real-proxy smoke against httpbin.org green; Tier 1 Opus 4.7 → deployed `/api/mcp` → echo tool E2E in 4.87s. Pre-commit review flow updated (subagent reviews, human approves, main writes marker) to kill tooling false positives.
+- **Sprint 5 — Day 2: scoped gateway + routes schema + auth pages (Thu 2026-04-23):**
+  - C.3 `REAL_PROXY_ENABLED` flipped default-on; typed `ExecuteResult` discriminated union; `mcp_events.latency_ms` now prefers upstream wire time
+  - C.5 `tools/list` emits `_meta.relationships: [{ to, type, description }]` per tool when outgoing edges exist; omitted otherwise
+  - B.2 `routes` + `route_steps` tables with ordered steps, `fallback_route_id` (set null), `rollback_tool_id` (set null), `tool_id` (restrict) — unblocks F.1 `execute_route`
+  - D.1 Three-tier scoped gateway: `/api/mcp` (org) + `/api/mcp/domain/[slug]` + `/api/mcp/server/[id]`; shared `buildGatewayHandler(scopeResolver)`; per-scope `Manifest` cache keyed on `ManifestScope` discriminated union
+  - G.5 3 new pre-call policies (`basic_auth`, `client_id`, `ip_allowlist`) fail-closed; `PreCallContext` gained `headers` + `client_ip` threaded from the Request; IPv4 CIDR matcher inline; 25 unit tests
+  - A.2 Supabase email/pw signup + login + logout pages (client form split into its own component for Suspense boundary around `useSearchParams`); `proxy.ts` + dashboard layout redirect to `/login` instead of dev-login; dev-login still available behind env gate for seeded demo
+  - Validations: local `pnpm test` 95/97 ✓, httpbin smoke 2/2 ✓, local gateway curl all 3 scopes ✓, `supabase db push` applied routes + builtin_keys to hosted, deployed gateway curl all 3 scopes ✓, Opus 4.7 → deployed `/api/mcp` E2E 9.76s ✓, `pnpm exec next build` ✓
 
-## Current: Sprint 5 — Gateway routing + routes schema + auth (Thu 2026-04-23, 6 WPs)
-
-Day 1 shipped schema + real proxies. Day 2 goal: flip real-proxy default-on, open three-tier gateway routing (unblocks J.1 Playground), land `routes` + `route_steps` (unblocks F.1 `execute_route`), ship real auth pages (unblocks D.2 gateway auth Fri). Parallel UI work on 3 more built-in policies.
-
-- [ ] **C.3** (S) Dispatcher: flip `REAL_PROXY_ENABLED=1` default-on; drop feature-flag branch from `tool-dispatcher.ts`; audit logs carry `upstream_latency_ms`.
-- [ ] **D.1** (M) `/api/mcp/domain/[id]` + `/api/mcp/server/[id]` scoped gateway routes with scoped `loadManifest(scope)`.
-- [ ] **B.2** (M) `routes` + `route_steps` tables (ordered, `fallback_route_id`, `rollback_tool_id`).
-- [ ] **A.2** (M) Signup + login + logout pages (Supabase email/pw). Replace dev-login. Critical path for Fri's D.2 gateway-auth WP.
-- [ ] **G.5** (M) Basic-auth + client-ID + IP allow/block built-in policies (3 of the 7 built-ins).
-- [ ] **C.5** (S) `tools/list _meta.relationships` injection so agents see typed edges as MCP metadata.
-
-### Cadence reminder
-- **Sprint 6 Fri** candidates once Thu closes: D.2 (gateway auth), E.1 E.2 E.3 (Salesforce + Slack + GitHub), F.1 (`execute_route`), G.2 (relationship CRUD UI), G.4 (rate-limit + injection-guard policies + `policy_versions` writes).
-- **Sprint 7 Sat** — last build day: F.2 F.3 (fallback + rollback execution), J.1 Playground A/B hero, I.1 I.2 (Opus showcase beats), J.3 (demo seed) + **record demo PM**.
-
-### Risks to watch
-- A.2 must land Thu — slip pushes D.2 to Sat AM and the Playground compresses into one afternoon.
-- C.3 flipping default-on means every run hits real upstreams. Post-merge: `VERIFY_REAL_PROXY=1 pnpm test smoke-real-proxy` to confirm httpbin still round-trips.
-- D.1 manifest-scope refactor is on the hot path — keep `/api/mcp` shape working so Tier 1 Anthropic E2E stays green.
-- E.1 Salesforce Dev-Edition creds must be confirmed Thu PM before E.* ships Fri.
+## Current:
+_Sprint 5 closed. Pull Sprint 6 candidates from `BACKLOG.md > Sprint 4+ queue` — unblocked after Thu: D.2 (blocked-by-A.4 which is still queued), E.1 / E.2 / E.3 (all unblocked by C.3), F.1 (unblocked by B.2 + C.3), G.2 (unblocked by B.3 from Sprint 4 Day 1), G.4 (unblocked by B.4), plus dep-free options A.3 / A.5 / C.4 / F.4 / G.6 / G.8 / H.1 / H.2._
 
 ## Session Log
-- 2026-04-22 — WP-3.5 shipped (shadcn dashboard-01 + MCP direct-import tool discovery). Reality-check vs `/projects/semantic-gps/docs` → 3.6 deferred, Sprint 4 opened. Architect + PO review of USER-STORIES.md produced 42-WP plan + locked decisions + Playground A/B hero.
 - 2026-04-22 — Sprint 4 collapsed to daily-sprint cadence (mega-sprint violated 3-6 sweet spot). Today = 6 day-1 unblockers; other 36 WPs parked in BACKLOG `Sprint 4+ queue`.
-- 2026-04-22 — Sprint 4 Day 1 shipped + wrapped: 6 WPs, 5 commits, hosted Supabase live, Opus 4.7 → deployed `/api/mcp` E2E verified. Review flow updated so subagent outputs findings only — main session writes marker after user ack. Six memories harvested (Anthropic mcp_toolset gotcha, vitest .env.local loader, review flow, idempotent migrations, sprint-size guardrail, single-tenant trigger).
+- 2026-04-22 — Sprint 4 Day 1 shipped + wrapped: 6 WPs, 5 commits, hosted Supabase live, Opus 4.7 → deployed `/api/mcp` E2E verified. Review flow updated so subagent outputs findings only — main session writes marker after user ack. Six memories harvested.
+- 2026-04-23 — Sprint 5 Day 2 shipped + wrapped: 6 WPs, 4 commits, three-tier scoped gateway live on Vercel, `REAL_PROXY_ENABLED` default-on, routes/route_steps schema ready for F.1, Supabase auth pages replace dev-login. Reviewer caught Next 16 `useSearchParams` Suspense blocker pre-build — codified `next build` into pre-commit gate. 7 hardening items queued in BACKLOG.
