@@ -2,11 +2,12 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { ChevronDownIcon, ChevronRightIcon, Trash2Icon } from 'lucide-react';
+import { Trash2Icon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export type ToolSummary = {
   name: string;
@@ -22,7 +23,7 @@ type Props = {
   tools: ToolSummary[];
 };
 
-const PREVIEW = 3;
+const CHIP_LIMIT = 12;
 
 export const ServerCard = ({ id, name, transport, originUrl, createdAt, tools }: Props) => {
   const router = useRouter();
@@ -44,70 +45,85 @@ export const ServerCard = ({ id, name, transport, originUrl, createdAt, tools }:
     }
   };
 
-  const visible = expanded ? tools : tools.slice(0, PREVIEW);
+  const shouldTruncate = tools.length > CHIP_LIMIT && !expanded;
+  const visible = shouldTruncate ? tools.slice(0, CHIP_LIMIT) : tools;
   const hiddenCount = tools.length - visible.length;
 
   return (
     <Card>
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="font-medium">{name}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              created {new Date(createdAt).toLocaleString()}
-            </p>
+          <div className="min-w-0">
+            <p className="truncate font-medium">{name}</p>
+            {originUrl && (
+              <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+                {originUrl}
+              </p>
+            )}
           </div>
-          <Badge variant="outline">{transport}</Badge>
+          <Badge variant="outline" className="shrink-0">{transport}</Badge>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        {originUrl ? (
-          <p className="truncate text-xs text-muted-foreground">{originUrl}</p>
-        ) : (
-          <p className="text-xs text-muted-foreground">inline spec import</p>
-        )}
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium">
-            {tools.length} tool{tools.length === 1 ? '' : 's'}
-          </p>
-          {tools.length > PREVIEW && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 gap-1 px-2 text-xs text-muted-foreground"
-              onClick={() => setExpanded((v) => !v)}
-            >
-              {expanded ? <ChevronDownIcon className="size-3" /> : <ChevronRightIcon className="size-3" />}
-              {expanded ? 'Collapse' : `Show all ${tools.length}`}
-            </Button>
-          )}
+      <CardContent className="flex flex-col gap-2">
+        <div className="flex items-baseline justify-between">
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">
+            Tools · {tools.length}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {new Date(createdAt).toLocaleDateString()}
+          </span>
         </div>
         {tools.length === 0 ? (
           <p className="text-xs text-muted-foreground">
-            No tools discovered. The origin may be unreachable or returned an empty list.
+            No tools discovered — origin may be unreachable.
           </p>
         ) : (
-          <ul className="flex flex-col gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
             {visible.map((t) => (
-              <li key={t.name} className="flex flex-col rounded-md border bg-muted/30 px-2 py-1.5">
-                <span className="font-mono text-xs">{t.name}</span>
+              <Tooltip key={t.name}>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant="secondary"
+                    className="font-mono text-[11px] font-normal"
+                  >
+                    {t.name}
+                  </Badge>
+                </TooltipTrigger>
                 {t.description && (
-                  <span className="line-clamp-2 text-xs text-muted-foreground">{t.description}</span>
+                  <TooltipContent side="bottom" className="max-w-xs">
+                    {t.description}
+                  </TooltipContent>
                 )}
-              </li>
+              </Tooltip>
             ))}
-            {!expanded && hiddenCount > 0 && (
-              <li className="text-xs text-muted-foreground">+{hiddenCount} more…</li>
+            {hiddenCount > 0 && (
+              <Badge
+                variant="outline"
+                className="cursor-pointer text-[11px] font-normal"
+                onClick={() => setExpanded(true)}
+              >
+                +{hiddenCount} more
+              </Badge>
             )}
-          </ul>
+            {expanded && tools.length > CHIP_LIMIT && (
+              <Badge
+                variant="outline"
+                className="cursor-pointer text-[11px] font-normal"
+                onClick={() => setExpanded(false)}
+              >
+                Collapse
+              </Badge>
+            )}
+          </div>
         )}
       </CardContent>
       <CardFooter>
         <Button
-          variant="destructive"
+          variant="ghost"
           size="sm"
           disabled={pending}
           onClick={onDelete}
+          className="text-muted-foreground hover:text-destructive"
         >
           <Trash2Icon className="size-4" />
           Delete
