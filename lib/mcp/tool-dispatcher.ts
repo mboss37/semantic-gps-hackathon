@@ -1,6 +1,7 @@
 import type { Manifest, ServerRow, ToolRow } from '@/lib/manifest/cache';
 import { proxyHttp } from '@/lib/mcp/proxy-http';
 import { proxyOpenApi } from '@/lib/mcp/proxy-openapi';
+import { proxySalesforce } from '@/lib/mcp/proxy-salesforce';
 
 // Tool dispatcher. Two codepaths:
 //   - mockExecuteTool — canned PII-rich data keyed by tool name. Fallback only
@@ -151,6 +152,11 @@ export const executeTool = async (
   }
   if (server.transport === 'http-streamable') {
     const result = await proxyHttp(tool, args, { serverId: server.id, traceId: ctx.traceId });
+    if (result.ok) return { ok: true, result: result.result, upstreamLatencyMs: result.latencyMs };
+    return { ok: false, result: { error: result.error, status: result.status }, error: result.error, status: result.status };
+  }
+  if (server.transport === 'salesforce') {
+    const result = await proxySalesforce(tool, args, { serverId: server.id, traceId: ctx.traceId });
     if (result.ok) return { ok: true, result: result.result, upstreamLatencyMs: result.latencyMs };
     return { ok: false, result: { error: result.error, status: result.status }, error: result.error, status: result.status };
   }
