@@ -23,7 +23,7 @@ CNA branding leaks into `app/layout.tsx` tab title + `app/page.tsx` marketing sh
 - [ ] `app/page.tsx` — thin Semantic GPS landing with "Open Dashboard" CTA (or direct redirect to `/dashboard`)
 
 ## [P0 daily-pull] Sprint 4+ queue — 30 WPs remaining (dep-annotated)
-Originally planned as a 42-WP mega-sprint. Collapsed to daily-sprint cadence 2026-04-22 (CLAUDE.md sweet spot = 3-6 WPs/sprint). Shipped: Sprint 4 Day 1 (A.1, B.1, B.3, B.4, C.1, C.2). Currently in flight: Sprint 5 Thu (A.2, B.2, C.3, C.5, D.1, G.5). Fri/Sat pulls come from here. Dep convention: `← blocked by X` / `→ blocks Y`. Sizes: S <1h, M 1-3h, L >3h. Pull rule: morning picks WPs whose `← blocked by` edges all landed.
+Originally planned as a 42-WP mega-sprint. Collapsed to daily-sprint cadence 2026-04-22 (CLAUDE.md sweet spot = 3-6 WPs/sprint). Shipped: Sprint 4 Day 1 (A.1, B.1, B.3, B.4, C.1, C.2), Sprint 5 Thu (A.2, B.2, C.3, C.5, D.1, G.5), Sprint 6 (A.4, D.2, F.1, G.2, G.4, G.6). Fri/Sat pulls come from here. Dep convention: `← blocked by X` / `→ blocks Y`. Sizes: S <1h, M 1-3h, L >3h. Pull rule: morning picks WPs whose `← blocked by` edges all landed.
 
 **Projected judge card (all P0 landing):** Impact 9 · Demo 9 · Opus 4.7 Use 8 · Depth 9 → ~87% weighted.
 
@@ -31,14 +31,10 @@ Originally planned as a 42-WP mega-sprint. Collapsed to daily-sprint cadence 202
 
 ### A. Platform — Auth + Org + Settings
 - [ ] **A.3** (S) Password reset flow (request + submit). ← A.2
-- [ ] **A.4** (S) Real auth middleware on `proxy.ts`; remove dev-login bypass. ← A.2 → D.2, J.2
 - [ ] **A.5** (S) Settings page — username + org name edit. ← A.1, A.2
 
 ### C. Real proxy layer
 - [ ] **C.4** (M) Multi-origin per server + health-driven origin swap. ← C.3, F.4 → F.2
-
-### D. Three-tier gateway routing + auth
-- [ ] **D.2** (M) Gateway auth header verification — reject unauthenticated calls before any tool; per-endpoint token scheme. ← A.4 → J.1, J.2
 
 ### E. Real integrations
 - [ ] **E.1** (M) Salesforce via `jsforce` username-password + curated 5 tools (find_account, find_contact, get_opportunity, update_opportunity_stage, create_task). ← C.3, B.1 → F.1 e2e, J.1, J.3
@@ -46,17 +42,13 @@ Originally planned as a 42-WP mega-sprint. Collapsed to daily-sprint cadence 202
 - [ ] **E.3** (M) GitHub — register official MCP server via HTTP-Streamable direct-MCP federation; PAT auth. ← C.3, B.1 → J.1, J.3
 
 ### F. Routes + stateful orchestration
-- [ ] **F.1** (L) `execute_route` MCP method — sequential steps, output threading via `output_capture_key` → next-step `input_mapping`, per-step policy stack, chained `trace_id`. ← B.2, C.3, E.* → F.2, F.3, G.1, J.1
 - [ ] **F.2** (M) Fallback execution — follows `fallback_to` edges + multi-origin swap; emits `fallback_triggered`. ← F.1, B.3, C.4 → I.2
 - [ ] **F.3** (M) Rollback execution — uses `compensated_by` edges, reverse-order compensation; emits `rollback_executed`. ← F.1, B.3 → I.2
 - [ ] **F.4** (S) Origin health probes (`/api/health/:server_id`, cached flag). ← B.1 → C.4, G.7
 
 ### G. TRel completion + policies + authoring UI
 - [ ] **G.1** (M) `validate_workflow` + `evaluate_goal` TRel methods (real impls, not stubs). ← B.2 → J.1
-- [ ] **G.2** (M) Relationship CRUD API + dashboard UI (add/edit/delete typed edges with descriptions). ← B.3 → G.3
 - [ ] **G.3** (L) Route designer UI — React Flow step editor + rollback/fallback wiring. ← B.2, G.2
-- [ ] **G.4** (M) Rate-limit + injection-guard policies + config UI (replaces JSON textarea) + `policy_versions` writes. ← B.4 → I.4
-- [ ] **G.6** (S) Semantic rewriting layer — `tools.display_name` + `display_description`; gateway publishes display values, proxies by origin name. ← C.3
 - [ ] **G.7** (M) Per-server detail: violation counts + copy-ready MCP client config block + resources/prompts introspect. ← D.1, F.4
 - [ ] **G.8** (S) Graph: domain-boundaries toggle + per-server policy count badge. ← B.1
 
@@ -77,7 +69,6 @@ Originally planned as a 42-WP mega-sprint. Collapsed to daily-sprint cadence 202
 - [ ] **J.3** (S) Real demo seed — domain + 1 Route + 8 relationships + policies referencing REAL tool IDs from E.*. ← E.*, G.2
 
 ### Risks
-- D.2 gateway auth cannot ship before A.4; J.2 E2E depends on both.
 - E.1 Salesforce username-password requires a Dev-Edition with API access — confirm creds before Fri.
 - J.1 Playground is L-size with 5 cross-stream deps → highest slip risk; pull no later than Sat AM.
 
