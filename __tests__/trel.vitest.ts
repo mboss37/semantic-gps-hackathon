@@ -34,6 +34,8 @@ const manifest: Manifest = {
   ],
   policies: [],
   assignments: [],
+  routes: [],
+  route_steps: [],
 };
 
 describe('discoverRelationships', () => {

@@ -1,5 +1,4 @@
 import type { Manifest, RelationshipRow, ToolRow } from '@/lib/manifest/cache';
-import { loadManifest } from '@/lib/manifest/cache';
 
 // TRel (Typed Relationships) handlers. Pure functions that read the compiled
 // manifest — no DB calls here so they stay testable with hand-rolled fixtures.
@@ -78,9 +77,9 @@ const pickStartingTool = (
 
 export const discoverRelationships = async (
   params: { server_id?: string } | undefined,
-  manifest?: Manifest,
+  manifest: Manifest,
 ): Promise<DiscoverRelationshipsResult> => {
-  const m = manifest ?? (await loadManifest());
+  const m = manifest;
   const serverId = params?.server_id;
   const tools = serverId ? m.tools.filter((t) => t.server_id === serverId) : m.tools;
   const toolIds = new Set(tools.map((t) => t.id));
@@ -106,9 +105,9 @@ export const discoverRelationships = async (
 
 export const findWorkflowPath = async (
   params: { goal: string; starting_tool?: string; max_depth?: number },
-  manifest?: Manifest,
+  manifest: Manifest,
 ): Promise<FindWorkflowPathResult> => {
-  const m = manifest ?? (await loadManifest());
+  const m = manifest;
   const maxDepth = params.max_depth ?? 3;
   const start = pickStartingTool(m.tools, params.goal, params.starting_tool);
 

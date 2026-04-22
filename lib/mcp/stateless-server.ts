@@ -5,7 +5,7 @@ import {
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
 import { logMCPEvent, redactPayload } from '@/lib/audit/logger';
-import { loadManifest } from '@/lib/manifest/cache';
+import { loadManifest, type ManifestScope } from '@/lib/manifest/cache';
 import { buildCatalog, executeTool } from '@/lib/mcp/tool-dispatcher';
 import { discoverRelationships, findWorkflowPath } from '@/lib/mcp/trel-handlers';
 import {
@@ -25,17 +25,55 @@ const SERVER_INFO = {
 
 type CreateServerOpts = {
   traceId: string;
+  // Manifest scope dictates which servers/tools this gateway instance sees.
+  // `org` for the root `/api/mcp`, `domain` for `/api/mcp/domain/[slug]`,
+  // `server` for `/api/mcp/server/[id]`.
+  scope: ManifestScope;
+  // Request metadata threaded into PreCallContext so request-metadata policies
+  // (basic_auth, client_id, ip_allowlist) can gate on caller identity. Gateway
+  // route extracts headers + infers IP from x-forwarded-for / x-real-ip.
+  headers?: Record<string, string>;
+  clientIp?: string;
 };
 
-export const createStatelessServer = ({ traceId }: CreateServerOpts): Server => {
+export const createStatelessServer = ({ traceId, scope, headers, clientIp }: CreateServerOpts): Server => {
   const server = new Server(SERVER_INFO, {
     capabilities: { tools: { listChanged: true } },
   });
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     const started = performance.now();
-    const manifest = await loadManifest();
+    const manifest = await loadManifest(scope);
     const catalog = buildCatalog(manifest);
+
+    // Build a tool-id -> name map once so every outgoing-edge lookup is O(1).
+    // `_meta.relationships` is the TRel sidecar that lets callers (Claude +
+    // orchestrators) see adjacency hints without a second round-trip through
+    // `discover_relationships`.
+    const toolNameById = new Map<string, string>();
+    for (const t of manifest.tools) toolNameById.set(t.id, t.name);
+
+    const tools = catalog.map((t) => {
+      const outgoing = manifest.relationships
+        .filter((r) => r.from_tool_id === t.tool_id)
+        .map((r) => ({
+          to: toolNameById.get(r.to_tool_id) ?? null,
+          type: r.relationship_type,
+          description: r.description,
+        }))
+        .filter(
+          (r): r is { to: string; type: typeof r.type; description: string } => r.to !== null,
+        );
+
+      const base: { name: string; description: string; inputSchema: Record<string, unknown>; _meta?: Record<string, unknown> } = {
+        name: t.name,
+        description: t.description,
+        inputSchema: t.input_schema,
+      };
+      if (outgoing.length > 0) base._meta = { relationships: outgoing };
+      return base;
+    });
+
     logMCPEvent({
       trace_id: traceId,
       method: 'tools/list',
@@ -43,18 +81,12 @@ export const createStatelessServer = ({ traceId }: CreateServerOpts): Server => 
       latency_ms: Math.round(performance.now() - started),
       payload: { tool_count: catalog.length },
     });
-    return {
-      tools: catalog.map((t) => ({
-        name: t.name,
-        description: t.description,
-        inputSchema: t.input_schema,
-      })),
-    };
+    return { tools };
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const started = performance.now();
-    const manifest = await loadManifest();
+    const manifest = await loadManifest(scope);
     const catalog = buildCatalog(manifest);
     const name = req.params.name;
     const args = (req.params.arguments ?? {}) as Record<string, unknown>;
@@ -94,6 +126,8 @@ export const createStatelessServer = ({ traceId }: CreateServerOpts): Server => 
       tool_id: entry.tool_id,
       tool_name: entry.name,
       args,
+      headers,
+      client_ip: clientIp,
     };
 
     const pre = runPreCallPolicies(policyCtx, manifest);
@@ -114,17 +148,23 @@ export const createStatelessServer = ({ traceId }: CreateServerOpts): Server => 
       };
     }
 
-    const rawResult = await executeTool(manifest, entry, args, { traceId });
-    const post = runPostCallPolicies({ ...policyCtx, result: rawResult }, manifest);
+    const execResult = await executeTool(manifest, entry, args, { traceId });
+    const post = runPostCallPolicies({ ...policyCtx, result: execResult.result }, manifest);
+
+    // Prefer the upstream latency from the real proxy when available — gives
+    // the audit row a pure "time on the wire" measurement instead of the full
+    // gateway round-trip (policies + serialization). Falls back to total
+    // gateway latency for mock/builtin paths.
+    const latencyMs = execResult.upstreamLatencyMs ?? Math.round(performance.now() - started);
 
     logMCPEvent({
       trace_id: traceId,
       server_id: entry.server_id,
       tool_name: entry.name,
       method: 'tools/call',
-      status: 'ok',
+      status: execResult.ok ? 'ok' : 'origin_error',
       policy_decisions: [...pre.decisions, ...post.decisions],
-      latency_ms: Math.round(performance.now() - started),
+      latency_ms: latencyMs,
       payload: { args: redactPayload(args), result: redactPayload(post.result) },
     });
 
@@ -135,7 +175,8 @@ export const createStatelessServer = ({ traceId }: CreateServerOpts): Server => 
 
   server.setRequestHandler(DiscoverRelationshipsRequestSchema, async (req) => {
     const started = performance.now();
-    const result = await discoverRelationships(req.params);
+    const manifest = await loadManifest(scope);
+    const result = await discoverRelationships(req.params, manifest);
     logMCPEvent({
       trace_id: traceId,
       method: 'discover_relationships',
@@ -152,7 +193,8 @@ export const createStatelessServer = ({ traceId }: CreateServerOpts): Server => 
 
   server.setRequestHandler(FindWorkflowPathRequestSchema, async (req) => {
     const started = performance.now();
-    const result = await findWorkflowPath(req.params);
+    const manifest = await loadManifest(scope);
+    const result = await findWorkflowPath(req.params, manifest);
     logMCPEvent({
       trace_id: traceId,
       method: 'find_workflow_path',

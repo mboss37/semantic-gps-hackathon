@@ -1,30 +1,15 @@
-import { randomUUID } from 'node:crypto';
-import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
-import { createStatelessServer } from '@/lib/mcp/stateless-server';
+import { buildGatewayHandler, demoOrgScope } from '@/lib/mcp/gateway-handler';
 
-// The gateway endpoint. Stateless: every request rebuilds the MCP Server,
-// connects to a fresh transport, handles the request, disposes.
-// HTTP-Streamable transport via Web Standard APIs — works in any runtime
-// that speaks Request/Response (Next.js App Router, Cloudflare Workers, Bun).
+// The root gateway endpoint — org-wide scope. Stateless: every request
+// rebuilds the MCP Server, connects a fresh transport, handles, disposes.
+// HTTP-Streamable transport via Web Standard APIs.
+// Sprint 5 note: auth lands in D.2 (Fri). Until then, scope resolves from
+// the seeded demo user's membership.
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const handle = async (request: Request): Promise<Response> => {
-  const traceId = randomUUID();
-  const server = createStatelessServer({ traceId });
-  const transport = new WebStandardStreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
-    enableJsonResponse: true,
-  });
-
-  try {
-    await server.connect(transport);
-    return await transport.handleRequest(request);
-  } finally {
-    await server.close().catch(() => {});
-  }
-};
+const handle = buildGatewayHandler(async () => demoOrgScope());
 
 export const GET = handle;
 export const POST = handle;

@@ -14,6 +14,8 @@ const buildManifest = (policies: PolicyRow[], assignments: Manifest['assignments
   relationships: [],
   policies,
   assignments,
+  routes: [],
+  route_steps: [],
 });
 
 const pii = (mode: PolicyRow['enforcement_mode']): PolicyRow => ({

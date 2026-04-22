@@ -1,9 +1,15 @@
 import type { Manifest, PolicyAssignmentRow, PolicyRow } from '@/lib/manifest/cache';
 import {
   runAllowlist,
+  runBasicAuth,
+  runClientId,
+  runIpAllowlist,
   runPiiRedaction,
   type AllowlistConfig,
+  type ClientIdConfig,
+  type IpAllowlistConfig,
   type PiiRedactionConfig,
+  type PreCallVerdict,
 } from '@/lib/policies/built-in';
 
 // The gateway hot-path adapter for policies. Turns an assignment-graph plus
@@ -28,6 +34,11 @@ export type PreCallContext = {
   tool_id: string;
   tool_name: string;
   args: unknown;
+  // Populated by the MCP gateway from the incoming Request. Optional so
+  // non-gateway callers (tests, tool-dispatcher direct paths) can skip them —
+  // the request-metadata policies deny-by-default when missing.
+  headers?: Record<string, string>;
+  client_ip?: string;
 };
 
 export type PostCallContext = PreCallContext & { result: unknown };
@@ -63,13 +74,28 @@ const applicablePolicies = (
   return manifest.policies.filter((p) => policyIds.has(p.id));
 };
 
+const evaluatePreCall = (policy: PolicyRow, ctx: PreCallContext): PreCallVerdict | null => {
+  switch (policy.builtin_key) {
+    case 'allowlist':
+      return runAllowlist(ctx.tool_name, policy.config as AllowlistConfig);
+    case 'basic_auth':
+      return runBasicAuth(ctx.headers);
+    case 'client_id':
+      return runClientId(ctx.headers, policy.config as ClientIdConfig);
+    case 'ip_allowlist':
+      return runIpAllowlist(ctx.client_ip, policy.config as IpAllowlistConfig);
+    default:
+      return null;
+  }
+};
+
 export const runPreCallPolicies = (ctx: PreCallContext, manifest: Manifest): PreCallOutcome => {
   const decisions: PolicyDecision[] = [];
   const policies = applicablePolicies({ server_id: ctx.server_id, tool_id: ctx.tool_id }, manifest);
 
   for (const policy of policies) {
-    if (policy.builtin_key !== 'allowlist') continue;
-    const verdict = runAllowlist(ctx.tool_name, policy.config as AllowlistConfig);
+    const verdict = evaluatePreCall(policy, ctx);
+    if (verdict === null) continue;
     if (verdict.ok) {
       decisions.push({
         policy_id: policy.id,
