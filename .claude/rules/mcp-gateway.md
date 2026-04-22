@@ -17,3 +17,4 @@ paths: ["app/api/mcp/**", "lib/mcp/**", "lib/manifest/**", "lib/policies/**"]
 - Every gateway call writes to `mcp_events` via `logMCPEvent` — fire-and-forget, never block
 - Use `redactPayload()` before logging — never write raw secrets or PII to `mcp_events`
 - Service role Supabase client is used here and here only (no user session on MCP route)
+- Real upstream tool calls go through `proxyOpenApi` (`transport === 'openapi'`) or `proxyDirectMcp` (`transport === 'http-streamable'`). `executeTool()` in `lib/mcp/tool-dispatcher.ts` dispatches behind `REAL_PROXY_ENABLED === '1'` and falls back to `mockExecuteTool` when off, missing server, missing tool, or unknown transport — never silent success. Never bare-`fetch` an upstream; always via `safeFetch` inside the proxies.

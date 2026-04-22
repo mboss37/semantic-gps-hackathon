@@ -131,13 +131,46 @@ semantic-gps/
 
 ## Database Schema (MVP)
 
-Single-org, no RLS multi-tenancy. Every table has `user_id` where ownership matters; that's it.
+Multi-tenant-ready, RLS off for now. `organizations` + `memberships` hold tenancy; every domain table FKs back to an org. Single-admin role for MVP, V2 expands the enum.
 
 ```sql
--- Servers: registered MCP backends
+-- Organizations: one per signup (admin's workspace)
+CREATE TABLE organizations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Memberships: user ↔ org with role. MVP locks role to 'admin'.
+CREATE TABLE memberships (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL DEFAULT 'admin' CHECK (role IN ('admin')),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE (organization_id, user_id)
+);
+
+-- Trigger: auto-create org + admin membership + default SalesOps domain on signup.
+-- SECURITY DEFINER + pinned search_path; see supabase/migrations/20260422120000_organizations.sql.
+
+-- Domains: mid-tier scope (org → domain → server). Used by the Playground A/B
+-- hero demo (gateway serves `/api/mcp/domain/salesops` vs `/api/mcp`).
+CREATE TABLE domains (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  slug TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE (organization_id, slug)
+);
+
+-- Servers: registered MCP backends. Org-scoped, optionally pinned to a domain.
 CREATE TABLE servers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  domain_id UUID REFERENCES domains(id) ON DELETE SET NULL,
   name TEXT NOT NULL,
   origin_url TEXT,               -- NULL for native-Tool servers
   transport TEXT NOT NULL CHECK (transport IN ('http-streamable', 'openapi')),
@@ -189,6 +222,19 @@ CREATE TABLE policy_assignments (
   tool_id UUID REFERENCES tools(id) ON DELETE CASCADE  -- NULL = applies to whole server
 );
 
+-- Policy versions: snapshot every insert/update on policies for audit + rollback.
+-- Trigger-driven; app layer doesn't write here directly.
+CREATE TABLE policy_versions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  policy_id UUID REFERENCES policies(id) ON DELETE CASCADE,
+  version INT NOT NULL,
+  config JSONB NOT NULL,
+  enforcement_mode TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  created_by UUID REFERENCES auth.users(id),
+  UNIQUE (policy_id, version)
+);
+
 -- Audit log: every gateway interaction
 CREATE TABLE mcp_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -222,9 +268,11 @@ CREATE INDEX idx_relationships_to ON relationships(to_tool_id);
 | POST | `/api/mcp` | MCP JSON-RPC endpoint. Handles `initialize`, `tools/list`, `tools/call`, plus TRel extensions `discover_relationships`, `find_workflow_path`, `validate_workflow`. |
 
 ### Dashboard (auth-gated)
+All endpoints org-scope via `requireAuth()` → `organization_id`. Every read filters by the caller's org, every insert pins the row to it.
+
 | Method | Path | Purpose |
 |---|---|---|
-| GET/POST/PATCH/DELETE | `/api/servers` | CRUD MCP server registrations |
+| GET/POST/PATCH/DELETE | `/api/servers` | CRUD MCP server registrations (org-scoped) |
 | POST | `/api/openapi-import` | `{ url }` → auto-create server + tools |
 | GET/POST/DELETE | `/api/relationships` | CRUD graph edges |
 | GET/POST/PATCH/DELETE | `/api/policies` | Built-in refs + JSON config |
@@ -426,6 +474,9 @@ Things that will silently bite if not explicitly called out:
 12. **Supabase 2026 key format parity.** Local `supabase start` emits the same `sb_publishable_*` / `sb_secret_*` format as hosted projects. Use canonical env names (`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`); the legacy `ANON_KEY` / `SERVICE_ROLE_KEY` names still work but are deprecated.
 13. **Port 54322 conflict = another Supabase stack running.** `pnpm supabase stop --project-id <other>` stops it without data loss (Docker volumes persist). Don't change ports unless you need both stacks concurrently.
 14. **Infra setup belongs in sprint 1, not demo day.** Vercel + Marketplace integration is one-shot and <30 min. Deploying early surfaces prod-only failures during iteration, not at submission.
+15. **Anthropic `mcp-client-2025-11-20` beta requires `mcp_toolset` pairing in `tools`.** Defining `mcp_servers` alone returns 400. Add `{ type: 'mcp_toolset', mcp_server_name: '<name>' }` in the `tools` array matching the server name exactly.
+16. **Vitest doesn't auto-load `.env.local`.** Inline a tiny dotenv parser at the top of `vitest.config.ts` (before `defineConfig`) — shell-source can miss vars that fail POSIX parse, and worker processes don't always see main-process env mutations.
+17. **Idempotent migrations unblock first-production `supabase db push`.** `drop constraint if exists`, `where not exists` guards on INSERTs, empty-case-safe DO blocks. Without them, the first push to hosted runs against a partial state and fails loudly.
 
 ---
 

@@ -12,6 +12,7 @@ paths: ["app/api/**"]
 - `await params` — Next.js 16 route params are async
 - Use `lib/supabase/server.ts` (user-scoped) in any route with a session
 - Use `lib/supabase/service.ts` (service role) **ONLY** in `app/api/mcp/route.ts`
+- **Org-scope every query.** `requireAuth()` returns `organization_id`. All `servers` / `tools` / `relationships` / `policies` reads + writes must filter by that org (`.eq('organization_id', organization_id)` on reads, include it on inserts). Cross-org data leaks start here.
 - Check Supabase `{ error }` — errors are returned, not thrown
 - `.single()` only when exactly one row is expected; otherwise `.maybeSingle()`
 - Never expose internal error details in responses — return typed error codes

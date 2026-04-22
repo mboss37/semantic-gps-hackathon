@@ -21,47 +21,19 @@
   - 3.4 Policy engine + enforce/shadow toggle (PII + allowlist built-ins) + manifest-aware gateway
   - 3.5 Dashboard (shadcn dashboard-01) + MCP direct-import tool discovery + server-card tool chips
   - 3.6 Seed + embedded demo agent — **DEFERRED to Sprint 4 WP-4.18**. Reality check on 2026-04-22 vs. the reference architecture at `/projects/semantic-gps/docs` surfaced that shipping a demo on mocked tool execution, a half-built TRel, and zero real integrations would be a vanity win. Scope got re-drawn.
+- **Sprint 4 — Day 1: schema foundation + real proxies (Wed 2026-04-22):**
+  - A.1 `organizations` + `memberships` schema + `on_auth_user_created` trigger; `servers.user_id` → `organization_id`
+  - B.1 `domains` table + `servers.domain_id` FK; trigger extended to auto-seed default SalesOps domain on signup
+  - B.3 Relationship taxonomy migrated to the stories' 8 types (`produces_input_for`, `requires_before`, `suggests_after`, `mutually_exclusive`, `alternative_to`, `validates`, `compensated_by`, `fallback_to`) — CHECK constraint, manifest type, TRel BFS, graph legend, tests all in sync
+  - B.4 `policy_versions` audit table with AFTER-INSERT/UPDATE trigger snapshotting every policies mutation
+  - C.1 Real OpenAPI HTTP proxy (`lib/mcp/proxy-openapi.ts`) — decrypt `auth_config`, bearer/basic/apikey, path+query+body composition, SSRF-guarded safeFetch, 5xx retry
+  - C.2 Real direct-MCP HTTP-Streamable proxy (`lib/mcp/proxy-http.ts`) — JSON-RPC `tools/call` forward, `application/json` or single-event SSE, Zod boundary validation
+  - Validations: hosted Supabase migrated via `db push`; Tier 2 real-proxy smoke against httpbin.org green; Tier 1 Opus 4.7 → deployed `/api/mcp` → echo tool E2E in 4.87s. Pre-commit review flow updated (subagent reviews, human approves, main writes marker) to kill tooling false positives.
 
-## Current: Sprint 4 — Day-1 unblockers (Wed 2026-04-22, 6 WPs)
-
-Daily-sprint cadence through Sat (CLAUDE.md sweet spot = 3-6 WPs/sprint). Each morning: pull the next day's WPs from `BACKLOG.md` → `Sprint 4+ queue` using the dep graph to pick what's unblocked.
-
-Today's goal: land schema + real proxy foundations so Thu can parallelize against real integrations (E.*) and route orchestration (F.*).
-
-- [ ] **A.1** (M) `organizations` + `memberships` schema; migrate `servers.user_id` → `organization_id`; auto-create org + admin membership on first signup.
-- [ ] **B.1** (S) `domains` table + `servers.domain_id` FK + seed "SalesOps" domain. ← A.1
-- [ ] **B.3** (S) Relationship taxonomy migration — replace CHECK with stories' 8 types (`produces_input_for`, `requires_before`, `suggests_after`, `mutually_exclusive`, `alternative_to`, `validates`, `compensated_by`, `fallback_to`). Update TRel handlers + tests + docs.
-- [ ] **B.4** (S) `policy_versions` table + snapshot trigger on policy mutations.
-- [ ] **C.1** (M) Real OpenAPI HTTP proxy (`lib/mcp/proxy-openapi.ts`) — decrypt `auth_config`, inject auth header, compose path/query/body, SSRF-guard, 5xx retry.
-- [ ] **C.2** (M) Real direct-MCP HTTP-Streamable proxy (`lib/mcp/proxy-http.ts`) — JSON-RPC forward `tools/call` to upstream with decrypted bearer.
-
-### Cadence
-- **Sprint 4** · Wed today · 6 WPs above
-- **Sprint 5** · Thu · pull AM from queue — likely `A.2, B.2, C.3, D.1` + one UI WP
-- **Sprint 6** · Fri · likely `D.2, E.1, E.2, E.3, F.1, G.2, G.4`
-- **Sprint 7** · Sat **last build day** · `F.2, F.3, J.1 hero, I.1, I.2, J.3` + **record demo PM**
-- **Sun** · submission only (README + summary + upload). No debugging.
-
-Queue is aspirational — actual daily pulls pick whatever's unblocked that morning.
-
-### Hero demo
-**Playground A/B** — left pane Claude Opus 4.7 + raw SF/Slack/GitHub MCPs (ungoverned); right pane same Opus 4.7 + `/api/mcp/domain/salesops`. Same scenario, same backends, same agent. Mid-demo PII enforce toggle on right pane only — next run redacts customer email in the Slack post.
-
-### Locked decisions
-- **Taxonomy:** stories' 8 types. `fallback_to` drives fallback execution, `compensated_by` drives rollback execution.
-- **Auth:** Supabase email/pw. First signup auto-creates org + admin. No invites/roles UI.
-- **Salesforce:** `jsforce` username-password.
-- **Policies:** ship built-ins only (PII, allowlist, rate-limit, injection-guard, Basic-auth, client-ID, IP allow/block).
-- **Playground is the hero demo.**
-- **Monitoring:** 3 lean widgets fixed.
-
-### Risks to watch
-- B.3 is the day-1 domino — blocks downstream G.2 + F.2 + F.3. Land it today.
-- E.1 Salesforce needs a Dev-Edition with API access — confirm creds before pulling E.* (Fri).
-- J.1 Playground is L-size + 5 cross-stream deps → highest slip risk; pull no later than Sat AM.
-- Live integration tests burn real API quotas — gate behind `VERIFY_INTEGRATIONS=1`.
+## Current:
+_Sprint closed. Pull Sprint 5 candidates from `BACKLOG.md > Sprint 4+ queue` — dep-unblocked after today: A.2, A.4, A.5, B.2, C.3, C.4, C.5, D.1, D.2, F.4, G.2, G.5, H.1, H.2._
 
 ## Session Log
-- 2026-04-21 — Sprint 3 opened; WP-3.1 through 3.4 shipped same day (core schema + gateway + TRel discovery + policy engine). Opt-in Anthropic SDK test proves Opus 4.7 drives the deployed gateway via MCP connector.
 - 2026-04-22 — WP-3.5 shipped (shadcn dashboard-01 + MCP direct-import tool discovery). Reality-check vs `/projects/semantic-gps/docs` → 3.6 deferred, Sprint 4 opened. Architect + PO review of USER-STORIES.md produced 42-WP plan + locked decisions + Playground A/B hero.
-- 2026-04-22 — Sprint 4 collapsed to daily-sprint cadence (mega-sprint violated 3-6 sweet spot). Today = 6 day-1 unblockers; other 36 WPs parked in BACKLOG `Sprint 4+ queue` for Thu/Fri/Sat daily pulls. Sat = record demo, Sun = submission only.
+- 2026-04-22 — Sprint 4 collapsed to daily-sprint cadence (mega-sprint violated 3-6 sweet spot). Today = 6 day-1 unblockers; other 36 WPs parked in BACKLOG `Sprint 4+ queue`.
+- 2026-04-22 — Sprint 4 Day 1 shipped + wrapped: 6 WPs, 5 commits, hosted Supabase live, Opus 4.7 → deployed `/api/mcp` E2E verified. Review flow updated so subagent outputs findings only — main session writes marker after user ack. Six memories harvested (Anthropic mcp_toolset gotcha, vitest .env.local loader, review flow, idempotent migrations, sprint-size guardrail, single-tenant trigger).

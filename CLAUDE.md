@@ -31,6 +31,7 @@ These are the source of truth for the build — read them before writing code, a
 
 - **`docs/ARCHITECTURE.md`** — operating manual. Stack choices, folder layout, DB schema, API surface, MCP gateway design, security baseline, non-negotiable conventions, hard-won lessons, day-1 checklist, explicit "what not to touch" list.
 - **`docs/PROJECT.md`** — pitch & scope. Problem, features, demo scenarios, day-by-day build plan, success criteria, out-of-scope list.
+- **`docs/USER-STORIES.md`** — locked user-story spec. Canonical relationship taxonomy, V2 cut-lines, Playground A/B hero narrative. Sprint scope must trace back to a story here.
 - **`BACKLOG.md`** — deferred features. Add here immediately when something is discussed but not in this sprint.
 - **`TASKS.md`** — current sprint + session log. Update as work lands.
 
@@ -149,5 +150,7 @@ Wait for all agents to return, synthesize their findings, then act.
 - **Manifest cache** in `lib/manifest/cache.ts` — invalidate on every mutation
 - **Service role Supabase client** used ONLY in the MCP gateway route; user-scoped everywhere else
 - **TRel methods** (`discover_relationships`, `find_workflow_path`, `validate_workflow`, `evaluate_goal`) are extra JSON-RPC methods on `/api/mcp` — same auth/policy stack as standard MCP methods
+- **Multi-tenant-ready schema with single-admin MVP** — `organizations` + `memberships` exist; `memberships.role` CHECK locked to `'admin'` only. First signup auto-creates org + membership + default SalesOps domain via `on_auth_user_created` trigger. RLS off for now. V2 expands role enum and enables RLS in a deliberate migration.
+- **Real-proxy behind `REAL_PROXY_ENABLED=1` feature flag** — `lib/mcp/proxy-openapi.ts` and `lib/mcp/proxy-http.ts` ship default-off for dev + vitest determinism. Flip to `1` on Vercel for prod routing. C.3 WP will make it default-on.
 - **Single-org MVP** — RLS off, one user per demo. Multi-tenancy is V2.
 - **Demos beat perfect code** — if any of the 4 success criteria breaks on stage, fall back to a recorded clip and ship
