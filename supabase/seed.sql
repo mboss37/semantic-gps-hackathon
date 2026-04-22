@@ -41,3 +41,14 @@ where u.email = 'demo@semantic-gps.dev'
   and not exists (
     select 1 from auth.identities i where i.user_id = u.id and i.provider = 'email'
   );
+
+-- Demo gateway token (plaintext intentionally exposed for demo; V2 adds UI
+-- to mint + rotate). Clients authenticate with:
+--   Authorization: Bearer sgps_demo_token_abcdef0123456789abcdef0123456789abcd
+insert into public.gateway_tokens (organization_id, token_hash, name)
+select m.organization_id,
+       encode(digest('sgps_demo_token_abcdef0123456789abcdef0123456789abcd', 'sha256'), 'hex'),
+       'demo'
+from public.memberships m
+where m.user_id = '11111111-1111-1111-1111-111111111111'
+on conflict (token_hash) do nothing;

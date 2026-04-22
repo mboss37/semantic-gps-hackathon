@@ -74,7 +74,22 @@ vi.mock('@/lib/manifest/cache', async () => {
   };
 });
 
-// Import AFTER the mock is declared so the route picks up the stubbed module.
+// Bearer-auth stub so the route gets a resolved org without a live DB.
+vi.mock('@/lib/supabase/service', () => ({
+  createServiceClient: () => ({}),
+}));
+vi.mock('@/lib/mcp/auth-token', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/lib/mcp/auth-token')>(
+      '@/lib/mcp/auth-token',
+    );
+  return {
+    ...actual,
+    resolveOrgFromToken: async () => ({ organization_id: uuid(100) }),
+  };
+});
+
+// Import AFTER the mocks are declared so the route picks up the stubbed modules.
 const { POST } = await import('@/app/api/mcp/route');
 
 type JsonRpcResponse = {
@@ -90,6 +105,7 @@ const rpc = async (body: unknown): Promise<Response> => {
     headers: {
       'content-type': 'application/json',
       accept: 'application/json, text/event-stream',
+      authorization: 'Bearer test-token',
     },
     body: JSON.stringify(body),
   });

@@ -1,8 +1,7 @@
-import { buildGatewayHandler, demoServerScope } from '@/lib/mcp/gateway-handler';
+import { buildGatewayHandler, serverScope } from '@/lib/mcp/gateway-handler';
 
 // Single-server gateway. Manifest narrows to one server + its tools +
-// relationships limited to those tools. Useful for isolating a noisy or
-// high-risk server during debugging and demo scenarios.
+// relationships limited to those tools — scoped to the token's org (WP-D.2).
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -10,9 +9,9 @@ export const dynamic = 'force-dynamic';
 type RouteContext = { params: Promise<{ id: string }> };
 
 const makeHandle = (context: RouteContext) =>
-  buildGatewayHandler(async () => {
+  buildGatewayHandler(async (_request, organizationId) => {
     const { id } = await context.params;
-    return demoServerScope(id);
+    return serverScope(organizationId, id);
   });
 
 export const GET = async (request: Request, context: RouteContext) =>

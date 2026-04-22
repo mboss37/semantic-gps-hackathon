@@ -1,5 +1,24 @@
-import { describe, expect, it } from 'vitest';
-import { POST } from '@/app/api/mcp/route';
+import { describe, expect, it, vi } from 'vitest';
+
+// Gateway smoke — bearer-auth is mocked so the suite works without a live
+// Supabase stack. Real-bearer coverage lives in gateway-auth.vitest.ts.
+vi.mock('@/lib/supabase/service', () => ({
+  createServiceClient: () => ({}),
+}));
+vi.mock('@/lib/mcp/auth-token', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/lib/mcp/auth-token')>(
+      '@/lib/mcp/auth-token',
+    );
+  return {
+    ...actual,
+    resolveOrgFromToken: async () => ({
+      organization_id: '00000000-0000-0000-0000-000000000001',
+    }),
+  };
+});
+
+const { POST } = await import('@/app/api/mcp/route');
 
 type JsonRpcResponse = {
   jsonrpc: '2.0';
@@ -14,6 +33,7 @@ const rpc = async (body: unknown, sessionId?: string): Promise<Response> => {
   const headers: Record<string, string> = {
     'content-type': 'application/json',
     accept: 'application/json, text/event-stream',
+    authorization: 'Bearer test-token',
   };
   if (sessionId) headers['mcp-session-id'] = sessionId;
   const request = new Request('http://localhost/api/mcp', {

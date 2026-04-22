@@ -1,8 +1,7 @@
-import { buildGatewayHandler, demoDomainScope } from '@/lib/mcp/gateway-handler';
+import { buildGatewayHandler, domainScope } from '@/lib/mcp/gateway-handler';
 
 // Domain-scoped gateway. Manifest is filtered to servers whose `domain_id`
-// matches the given slug. Auth arrives in D.2 — today the demo user's org
-// is the implicit scope.
+// matches the given slug, scoped to the token's org (WP-D.2).
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -10,9 +9,9 @@ export const dynamic = 'force-dynamic';
 type RouteContext = { params: Promise<{ slug: string }> };
 
 const makeHandle = (context: RouteContext) =>
-  buildGatewayHandler(async () => {
+  buildGatewayHandler(async (_request, organizationId) => {
     const { slug } = await context.params;
-    return demoDomainScope(slug);
+    return domainScope(organizationId, slug);
   });
 
 export const GET = async (request: Request, context: RouteContext) =>
