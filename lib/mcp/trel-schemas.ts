@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
-// Typed Relationships — non-standard JSON-RPC methods exposed on /api/mcp
-// alongside the MCP builtins. They share the auth + policy + audit stack
-// with tools/call because they flow through the same McpServer.
+// Typed Relationships + orchestration. Non-standard JSON-RPC methods exposed
+// on /api/mcp alongside the MCP builtins. They share the auth + policy +
+// audit stack with tools/call because they flow through the same McpServer.
 
 export const DiscoverRelationshipsRequestSchema = z.object({
   method: z.literal('discover_relationships'),
@@ -25,12 +25,51 @@ export const FindWorkflowPathRequestSchema = z.object({
   }),
 });
 
+export const ExecuteRouteRequestSchema = z.object({
+  method: z.literal('execute_route'),
+  params: z.object({
+    route_id: z.string().uuid().describe('Route UUID from the routes table.'),
+    inputs: z
+      .record(z.string(), z.unknown())
+      .default({})
+      .describe('Literal inputs bound into the first step; later steps can reference capture-bag values.'),
+  }),
+});
+
 export type DiscoverRelationshipsParams = z.infer<
   typeof DiscoverRelationshipsRequestSchema
 >['params'];
 export type FindWorkflowPathParams = z.infer<
   typeof FindWorkflowPathRequestSchema
 >['params'];
+export type ExecuteRouteParams = z.infer<typeof ExecuteRouteRequestSchema>['params'];
 
-export const TREL_METHODS = ['discover_relationships', 'find_workflow_path'] as const;
+export type ExecuteRouteStepStatus =
+  | 'ok'
+  | 'origin_error'
+  | 'blocked_by_policy'
+  | 'unauthorized';
+
+export type ExecuteRouteStep = {
+  step_order: number;
+  tool_name: string;
+  status: ExecuteRouteStepStatus;
+  latency_ms: number;
+  result?: unknown;
+  error?: string;
+};
+
+export type ExecuteRouteResult = {
+  ok: boolean;
+  route_id: string;
+  steps: ExecuteRouteStep[];
+  halted_at_step?: number;
+  rationale: string;
+};
+
+export const TREL_METHODS = [
+  'discover_relationships',
+  'find_workflow_path',
+  'execute_route',
+] as const;
 export type TrelMethod = (typeof TREL_METHODS)[number];

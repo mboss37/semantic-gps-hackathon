@@ -6,10 +6,12 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { logMCPEvent, redactPayload } from '@/lib/audit/logger';
 import { loadManifest, type ManifestScope } from '@/lib/manifest/cache';
+import { executeRoute, type PolicyContextBuilder } from '@/lib/mcp/execute-route';
 import { buildCatalog, executeTool } from '@/lib/mcp/tool-dispatcher';
 import { discoverRelationships, findWorkflowPath } from '@/lib/mcp/trel-handlers';
 import {
   DiscoverRelationshipsRequestSchema,
+  ExecuteRouteRequestSchema,
   FindWorkflowPathRequestSchema,
 } from '@/lib/mcp/trel-schemas';
 import { runPostCallPolicies, runPreCallPolicies } from '@/lib/policies/enforce';
@@ -203,6 +205,43 @@ export const createStatelessServer = ({ traceId, scope, headers, clientIp }: Cre
       payload: { params: req.params, path_length: result.path.length, rationale: result.rationale },
     });
     return result;
+  });
+
+  server.setRequestHandler(ExecuteRouteRequestSchema, async (req) => {
+    const started = performance.now();
+    const manifest = await loadManifest(scope);
+    // Per-step policy context thread the gateway-level headers + client IP so
+    // request-metadata policies (basic_auth, client_id, ip_allowlist, future
+    // rate_limit) see the same caller identity whether the call arrives via
+    // tools/call or via execute_route.
+    const policyCtxBuilder: PolicyContextBuilder = (entry, resolvedArgs) => ({
+      server_id: entry.server_id,
+      tool_id: entry.tool_id,
+      tool_name: entry.name,
+      args: resolvedArgs,
+      headers,
+      client_ip: clientIp,
+    });
+    const result = await executeRoute(req.params, manifest, policyCtxBuilder, { traceId });
+    logMCPEvent({
+      trace_id: traceId,
+      method: 'execute_route',
+      status: result.ok ? 'ok' : 'origin_error',
+      latency_ms: Math.round(performance.now() - started),
+      payload: {
+        route_id: req.params.route_id,
+        step_count: result.steps.length,
+        halted_at_step: result.halted_at_step,
+        rationale: result.rationale,
+      },
+    });
+    // MCP transport expects a content array for non-builtin responses. Wrap
+    // the structured result as a JSON text block so clients can parse it
+    // consistently with tools/call returns.
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+      structuredContent: result,
+    };
   });
 
   server.onerror = (err: Error) => {
