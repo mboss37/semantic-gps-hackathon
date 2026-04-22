@@ -48,18 +48,24 @@ export const createStatelessServer = ({ traceId, scope, headers, clientIp }: Cre
     const manifest = await loadManifest(scope);
     const catalog = buildCatalog(manifest);
 
-    // Build a tool-id -> name map once so every outgoing-edge lookup is O(1).
-    // `_meta.relationships` is the TRel sidecar that lets callers (Claude +
-    // orchestrators) see adjacency hints without a second round-trip through
-    // `discover_relationships`.
-    const toolNameById = new Map<string, string>();
-    for (const t of manifest.tools) toolNameById.set(t.id, t.name);
+    // Build a tool-id -> manifest row map once so every lookup (outgoing
+    // edges + semantic rewriting) is O(1). `_meta.relationships` is the TRel
+    // sidecar that lets callers (Claude + orchestrators) see adjacency hints
+    // without a second round-trip through `discover_relationships`.
+    const manifestRowById = new Map<string, typeof manifest.tools[number]>();
+    for (const t of manifest.tools) manifestRowById.set(t.id, t);
+
+    // Display name for outgoing edge targets: use `display_name` when set,
+    // fall back to the origin `name` — keeps edge labels consistent with the
+    // rewriting layer below.
+    const displayNameById = new Map<string, string>();
+    for (const t of manifest.tools) displayNameById.set(t.id, t.display_name ?? t.name);
 
     const tools = catalog.map((t) => {
       const outgoing = manifest.relationships
         .filter((r) => r.from_tool_id === t.tool_id)
         .map((r) => ({
-          to: toolNameById.get(r.to_tool_id) ?? null,
+          to: displayNameById.get(r.to_tool_id) ?? null,
           type: r.relationship_type,
           description: r.description,
         }))
@@ -67,9 +73,18 @@ export const createStatelessServer = ({ traceId, scope, headers, clientIp }: Cre
           (r): r is { to: string; type: typeof r.type; description: string } => r.to !== null,
         );
 
+      // WP-G.6 semantic rewriting: if the manifest row carries
+      // `display_name` / `display_description`, surface those on `tools/list`
+      // instead of the origin name/description. Dispatch in `tools/call`
+      // still looks up by origin `name` (see buildCatalog), so upstream
+      // contracts stay stable.
+      const manifestRow = manifestRowById.get(t.tool_id);
+      const displayName = manifestRow?.display_name ?? t.name;
+      const displayDescription = manifestRow?.display_description ?? t.description;
+
       const base: { name: string; description: string; inputSchema: Record<string, unknown>; _meta?: Record<string, unknown> } = {
-        name: t.name,
-        description: t.description,
+        name: displayName,
+        description: displayDescription,
         inputSchema: t.input_schema,
       };
       if (outgoing.length > 0) base._meta = { relationships: outgoing };
@@ -93,7 +108,16 @@ export const createStatelessServer = ({ traceId, scope, headers, clientIp }: Cre
     const name = req.params.name;
     const args = (req.params.arguments ?? {}) as Record<string, unknown>;
 
-    const entry = catalog.find((t) => t.name === name);
+    // WP-G.6: `tools/list` surfaces `display_name` when set, so `tools/call`
+    // must accept EITHER origin name or display_name. Origin name still wins
+    // if both exist (protects against display collisions). Builtin tools
+    // have no manifest row, so they only match by origin name.
+    const displayToOrigin = new Map<string, string>();
+    for (const t of manifest.tools) {
+      if (t.display_name) displayToOrigin.set(t.display_name, t.name);
+    }
+    const originName = displayToOrigin.get(name) ?? name;
+    const entry = catalog.find((t) => t.name === originName);
     if (!entry) {
       logMCPEvent({
         trace_id: traceId,
