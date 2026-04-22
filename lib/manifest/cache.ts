@@ -7,13 +7,22 @@ import { createServiceClient } from '@/lib/supabase/service';
 
 export type ServerRow = {
   id: string;
-  user_id: string | null;
+  organization_id: string;
+  domain_id: string | null;
   name: string;
   origin_url: string | null;
   transport: 'http-streamable' | 'openapi';
   openapi_spec: unknown;
   auth_config: unknown;
   created_at: string;
+};
+
+export type DomainRow = {
+  id: string;
+  organization_id: string;
+  slug: string;
+  name: string;
+  description: string | null;
 };
 
 export type ToolRow = {
@@ -29,14 +38,14 @@ export type RelationshipRow = {
   from_tool_id: string;
   to_tool_id: string;
   relationship_type:
-    | 'depends_on'
-    | 'composes_into'
+    | 'produces_input_for'
+    | 'requires_before'
+    | 'suggests_after'
+    | 'mutually_exclusive'
     | 'alternative_to'
-    | 'prerequisite'
-    | 'conflicts_with'
-    | 'enables'
-    | 'requires_auth'
-    | 'deprecated_by';
+    | 'validates'
+    | 'compensated_by'
+    | 'fallback_to';
   description: string;
 };
 

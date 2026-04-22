@@ -162,8 +162,8 @@ CREATE TABLE relationships (
   from_tool_id UUID REFERENCES tools(id) ON DELETE CASCADE,
   to_tool_id UUID REFERENCES tools(id) ON DELETE CASCADE,
   relationship_type TEXT NOT NULL CHECK (relationship_type IN (
-    'depends_on', 'composes_into', 'alternative_to', 'prerequisite',
-    'conflicts_with', 'enables', 'requires_auth', 'deprecated_by'
+    'produces_input_for', 'requires_before', 'suggests_after', 'mutually_exclusive',
+    'alternative_to', 'validates', 'compensated_by', 'fallback_to'
   )),
   description TEXT NOT NULL,
   UNIQUE (from_tool_id, to_tool_id, relationship_type)

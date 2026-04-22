@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Manifest } from '@/lib/manifest/cache';
+import type { Manifest, RelationshipRow } from '@/lib/manifest/cache';
 import { discoverRelationships, findWorkflowPath } from '@/lib/mcp/trel-handlers';
 
 const uuid = (n: number): string => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
@@ -26,11 +26,11 @@ const manifest: Manifest = {
     { id: T.unrelated, server_id: SERVER_B, name: 'otherServerTool', description: 'Belongs to another server.', input_schema: {} },
   ],
   relationships: [
-    { id: uuid(20), from_tool_id: T.search, to_tool_id: T.getCustomer, relationship_type: 'enables', description: 'search finds IDs that getCustomer consumes' },
-    { id: uuid(21), from_tool_id: T.getCustomer, to_tool_id: T.listOrders, relationship_type: 'enables', description: 'customer data informs order lookup' },
-    { id: uuid(22), from_tool_id: T.listOrders, to_tool_id: T.createTicket, relationship_type: 'composes_into', description: 'tickets reference orders' },
+    { id: uuid(20), from_tool_id: T.search, to_tool_id: T.getCustomer, relationship_type: 'produces_input_for', description: 'search finds IDs that getCustomer consumes' },
+    { id: uuid(21), from_tool_id: T.getCustomer, to_tool_id: T.listOrders, relationship_type: 'produces_input_for', description: 'customer data informs order lookup' },
+    { id: uuid(22), from_tool_id: T.listOrders, to_tool_id: T.createTicket, relationship_type: 'suggests_after', description: 'tickets commonly follow an order lookup' },
     { id: uuid(23), from_tool_id: T.createTicket, to_tool_id: T.sendEmail, relationship_type: 'alternative_to', description: 'can send email instead of a ticket' },
-    { id: uuid(24), from_tool_id: T.getCustomer, to_tool_id: T.createTicket, relationship_type: 'depends_on', description: 'ticket requires customer — reverse edge, not followed by BFS' },
+    { id: uuid(24), from_tool_id: T.getCustomer, to_tool_id: T.createTicket, relationship_type: 'requires_before', description: 'ticket requires customer — reverse-sense edge for BFS coverage' },
   ],
   policies: [],
   assignments: [],
@@ -61,8 +61,8 @@ describe('findWorkflowPath', () => {
     expect(names[0]).toBe('searchCustomers');
     expect(names).toContain('getCustomer');
     expect(names).toContain('createSupportTicket');
-    // Reverse-direction depends_on from getCustomer → createTicket must NOT be followed
-    // (we only follow composes_into / enables / alternative_to).
+    // BFS only walks forward edges (produces_input_for / suggests_after / alternative_to),
+    // so the `requires_before` edge getCustomer→createTicket must NOT be followed.
     // sendEmail is reachable via alternative_to from createSupportTicket.
     expect(names).toContain('sendEmail');
     expect(names).not.toContain('otherServerTool');
@@ -78,5 +78,35 @@ describe('findWorkflowPath', () => {
     );
     expect(out.path).toHaveLength(0);
     expect(out.rationale).toMatch(/no tool matched/i);
+  });
+});
+
+describe('relationship taxonomy guard', () => {
+  it('accepts all 8 canonical types and rejects anything else at the type level', () => {
+    // Exhaustive list of valid types — assigning each one must compile.
+    const valid: ReadonlyArray<RelationshipRow['relationship_type']> = [
+      'produces_input_for',
+      'requires_before',
+      'suggests_after',
+      'mutually_exclusive',
+      'alternative_to',
+      'validates',
+      'compensated_by',
+      'fallback_to',
+    ];
+    expect(valid).toHaveLength(8);
+
+    // The following row uses a retired type and MUST fail typecheck. This
+    // stands in for the DB CHECK constraint that rejects the same string at
+    // runtime (exercised in the migration's integration path, not here).
+    const bad = {
+      id: uuid(99),
+      from_tool_id: T.search,
+      to_tool_id: T.getCustomer,
+      // @ts-expect-error — 'depends_on' is not in the canonical 8 types.
+      relationship_type: 'depends_on',
+      description: 'retired type, must be rejected',
+    } satisfies RelationshipRow;
+    expect(bad.description).toContain('retired');
   });
 });

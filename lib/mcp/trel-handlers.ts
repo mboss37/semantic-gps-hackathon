@@ -37,9 +37,11 @@ export type FindWorkflowPathResult = {
 };
 
 // Edge types that flow "forward" in a workflow — the ones BFS should follow.
+// `produces_input_for` is the data-flow spine; `suggests_after` is the soft
+// recommendation; `alternative_to` lets BFS hop to equivalent substitutes.
 const FORWARD_EDGE_TYPES = new Set<RelationshipRow['relationship_type']>([
-  'composes_into',
-  'enables',
+  'produces_input_for',
+  'suggests_after',
   'alternative_to',
 ]);
 

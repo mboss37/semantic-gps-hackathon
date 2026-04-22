@@ -20,7 +20,7 @@ Enterprises want agents that touch Salesforce, SAP, Slack, and internal APIs. Th
 
 One MCP endpoint sits between the agent and every backend tool. It returns:
 
-- **A typed workflow graph** — tools aren't listed, they're *connected*. `create_lead` depends_on `authenticate_crm`. `send_email` composes_into `onboard_customer`.
+- **A typed workflow graph** — tools aren't listed, they're *connected*. `authenticate_crm` `requires_before` `create_lead`. `get_customer` `produces_input_for` `send_email`.
 - **Live policies** — PII redaction, rate limits, allowlists, approval gates. Change them at runtime; every agent picks up new rules on the next call.
 - **Fallback routes** — when an origin is unhealthy, traffic reroutes automatically. The agent never sees the failure.
 - **Full audit** — every call, every policy decision, every tool invocation logged with trace IDs. Replay any session.
@@ -34,7 +34,7 @@ The agent ships once. The business keeps editing the rules.
 ### 1. MCP Gateway with TRel Protocol
 Single streamable HTTP endpoint every agent connects to. JSON-RPC 2.0 compliant, full MCP spec. Adds four extension methods that agents can call like any other MCP method:
 
-- `discover_relationships` — returns the typed graph. 8 relationship types: `depends_on`, `composes_into`, `alternative_to`, `prerequisite`, `conflicts_with`, `enables`, `requires_auth`, `deprecated_by`.
+- `discover_relationships` — returns the typed graph. 8 relationship types: `produces_input_for`, `requires_before`, `suggests_after`, `mutually_exclusive`, `alternative_to`, `validates`, `compensated_by`, `fallback_to`.
 - `find_workflow_path({ goal })` — "how do I get from lead-capture to invoice?" Returns the ordered tool sequence.
 - `validate_workflow({ plan })` — pre-flight check: does this plan satisfy all policies and dependencies? Catches broken agent flows before execution.
 - `evaluate_goal({ intent })` — maps a natural-language intent to a candidate tool chain.

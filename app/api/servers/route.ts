@@ -10,8 +10,9 @@ export const dynamic = 'force-dynamic';
 
 export const GET = async (): Promise<Response> => {
   let supabase;
+  let organization_id: string;
   try {
-    ({ supabase } = await requireAuth());
+    ({ supabase, organization_id } = await requireAuth());
   } catch (e) {
     if (e instanceof UnauthorizedError) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
@@ -23,6 +24,7 @@ export const GET = async (): Promise<Response> => {
     supabase
       .from('servers')
       .select('id, name, origin_url, transport, created_at')
+      .eq('organization_id', organization_id)
       .order('created_at', { ascending: false }),
     supabase.from('tools').select('server_id'),
   ]);
@@ -61,10 +63,10 @@ const PostBodySchema = z.object({
 });
 
 export const POST = async (request: Request): Promise<Response> => {
-  let user;
   let supabase;
+  let organization_id: string;
   try {
-    ({ user, supabase } = await requireAuth());
+    ({ supabase, organization_id } = await requireAuth());
   } catch (e) {
     if (e instanceof UnauthorizedError) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
@@ -90,7 +92,7 @@ export const POST = async (request: Request): Promise<Response> => {
 
   const { data: server, error } = await supabase
     .from('servers')
-    .insert({ user_id: user.id, name, origin_url, transport: 'http-streamable', auth_config: authConfig })
+    .insert({ organization_id, name, origin_url, transport: 'http-streamable', auth_config: authConfig })
     .select('id, name')
     .single();
 

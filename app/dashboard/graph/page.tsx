@@ -63,7 +63,7 @@ const layoutNodes = (nodes: TrelNode[]): Node[] => {
 
 const toRfEdges = (edges: TrelEdge[]): Edge[] =>
   edges.map((e) => {
-    const style = EDGE_STYLES[e.type] ?? EDGE_STYLES.enables;
+    const style = EDGE_STYLES[e.type] ?? EDGE_STYLES.produces_input_for;
     return {
       id: e.id,
       source: e.from,
@@ -72,7 +72,8 @@ const toRfEdges = (edges: TrelEdge[]): Edge[] =>
       style: { stroke: style.stroke, strokeWidth: 1.5 },
       labelStyle: { fill: style.stroke, fontSize: 10 },
       labelBgStyle: { fill: '#18181b' },
-      animated: e.type === 'enables' || e.type === 'composes_into',
+      // Animate the "live data" edges — same subset BFS walks forward.
+      animated: e.type === 'produces_input_for' || e.type === 'suggests_after',
     };
   });
 

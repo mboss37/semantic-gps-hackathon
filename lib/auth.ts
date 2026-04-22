@@ -14,5 +14,18 @@ export const requireAuth = async () => {
   if (error || !data.user) {
     throw new UnauthorizedError();
   }
-  return { user: data.user, supabase };
+  const { data: membership, error: memErr } = await supabase
+    .from('memberships')
+    .select('organization_id, role')
+    .eq('user_id', data.user.id)
+    .maybeSingle();
+  if (memErr || !membership) {
+    throw new UnauthorizedError('no membership');
+  }
+  return {
+    user: data.user,
+    supabase,
+    organization_id: membership.organization_id as string,
+    role: membership.role as 'admin',
+  };
 };

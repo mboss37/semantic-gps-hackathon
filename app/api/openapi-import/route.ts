@@ -21,10 +21,10 @@ const BodySchema = z
   });
 
 export const POST = async (request: Request): Promise<Response> => {
-  let user;
   let supabase;
+  let organization_id: string;
   try {
-    ({ user, supabase } = await requireAuth());
+    ({ supabase, organization_id } = await requireAuth());
   } catch (e) {
     if (e instanceof UnauthorizedError) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
@@ -81,7 +81,7 @@ export const POST = async (request: Request): Promise<Response> => {
   const { data: inserted, error: serverErr } = await supabase
     .from('servers')
     .insert({
-      user_id: user.id,
+      organization_id,
       name,
       origin_url: originUrl,
       transport: 'openapi',

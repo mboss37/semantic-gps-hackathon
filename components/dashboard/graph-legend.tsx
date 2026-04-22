@@ -1,17 +1,18 @@
 'use client';
 
-// 8 TRel edge types. Colors are also consumed by the React Flow edge styling
-// in the graph page — keep the two in sync.
+// Canonical 8 TRel edge types (docs/USER-STORIES.md §Relationships & Graph).
+// Colors are also consumed by the React Flow edge styling in the graph page —
+// keep the two in sync.
 
 export const EDGE_STYLES: Record<string, { stroke: string; label: string; description: string }> = {
-  depends_on: { stroke: '#f97316', label: 'depends_on', description: 'requires the target first' },
-  composes_into: { stroke: '#22d3ee', label: 'composes_into', description: 'step within the target flow' },
-  alternative_to: { stroke: '#a78bfa', label: 'alternative_to', description: 'interchangeable alternative' },
-  prerequisite: { stroke: '#facc15', label: 'prerequisite', description: 'gating precondition' },
-  conflicts_with: { stroke: '#ef4444', label: 'conflicts_with', description: 'cannot run together' },
-  enables: { stroke: '#34d399', label: 'enables', description: 'unlocks the target' },
-  requires_auth: { stroke: '#60a5fa', label: 'requires_auth', description: 'target needs the subject for auth' },
-  deprecated_by: { stroke: '#a3a3a3', label: 'deprecated_by', description: 'superseded' },
+  produces_input_for: { stroke: '#34d399', label: 'produces_input_for', description: 'output of A feeds B as input' },
+  requires_before: { stroke: '#f97316', label: 'requires_before', description: 'B cannot run until A succeeds' },
+  suggests_after: { stroke: '#22d3ee', label: 'suggests_after', description: 'B commonly follows A (non-binding)' },
+  mutually_exclusive: { stroke: '#ef4444', label: 'mutually_exclusive', description: 'A and B cannot coexist in a trace' },
+  alternative_to: { stroke: '#a78bfa', label: 'alternative_to', description: 'B is an interchangeable substitute for A' },
+  validates: { stroke: '#facc15', label: 'validates', description: 'B checks the output of A' },
+  compensated_by: { stroke: '#a3a3a3', label: 'compensated_by', description: 'B rolls back A on downstream failure' },
+  fallback_to: { stroke: '#60a5fa', label: 'fallback_to', description: 'route to B if A fails' },
 };
 
 export const GraphLegend = () => (
