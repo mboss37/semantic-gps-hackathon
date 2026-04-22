@@ -79,13 +79,19 @@ export const validateUrl = async (input: string): Promise<URL> => {
     throw new SsrfBlockedError('bad_scheme', `scheme ${url.protocol} not allowed`);
   }
 
+  // Test-only escape hatch — lets proxy tests spin `http.createServer` on
+  // an ephemeral localhost port without tripping the loopback guard.
+  // Never set this in production; there is no code path outside tests that
+  // sets it, and SSRF is a hard requirement for the gateway route.
+  const allowLocalhost = process.env.SSRF_ALLOW_LOCALHOST === '1';
+
   const host = url.hostname.toLowerCase();
-  if (!host || host === 'localhost' || host.endsWith('.localhost')) {
+  if (!host || ((host === 'localhost' || host.endsWith('.localhost')) && !allowLocalhost)) {
     throw new SsrfBlockedError('bad_host', 'localhost rejected');
   }
 
   if (isIP(host)) {
-    if (isBlockedIp(host)) {
+    if (isBlockedIp(host) && !allowLocalhost) {
       throw new SsrfBlockedError('private_ip', 'ip in blocked range');
     }
     return url;
@@ -97,7 +103,7 @@ export const validateUrl = async (input: string): Promise<URL> => {
       throw new SsrfBlockedError('dns_failed', `no dns records for ${host}`);
     }
     for (const r of records) {
-      if (isBlockedIp(r.address)) {
+      if (isBlockedIp(r.address) && !allowLocalhost) {
         throw new SsrfBlockedError('private_ip', `${host} resolves to blocked ${r.address}`);
       }
     }

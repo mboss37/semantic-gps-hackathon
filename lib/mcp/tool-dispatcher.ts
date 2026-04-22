@@ -1,9 +1,13 @@
-import type { Manifest, ToolRow } from '@/lib/manifest/cache';
+import type { Manifest, ServerRow, ToolRow } from '@/lib/manifest/cache';
+import { proxyHttp } from '@/lib/mcp/proxy-http';
+import { proxyOpenApi } from '@/lib/mcp/proxy-openapi';
 
-// Hackathon shortcut: tools imported from OpenAPI don't proxy to a real
-// origin yet — the dispatcher returns PII-rich canned data keyed by the
-// tool's name. Gives the policy demo concrete output to redact without
-// standing up an upstream service.
+// Tool dispatcher. Two codepaths:
+//   - mockExecuteTool — canned PII-rich data keyed by tool name. Used by the
+//     policy demo and whenever REAL_PROXY_ENABLED is off.
+//   - executeTool — routes to the real proxy layer based on the server's
+//     transport (openapi / http-streamable), falling back to the mock when
+//     the flag is off or the server row can't be located.
 
 const DEMO_CUSTOMER = {
   id: '11111111-1111-1111-1111-111111111111',
@@ -98,4 +102,37 @@ export const buildCatalog = (manifest: Manifest): ToolCatalogEntry[] => {
     input_schema: (t.input_schema as Record<string, unknown>) ?? { type: 'object' },
   }));
   return [ECHO_ENTRY, ...fromManifest];
+};
+
+export type ExecuteContext = {
+  traceId: string;
+};
+
+export const isRealProxyEnabled = (): boolean => process.env.REAL_PROXY_ENABLED === '1';
+
+// Unified execution path. When the real-proxy flag is off (demo + vitest
+// defaults) we fall back to mockExecuteTool verbatim. When on, we branch on
+// the server transport. Any proxy failure surfaces as a string result so the
+// caller can still feed it through the post-call policy pipeline.
+export const executeTool = async (
+  manifest: Manifest,
+  entry: ToolCatalogEntry,
+  args: Record<string, unknown>,
+  ctx: ExecuteContext,
+): Promise<unknown> => {
+  if (!isRealProxyEnabled()) return mockExecuteTool(entry.name, args);
+
+  const server: ServerRow | undefined = manifest.servers.find((s) => s.id === entry.server_id);
+  const tool: ToolRow | undefined = manifest.tools.find((t) => t.id === entry.tool_id);
+  if (!server || !tool) return mockExecuteTool(entry.name, args);
+
+  if (server.transport === 'openapi') {
+    const result = await proxyOpenApi(tool, args, { serverId: server.id, traceId: ctx.traceId });
+    return result.ok ? result.result : { error: result.error, status: result.status };
+  }
+  if (server.transport === 'http-streamable') {
+    const result = await proxyHttp(tool, args, { serverId: server.id, traceId: ctx.traceId });
+    return result.ok ? result.result : { error: result.error, status: result.status };
+  }
+  return mockExecuteTool(entry.name, args);
 };

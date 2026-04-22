@@ -6,7 +6,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { logMCPEvent, redactPayload } from '@/lib/audit/logger';
 import { loadManifest } from '@/lib/manifest/cache';
-import { buildCatalog, mockExecuteTool } from '@/lib/mcp/tool-dispatcher';
+import { buildCatalog, executeTool } from '@/lib/mcp/tool-dispatcher';
 import { discoverRelationships, findWorkflowPath } from '@/lib/mcp/trel-handlers';
 import {
   DiscoverRelationshipsRequestSchema,
@@ -114,7 +114,7 @@ export const createStatelessServer = ({ traceId }: CreateServerOpts): Server => 
       };
     }
 
-    const rawResult = mockExecuteTool(entry.name, args);
+    const rawResult = await executeTool(manifest, entry, args, { traceId });
     const post = runPostCallPolicies({ ...policyCtx, result: rawResult }, manifest);
 
     logMCPEvent({
