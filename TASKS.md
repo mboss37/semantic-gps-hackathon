@@ -30,8 +30,26 @@
   - C.2 Real direct-MCP HTTP-Streamable proxy (`lib/mcp/proxy-http.ts`) — JSON-RPC `tools/call` forward, `application/json` or single-event SSE, Zod boundary validation
   - Validations: hosted Supabase migrated via `db push`; Tier 2 real-proxy smoke against httpbin.org green; Tier 1 Opus 4.7 → deployed `/api/mcp` → echo tool E2E in 4.87s. Pre-commit review flow updated (subagent reviews, human approves, main writes marker) to kill tooling false positives.
 
-## Current:
-_Sprint closed. Pull Sprint 5 candidates from `BACKLOG.md > Sprint 4+ queue` — dep-unblocked after today: A.2, A.4, A.5, B.2, C.3, C.4, C.5, D.1, D.2, F.4, G.2, G.5, H.1, H.2._
+## Current: Sprint 5 — Gateway routing + routes schema + auth (Thu 2026-04-23, 6 WPs)
+
+Day 1 shipped schema + real proxies. Day 2 goal: flip real-proxy default-on, open three-tier gateway routing (unblocks J.1 Playground), land `routes` + `route_steps` (unblocks F.1 `execute_route`), ship real auth pages (unblocks D.2 gateway auth Fri). Parallel UI work on 3 more built-in policies.
+
+- [ ] **C.3** (S) Dispatcher: flip `REAL_PROXY_ENABLED=1` default-on; drop feature-flag branch from `tool-dispatcher.ts`; audit logs carry `upstream_latency_ms`.
+- [ ] **D.1** (M) `/api/mcp/domain/[id]` + `/api/mcp/server/[id]` scoped gateway routes with scoped `loadManifest(scope)`.
+- [ ] **B.2** (M) `routes` + `route_steps` tables (ordered, `fallback_route_id`, `rollback_tool_id`).
+- [ ] **A.2** (M) Signup + login + logout pages (Supabase email/pw). Replace dev-login. Critical path for Fri's D.2 gateway-auth WP.
+- [ ] **G.5** (M) Basic-auth + client-ID + IP allow/block built-in policies (3 of the 7 built-ins).
+- [ ] **C.5** (S) `tools/list _meta.relationships` injection so agents see typed edges as MCP metadata.
+
+### Cadence reminder
+- **Sprint 6 Fri** candidates once Thu closes: D.2 (gateway auth), E.1 E.2 E.3 (Salesforce + Slack + GitHub), F.1 (`execute_route`), G.2 (relationship CRUD UI), G.4 (rate-limit + injection-guard policies + `policy_versions` writes).
+- **Sprint 7 Sat** — last build day: F.2 F.3 (fallback + rollback execution), J.1 Playground A/B hero, I.1 I.2 (Opus showcase beats), J.3 (demo seed) + **record demo PM**.
+
+### Risks to watch
+- A.2 must land Thu — slip pushes D.2 to Sat AM and the Playground compresses into one afternoon.
+- C.3 flipping default-on means every run hits real upstreams. Post-merge: `VERIFY_REAL_PROXY=1 pnpm test smoke-real-proxy` to confirm httpbin still round-trips.
+- D.1 manifest-scope refactor is on the hot path — keep `/api/mcp` shape working so Tier 1 Anthropic E2E stays green.
+- E.1 Salesforce Dev-Edition creds must be confirmed Thu PM before E.* ships Fri.
 
 ## Session Log
 - 2026-04-22 — WP-3.5 shipped (shadcn dashboard-01 + MCP direct-import tool discovery). Reality-check vs `/projects/semantic-gps/docs` → 3.6 deferred, Sprint 4 opened. Architect + PO review of USER-STORIES.md produced 42-WP plan + locked decisions + Playground A/B hero.

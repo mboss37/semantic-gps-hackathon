@@ -22,29 +22,22 @@ CNA branding leaks into `app/layout.tsx` tab title + `app/page.tsx` marketing sh
 - [ ] `app/layout.tsx` — replace metadata (`title: "Create Next App"`, description)
 - [ ] `app/page.tsx` — thin Semantic GPS landing with "Open Dashboard" CTA (or direct redirect to `/dashboard`)
 
-## [P0 daily-pull] Sprint 4+ queue — 36 WPs (dep-annotated)
-Originally planned as a 42-WP mega-sprint. Collapsed to daily-sprint cadence 2026-04-22 (CLAUDE.md sweet spot = 3-6 WPs/sprint). Today's 6 (A.1, B.1, B.3, B.4, C.1, C.2) live in `TASKS.md` as Sprint 4; Thu/Fri/Sat pulls come from here. Dep convention: `← blocked by X` / `→ blocks Y`. Sizes: S <1h, M 1-3h, L >3h. Pull rule: morning picks WPs whose `← blocked by` edges all landed.
+## [P0 daily-pull] Sprint 4+ queue — 30 WPs remaining (dep-annotated)
+Originally planned as a 42-WP mega-sprint. Collapsed to daily-sprint cadence 2026-04-22 (CLAUDE.md sweet spot = 3-6 WPs/sprint). Shipped: Sprint 4 Day 1 (A.1, B.1, B.3, B.4, C.1, C.2). Currently in flight: Sprint 5 Thu (A.2, B.2, C.3, C.5, D.1, G.5). Fri/Sat pulls come from here. Dep convention: `← blocked by X` / `→ blocks Y`. Sizes: S <1h, M 1-3h, L >3h. Pull rule: morning picks WPs whose `← blocked by` edges all landed.
 
 **Projected judge card (all P0 landing):** Impact 9 · Demo 9 · Opus 4.7 Use 8 · Depth 9 → ~87% weighted.
 
 **Critical path:** `A.1 → B.1 → D.1 → E.* → F.1 → J.1 → record`. Everything else parallelizes.
 
 ### A. Platform — Auth + Org + Settings
-- [ ] **A.2** (M) Signup + login + logout pages (Supabase email/pw). Replace dev-login. ← A.1 → A.3, A.4
 - [ ] **A.3** (S) Password reset flow (request + submit). ← A.2
 - [ ] **A.4** (S) Real auth middleware on `proxy.ts`; remove dev-login bypass. ← A.2 → D.2, J.2
 - [ ] **A.5** (S) Settings page — username + org name edit. ← A.1, A.2
 
-### B. Schema
-- [ ] **B.2** (M) `routes` + `route_steps` (ordered, `fallback_route_id`, `rollback_tool_id`). ← A.1 → F.1, F.2, F.3, G.3
-
 ### C. Real proxy layer
-- [ ] **C.3** (S) Gateway dispatcher swap — route per `transport` to real proxy; audit logs carry `upstream_latency_ms`. ← C.1, C.2 → E.*, F.1, G.6, J.1
 - [ ] **C.4** (M) Multi-origin per server + health-driven origin swap. ← C.3, F.4 → F.2
-- [ ] **C.5** (S) `tools/list` `_meta.relationships` injection. ← C.3
 
 ### D. Three-tier gateway routing + auth
-- [ ] **D.1** (M) `/api/mcp/domain/[id]` + `/api/mcp/server/[id]` routes with scoped `loadManifest(scope)`. ← B.1 → G.7, J.1
 - [ ] **D.2** (M) Gateway auth header verification — reject unauthenticated calls before any tool; per-endpoint token scheme. ← A.4 → J.1, J.2
 
 ### E. Real integrations
@@ -63,7 +56,6 @@ Originally planned as a 42-WP mega-sprint. Collapsed to daily-sprint cadence 202
 - [ ] **G.2** (M) Relationship CRUD API + dashboard UI (add/edit/delete typed edges with descriptions). ← B.3 → G.3
 - [ ] **G.3** (L) Route designer UI — React Flow step editor + rollback/fallback wiring. ← B.2, G.2
 - [ ] **G.4** (M) Rate-limit + injection-guard policies + config UI (replaces JSON textarea) + `policy_versions` writes. ← B.4 → I.4
-- [ ] **G.5** (M) Basic-auth + client-ID + IP allow/block built-in policies (stories' 6th built-in).
 - [ ] **G.6** (S) Semantic rewriting layer — `tools.display_name` + `display_description`; gateway publishes display values, proxies by origin name. ← C.3
 - [ ] **G.7** (M) Per-server detail: violation counts + copy-ready MCP client config block + resources/prompts introspect. ← D.1, F.4
 - [ ] **G.8** (S) Graph: domain-boundaries toggle + per-server policy count badge. ← B.1
