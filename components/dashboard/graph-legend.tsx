@@ -15,6 +15,15 @@ export const EDGE_STYLES: Record<string, { stroke: string; label: string; descri
   fallback_to: { stroke: '#60a5fa', label: 'fallback_to', description: 'route to B if A fails' },
 };
 
+// Non-canonical edge key, used only when a `compensated_by` edge is actively
+// lit up by a rollback cascade in the viz (Sprint 8 WP-I.2). Not a relationship
+// type — keep it out of the 8-type legend row.
+export const ROLLBACK_HIGHLIGHT_STYLE = {
+  stroke: '#f43f5e',
+  label: 'rollback',
+  description: 'compensated_by edge firing live from an execute_route rollback',
+};
+
 export const GraphLegend = () => (
   <div className="flex flex-wrap gap-2 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3 text-xs">
     {Object.entries(EDGE_STYLES).map(([key, s]) => (
