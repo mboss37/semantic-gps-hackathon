@@ -317,6 +317,8 @@ All endpoints org-scope via `requireAuth()` → `organization_id`. Every read fi
 | GET/POST/PATCH/DELETE | `/api/policies` | Built-in refs + JSON config |
 | POST/DELETE | `/api/policies/:id/assignments` | Attach policy to server/tool |
 | GET | `/api/audit` | Query events for dashboard (filterable by trace_id, status, time range) |
+| GET | `/api/policies/:id/timeline?days=N` | 7-day (default) shadow→enforce event trail per policy, bucketed by day × verdict |
+| POST | `/api/internal/manifest/invalidate` | Dev-gated cache clear (404 in prod unless `MANIFEST_INTROSPECTION_ENABLED=1`). Required after direct DB seeds bypass mutation routes |
 | POST | `/api/auth/login` | Supabase email/password login |
 | POST | `/api/auth/signup` | Signup (single-user mode — could even disable after first signup) |
 
@@ -519,6 +521,7 @@ Things that will silently bite if not explicitly called out:
 18. **Next.js 16 `useSearchParams` requires a Suspense boundary in client pages.** `export const dynamic = 'force-dynamic'` does NOT fix it — v16 is stricter than v15. Canonical fix: split the hook-using form into its own client component, wrap it in `<Suspense>` inside a server page. `tsc --noEmit` + `pnpm test` both pass the broken setup; only `pnpm exec next build` catches it. Always run `next build` on any `app/` page change.
 19. **Run opt-in test flags before committing code they gate.** `VERIFY_REAL_PROXY=1`, `VERIFY_ANTHROPIC=1`, `VERIFY_INTEGRATIONS=1`. Defaults skip them for CI speed, but if the diff touches their scope, the gated tests are the only coverage — skipping them hides regressions until demo day.
 20. **Gateway governs the CALL, downstream governs the DATA.** Policies that duplicate Salesforce Approval Processes / SAP Workflow / ServiceNow CAB / agent-framework cost budgets add zero and pull focus. If agent frameworks or downstream systems have better visibility into the thing, it's not the control plane's policy. Principle cemented Sprint 9 after nearly shipping `budget_cap`; see CLAUDE.md § Key Decisions.
+21. **Next.js 16 treats `_`-prefixed folders as private and excludes them from routing.** An ops endpoint at `app/api/_internal/manifest/invalidate/route.ts` 404s silently at every environment — the underscore makes the whole folder a build-time private folder (no route emitted). Use `app/api/internal/...` + runtime env gate (`NODE_ENV === 'production' && !MANIFEST_INTROSPECTION_ENABLED`) inside the handler instead. `tsc` + `lint` + `test` all pass the broken setup; only `pnpm exec next build`'s route table reveals the missing route. Caught Sprint 12 WP-G.18.
 
 ---
 

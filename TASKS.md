@@ -88,16 +88,16 @@
 - 11.5 `scripts/cleanup-demo-data.mjs` — idempotent recording-day reset CLI with `--dry-run`, per-subsystem error isolation, SOQL double-escape parity with `proxy-salesforce.ts`
 - 11.6 Policy row Select → ToggleGroup — 1-click shadow↔enforce flip for live demo narrative
 
-## Current: Sprint 12 — Opus amplifier + rollback honesty + dev-workflow cleanup (Thu 2026-04-23 PM)
+**Sprint 12 — Opus amplifier + saga honesty + dev-workflow cleanup (Thu Apr 23 PM):**
+- 12.1 Extended-thinking blocks in Playground — `thinking: {type:'enabled', budget_tokens:2048}` + `max_tokens:8192` on both panes; new `ThinkingEvent` NDJSON type; collapsible `<details>` reasoning panel with char count. Honest-A/B principle extended to model capabilities.
+- 12.2 Compensation edges for Slack + SF — new `delete_message` (Slack `chat.delete`) + `delete_task` (SF REST DELETE, widened `CallInit.method`) tools; 2 new `compensated_by` edges; `rollback_input_mapping` on cross_domain_escalation steps 4+5; hosted DB synced with parity UUIDs.
+- 12.3 Manifest cache invalidation endpoint — `POST /api/internal/manifest/invalidate`, dev-gated via `NODE_ENV` + `MANIFEST_INTROSPECTION_ENABLED`; `__HMR_NONCE__` export + comment deleted. **Subagent caught Next.js `_`-prefixed folders are private and excluded from routing** — added as Hard-Won Lesson #21.
+- 12.4 Policy shadow→enforce timeline — `GET /api/policies/[id]/timeline?days=N` (Zod 1-30, default 7), JS-side jsonb filter on `policy_decisions` array, zero-filled daily buckets. `/dashboard/policies/[id]` page + Recharts stacked bars (allow/shadow_block/enforce_block). "View timeline" link added to PolicyRow.
+- Validations: 269 pass / 5 skip / 0 fail, tsc + lint + `next build` clean, local db reset clean, hosted synced. 1 commit pushed to main.
 
-Front-loading the biggest score levers while 2.5 build days remain. I.1 banks the Opus 4.7 Use score (25% of judging) by surfacing Opus thinking in the Playground. G.17 makes the rollback cascade demo honest across all 3 upstreams instead of GitHub-only. G.18 kills the `__HMR_NONCE__` hack so the rest of the weekend's seed-and-test loops don't need dev-server restarts. I.4 extends the governance narrative from "shadow mode exists" to "here's 7 days of events it would have caught."
-
-- [ ] **12.1** (M) Extended-thinking blocks in Playground. `thinking: { type: 'enabled', budget_tokens: 2048 }` on both panes, `ThinkingEvent` in the NDJSON stream, collapsible `<details>` in PaneView. (Main thread.)
-- [ ] **12.2** (S) Compensation edges for Slack + SF writes. New `delete_message` + `delete_task` tools; `compensated_by` seed rows; `rollback_input_mapping` on the cross_domain_escalation route steps. (Subagent lane A.)
-- [ ] **12.3** (S) Manifest cache invalidation endpoint. Dev-gated `POST /api/_internal/manifest/invalidate`, drops the `__HMR_NONCE__` hack. (Subagent lane B.)
-- [ ] **12.4** (M) Shadow→enforce timeline per policy. `GET /api/policies/[id]/timeline?days=7` + `/dashboard/policies/[id]` detail page with Recharts stacked bars. (Subagent lane C.)
+## Current:
 
 ## Session Log
+- 2026-04-23 — Sprint 12 shipped + wrapped: 4 WPs (I.1 thinking + G.17 compensators + G.18 invalidation + I.4 timeline), 1 commit. Next.js `_` private-folder gotcha caught by subagent B; `__HMR_NONCE__` hack deleted. Honest-A/B principle extended to model capabilities. 269/5/0. 4 memories harvested + 1 updated.
 - 2026-04-23 — Sprint 11 shipped: submission-gate landing replacement, README + SUBMISSION.md + root VISION.md, demo-data cleanup CLI, policy row ToggleGroup. 10 files (+515/-91), 1 commit, pushed. Code review clean; three preemptive fixes applied (NaN guard, SOQL escape parity, GH window comment).
 - 2026-04-23 — Sprint 10 shipped + wrapped: G.13/G.14/G.15/G.16 completing 12-builtin policy taxonomy + demo-readiness bundle (local bootstrap, libphonenumber-js PII, canonical saga rollback, DEMO.md playbook). 4 demo stories E2E validated live. 5 memories harvested. 256/5/0.
-- 2026-04-24 — Sprint 9 shipped + wrapped: 5 WPs (G.10/G.11/G.9/J.4/J.5) + `policy-config-forms.tsx` 9-file split. G.12 budget_cap retired mid-sprint — "gateway governs the CALL, downstream governs the DATA" cemented into CLAUDE.md + ARCHITECTURE.md.
