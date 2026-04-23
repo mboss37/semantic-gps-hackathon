@@ -38,9 +38,10 @@ vi.mock('@anthropic-ai/sdk', () => {
   return { default: FakeAnthropic };
 });
 
-// Keep the env sane so we don't bail on ANTHROPIC_API_KEY.
+// Keep the env sane so we don't bail on ANTHROPIC_API_KEY or model helpers.
 beforeEach(() => {
   process.env.ANTHROPIC_API_KEY = 'sk-test-playground';
+  process.env.PLAYGROUND_MODEL = 'claude-opus-4-7';
   requireAuthMock.mockReset();
   mintTokenMock.mockReset();
   betaCreateMock.mockReset();

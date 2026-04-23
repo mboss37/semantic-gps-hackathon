@@ -1,6 +1,17 @@
-// pii_redaction — scan request/response payloads for common PII patterns and
-// replace matches with deterministic placeholders. Pure function: no DB, no
-// manifest. Caller decides what to log.
+// pii_redaction — scan request/response payloads for PII and replace matches
+// with deterministic placeholders. Pure function: no DB, no manifest.
+// Caller decides what to log.
+//
+// Phone numbers: parsed via libphonenumber-js (Google's libphonenumber port —
+// same library Twilio / Stripe / etc. use). Covers US parenthesized format,
+// international E.164, common separator variants, and rejects dates / IPs /
+// long digit runs that a naive regex would false-positive on. Countries
+// default to the global set; a future enhancement can scope by org config.
+//
+// Non-phone patterns (email, SSN, credit card) stay regex-based because
+// libphonenumber handles phones only and those formats are regex-tractable.
+
+import { findPhoneNumbersInText, isSupportedCountry, type CountryCode } from 'libphonenumber-js';
 
 export type PiiPattern = {
   name: string;
@@ -13,11 +24,6 @@ export const DEFAULT_PII_PATTERNS: readonly PiiPattern[] = [
     name: 'email',
     regex: /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
     replacement: '[redacted:email]',
-  },
-  {
-    name: 'phone_us',
-    regex: /\b\d{3}[-.\s]\d{3}[-.\s]\d{4}\b/g,
-    replacement: '[redacted:phone]',
   },
   {
     name: 'ssn_us',
@@ -37,6 +43,10 @@ export const DEFAULT_PII_PATTERNS: readonly PiiPattern[] = [
 
 export type PiiRedactionConfig = {
   patterns?: Array<{ name: string; regex: string; replacement?: string }>;
+  // Default region used to parse local-format phone numbers that lack a
+  // country code (e.g. "(512) 757-6000" → US). Defaults to 'US'. Pass null
+  // to accept only internationally-formatted (E.164) numbers.
+  phone_default_country?: string | null;
 };
 
 const compilePatterns = (config?: PiiRedactionConfig): readonly PiiPattern[] => {
@@ -56,20 +66,58 @@ export type PiiRedactionResult = {
 
 const MAX_SAMPLES = 5;
 const MAX_DEPTH = 8;
+const PHONE_REPLACEMENT = '[redacted:phone]';
+
+// Replace phone numbers in `text` via libphonenumber-js `findPhoneNumbersInText`.
+// Splices in order, walking end→start so earlier offsets stay valid as the
+// string shrinks. Returns the redacted string + the match count + short
+// samples for audit.
+const redactPhones = (
+  text: string,
+  defaultCountry: CountryCode | null,
+  existingSamples: string[],
+): { redacted: string; count: number } => {
+  const matches = defaultCountry
+    ? findPhoneNumbersInText(text, { defaultCountry })
+    : findPhoneNumbersInText(text);
+  if (matches.length === 0) return { redacted: text, count: 0 };
+
+  let out = text;
+  for (const m of [...matches].reverse()) {
+    out = out.slice(0, m.startsAt) + PHONE_REPLACEMENT + out.slice(m.endsAt);
+  }
+  for (const m of matches) {
+    if (existingSamples.length >= MAX_SAMPLES) break;
+    const e164 = m.number.number; // '+15127576000'
+    existingSamples.push(`phone:${e164.slice(0, 4)}…`);
+  }
+  return { redacted: out, count: matches.length };
+};
 
 export const runPiiRedaction = (value: unknown, config?: PiiRedactionConfig): PiiRedactionResult => {
   const patterns = compilePatterns(config);
   const samples: string[] = [];
+  const rawCountry = config?.phone_default_country;
+  const defaultCountry: CountryCode | null =
+    rawCountry === null
+      ? null
+      : rawCountry && isSupportedCountry(rawCountry)
+        ? rawCountry
+        : 'US';
   let matchCount = 0;
 
   const walk = (v: unknown, depth: number): unknown => {
     if (depth > MAX_DEPTH) return v;
     if (typeof v === 'string') {
       let out = v;
+
+      const phoneResult = redactPhones(out, defaultCountry, samples);
+      matchCount += phoneResult.count;
+      out = phoneResult.redacted;
+
       for (const pattern of patterns) {
-        // Fresh regex per scan so `g` flag lastIndex state doesn't leak.
         const scanner = new RegExp(pattern.regex.source, pattern.regex.flags);
-        const matches = v.match(scanner);
+        const matches = out.match(scanner);
         if (matches && matches.length > 0) {
           matchCount += matches.length;
           if (samples.length < MAX_SAMPLES) {

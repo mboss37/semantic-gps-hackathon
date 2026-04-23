@@ -36,14 +36,53 @@ export type ExecuteRouteCtx = {
 const STEPS_PREFIX = '$steps.';
 const INPUTS_PREFIX = '$inputs.';
 
+// A captured step carries both the args that were sent to the tool AND the
+// post-redaction result. Rollback/fallback can reference either — "undo this
+// create_issue" needs {owner, repo} from the original args plus the issue
+// `number` from the result.
+export type CapturedStep = {
+  args: Record<string, unknown>;
+  result: unknown;
+};
+
 // Resolve a "$steps.<capture_key>.<dot.path>" reference against the capture
-// bag. Supports dot segments and numeric array indices — no wildcards, no
-// slices. Missing paths throw so misconfigured routes fail loud rather than
-// silently feeding `undefined` into the next tool.
-const resolveStepRef = (path: string, captureBag: Record<string, unknown>): unknown => {
+// bag. Each captured step is `{args, result}`. When the path's next segment
+// after the capture key is `args` or `result` we navigate that explicit
+// subtree; any other segment auto-prefixes to `.result.` for backwards
+// compatibility with routes written before Sprint 10's rollback mapping.
+// Supports dot segments + numeric array indices — no wildcards, no slices.
+// Missing paths throw so misconfigured routes fail loud instead of silently
+// feeding `undefined` into the next tool.
+const resolveStepRef = (
+  path: string,
+  captureBag: Record<string, CapturedStep>,
+): unknown => {
   const segments = path.slice(STEPS_PREFIX.length).split('.');
-  let cursor: unknown = captureBag;
-  for (const seg of segments) {
+  const captureKey = segments[0];
+  if (captureKey === undefined || captureKey === '') {
+    throw new Error(`empty segment in "${path}"`);
+  }
+  const rest = segments.slice(1);
+  const captured = captureBag[captureKey];
+  if (captured === undefined) {
+    throw new Error(`"${path}" references unknown capture key "${captureKey}"`);
+  }
+
+  // Explicit namespace or backwards-compat implicit result.
+  let cursor: unknown;
+  let pathSegments: string[];
+  if (rest[0] === 'args') {
+    cursor = captured.args;
+    pathSegments = rest.slice(1);
+  } else if (rest[0] === 'result') {
+    cursor = captured.result;
+    pathSegments = rest.slice(1);
+  } else {
+    cursor = captured.result;
+    pathSegments = rest;
+  }
+
+  for (const seg of pathSegments) {
     if (seg === '') {
       throw new Error(`empty segment in "${path}"`);
     }
@@ -66,7 +105,7 @@ const resolveStepRef = (path: string, captureBag: Record<string, unknown>): unkn
 const resolveInputMapping = (
   mapping: Record<string, unknown>,
   inputs: Record<string, unknown>,
-  captureBag: Record<string, unknown>,
+  captureBag: Record<string, CapturedStep>,
 ): Record<string, unknown> => {
   const out: Record<string, unknown> = {};
   for (const [key, raw] of Object.entries(mapping)) {
@@ -292,7 +331,7 @@ const attemptFallback = async (
   args: Record<string, unknown>,
   policyCtxBuilder: PolicyContextBuilder,
   ctx: ExecuteRouteCtx,
-  captureBag: Record<string, unknown>,
+  captureBag: Record<string, CapturedStep>,
 ): Promise<ExecuteRouteStep> => {
   const { step, tool: primaryTool } = pair;
   const originalError = primaryStep.error ?? 'origin_error';
@@ -365,7 +404,7 @@ const attemptFallback = async (
       },
     });
     if (step.output_capture_key) {
-      captureBag[step.output_capture_key] = fallbackPostResult;
+      captureBag[step.output_capture_key] = { args, result: fallbackPostResult };
     }
     return {
       step_order: step.step_order,
@@ -408,7 +447,7 @@ const runSingleStep = async (
   entry: ToolCatalogEntry,
   manifest: Manifest,
   inputs: Record<string, unknown>,
-  captureBag: Record<string, unknown>,
+  captureBag: Record<string, CapturedStep>,
   policyCtxBuilder: PolicyContextBuilder,
   ctx: ExecuteRouteCtx,
 ): Promise<ExecuteRouteStep> => {
@@ -446,7 +485,7 @@ const runSingleStep = async (
 
   if (stepResult.status === 'ok') {
     if (step.output_capture_key) {
-      captureBag[step.output_capture_key] = postResult;
+      captureBag[step.output_capture_key] = { args, result: postResult };
     }
     return stepResult;
   }
@@ -520,14 +559,19 @@ const pickCompensationEdge = (
 };
 
 // Walk the completed steps in reverse and fire each step's compensated_by
-// tool with the original step's result as args. Best-effort: a compensation
-// that throws or returns !ok is logged + marked compensation_failed, but the
-// walk continues to the next older step. Mutates each step entry in place to
-// annotate `rollback`, and returns the aggregate summary.
+// tool. Compensator args come from `step.rollback_input_mapping` when set
+// (canonical saga pattern — producer result shape rarely matches compensator
+// schema), falling back to the producing step's result verbatim for legacy
+// routes without a mapping. Best-effort: a compensation that throws or
+// returns !ok is logged + marked compensation_failed, but the walk continues
+// to the next older step. Mutates each step entry in place to annotate
+// `rollback`, and returns the aggregate summary.
 const executeRollback = async (
   steps: ExecuteRouteStep[],
   plan: Array<{ step: RouteStepRow; tool: ToolRow }>,
   manifest: Manifest,
+  inputs: Record<string, unknown>,
+  captureBag: Record<string, CapturedStep>,
   ctx: ExecuteRouteCtx,
 ): Promise<ExecuteRouteRollbackSummary> => {
   const catalog = buildCatalog(manifest);
@@ -567,14 +611,39 @@ const executeRollback = async (
       continue;
     }
 
-    // Pass the ORIGINAL step's result as args — duck-typed against the
-    // compensation tool's inputSchema inside executeTool. Non-object results
-    // (rare) get wrapped so the dispatcher always sees a record.
-    const originalResult = stepEntry.result;
-    const compArgs: Record<string, unknown> =
-      originalResult && typeof originalResult === 'object' && !Array.isArray(originalResult)
-        ? (originalResult as Record<string, unknown>)
-        : { value: originalResult };
+    // Build compensation args. Preferred path: explicit rollback_input_mapping
+    // on the step, resolved against the capture bag + route inputs. Fallback:
+    // pass the producer's result verbatim (legacy behaviour; rarely works
+    // when producer + compensator field names differ).
+    let compArgs: Record<string, unknown>;
+    try {
+      if (
+        planPair.step.rollback_input_mapping &&
+        Object.keys(planPair.step.rollback_input_mapping).length > 0
+      ) {
+        compArgs = resolveInputMapping(
+          planPair.step.rollback_input_mapping,
+          inputs,
+          captureBag,
+        );
+      } else {
+        const originalResult = stepEntry.result;
+        compArgs =
+          originalResult && typeof originalResult === 'object' && !Array.isArray(originalResult)
+            ? (originalResult as Record<string, unknown>)
+            : { value: originalResult };
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      stepEntry.rollback = {
+        attempted: true,
+        status: 'compensation_failed',
+        compensation_tool_name: compensation.tool.name,
+        error: `rollback_input_mapping: ${message}`,
+      };
+      summary.failed_count += 1;
+      continue;
+    }
 
     try {
       const exec = await executeTool(manifest, compEntry, compArgs, { traceId: ctx.traceId });
@@ -618,6 +687,8 @@ const executeRollback = async (
           compensation_tool: compensation.tool.name,
           original_step_order: stepEntry.step_order,
           error: exec.error,
+          args_sent: redactPayload(compArgs),
+          mapping_used: planPair.step.rollback_input_mapping ?? null,
         },
       });
     } catch (err) {
@@ -665,7 +736,7 @@ export const executeRoute = async (
   if ('error' in plan) return plan.error;
 
   const catalog = buildCatalog(manifest);
-  const captureBag: Record<string, unknown> = {};
+  const captureBag: Record<string, CapturedStep> = {};
   const steps: ExecuteRouteStep[] = [];
 
   for (const pair of plan.steps) {
@@ -677,7 +748,7 @@ export const executeRoute = async (
         rationale: resolved.rationale,
       };
       if (autoRollbackOnHalt && steps.length > 1) {
-        halted.rollback_summary = await executeRollback(steps, plan.steps, manifest, ctx);
+        halted.rollback_summary = await executeRollback(steps, plan.steps, manifest, params.inputs, captureBag, ctx);
       }
       return halted;
     }
@@ -695,7 +766,7 @@ export const executeRoute = async (
     if (stepResult.status !== 'ok') {
       const halted = haltedResult(params.route_id, steps, stepResult);
       if (autoRollbackOnHalt && steps.length > 1) {
-        halted.rollback_summary = await executeRollback(steps, plan.steps, manifest, ctx);
+        halted.rollback_summary = await executeRollback(steps, plan.steps, manifest, params.inputs, captureBag, ctx);
       }
       return halted;
     }

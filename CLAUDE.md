@@ -146,6 +146,13 @@ Wait for all agents to return, synthesize their findings, then act.
 - Never log raw MCP payloads — use `redactPayload()` first
 - Never add scope from the "What Not To Touch" list in `docs/ARCHITECTURE.md` (RLS, SSO, i18n, etc.)
 - **Never develop against the hosted Supabase project.** Local dev uses `pnpm supabase start` (Docker stack) — `.env.local` gets local URLs + local keys. The hosted project is production. Migration workflow is **apply to local, iterate, `supabase db reset` freely, push to hosted only before the first real deploy.** Proposing hosted creds for local dev is an anti-pattern — do not repeat it.
+- **Always seed local first, test + validate locally, THEN mirror to hosted.** Hard rule, no exceptions. The correct flow for any demo data (servers, tools, relationships, routes, policies, fixtures):
+  1. Apply the idempotent seed SQL to **local** via `docker exec supabase_db_semantic-gps-hackathon psql -U postgres -d postgres -f <file>` (or equivalent).
+  2. Validate end-to-end against the **local** gateway (`http://localhost:3000/api/mcp`) + local Supabase. Every demo story must PASS locally before touching hosted.
+  3. Only after local is green, mirror the same SQL to hosted via Supabase MCP `execute_sql`.
+  4. **Never** test a demo beat against hosted first — "it works on prod, let's check local later" is the anti-pattern.
+- **`pnpm supabase db reset` wipes all data-plane seeds.** `supabase/seed.sql` is the ONLY thing that auto-re-runs (demo user, org, gateway token). Anything loaded via `docker exec psql -f` or Supabase MCP outside seed.sql is gone after a reset. After any `db reset`, immediately re-run every demo-data seed script (SF/Slack/GH registration, policies, routes) against the fresh local DB before testing anything. Better: fold recurring demo seeds into `supabase/seed.sql` so they're local-reset-durable.
+- **Local must be a full superset of hosted demo state at all times.** If hosted has 3 MCPs + 12 tools + 5 policies registered, local has the same — or strictly more — before any new work starts. An empty local while hosted is populated is always a bug, not a setup choice.
 
 ## Key Decisions
 - **MCP gateway is stateless** — fresh `McpServer` per request; no in-memory session state

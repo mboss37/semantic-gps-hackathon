@@ -41,6 +41,20 @@ CNA branding leaks into `app/layout.tsx` tab title + `app/page.tsx` marketing sh
 - [ ] `app/page.tsx` — thin Semantic GPS landing with "Open Dashboard" CTA (or direct redirect to `/dashboard` when logged in)
 - [ ] Handle `?verified=true` query param on the landing (or a dedicated `/auth/confirm` route handler) — show a success banner / toast so email-click feedback is visible, then redirect to `/dashboard` after 2s
 
+### [P0 Sat AM] Validate Playground UI presets against live agent flow
+`components/dashboard/playground-workbench.tsx::SCENARIOS` has 3 preset prompts (off-hours, write-freeze, pii-leak). Sprint 10 validation tested the underlying gateway behaviour via direct JSON-RPC, NOT via the Playground UI's Anthropic-SDK-driven agent loop. Before recording, drive each preset through the actual Playground UI — confirm the agent picks the right tools, the contrast renders in both panes, and the Cloudflare tunnel wiring works end-to-end. If the agent picks unexpected tools or Slack/GitHub bot scopes don't match, adjust prompts or policies before the first take.
+
+- [ ] Start Cloudflare quick tunnel (`cloudflared tunnel --url http://localhost:3000`)
+- [ ] Point `NEXT_PUBLIC_APP_URL` (or equivalent) at the tunnel URL so Anthropic's MCP connector can reach the gateway
+- [ ] Hit each preset's "Run" button on `/dashboard/playground`, screen-record both panes, confirm the governance contrast matches the DEMO.md script
+- [ ] If any preset's prompt elicits the wrong tool order, rewrite the prompt; don't invent tools
+
+### [P0 Sat AM] Recording-day profile: flip `business_hours_window` to `shadow`
+Canonical seed is Mon-Fri 09:00-17:00 Europe/Vienna enforce-global. Sunday recording is outside the window → every tool call blocks until the policy is flipped. Document the flip in the recording-day checklist AND consider a toggle on the Policies page that swaps enforce↔shadow in one click, so the demo narrative can show the flip live without a multi-step dialog. Also nice: a "recording profile" env var (`SEMANTIC_GPS_DEMO_MODE=1`) that auto-loosens the default enforcement to shadow on startup.
+
+- [ ] Add enforce↔shadow toggle to the Policies row UI (single button, no config dialog)
+- [ ] Optional: `SEMANTIC_GPS_DEMO_MODE` env that seeds/loosens policies for recording
+
 ---
 
 ## Sprint queue — daily pulls from here
@@ -74,6 +88,9 @@ _(all shipped or pulled into Sprint 8)_
 - [ ] **G.3** (L) Route designer UI — React Flow step editor + rollback/fallback wiring. ← B.2, G.2
 - [ ] **G.7** (M) Per-server detail: violation counts + copy-ready MCP client config block + resources/prompts introspect. ← D.1, F.4
 - [ ] **G.8** (S) Graph: domain-boundaries toggle + per-server policy count badge. ← B.1
+- [ ] **G.17** (S) Compensation edges for write operations beyond GitHub. `chat_post_message` + `create_task` have no `compensated_by` edge in the current seed — when a route rolls back, Slack messages + SF tasks stay as orphaned side effects. Add edges: `chat_post_message → delete_message` (needs new Slack tool + `chat:write` + `chat:delete` bot scopes), `create_task → delete_task` (needs new SF tool). Makes the rollback cascade demo honest end-to-end instead of "GitHub-only undo."
+- [ ] **G.18** (S, dev workflow) Manifest cache invalidation endpoint for ops. Currently direct DB mutations (via `docker exec psql` or Supabase MCP `execute_sql`) bypass `invalidateManifest()`, leaving the in-memory cache stale until a module reload. Workaround during Sprint 10 was bumping `__HMR_NONCE__` in `lib/manifest/cache.ts`. Canonical fix: dev-gated `POST /api/_internal/manifest/invalidate` route (auth-required, 404s in prod), OR replace the singleton Map with a `revision` integer stored in DB + per-request freshness check. Unlocks seed-and-test loops without the HMR hack.
+- [ ] **G.19** (S) Demo-data cleanup CLI. Automate the recording-day reset of real upstream artefacts: close all open GH issues on the sandbox repo, delete `#general` Slack messages posted by the demo bot in the last N hours, delete recent SF Tasks on Edge Communications owned by the demo user. Run before each recording take to avoid on-camera noise from prior iterations. Idempotent; safe to run against hosted.
 
 ### H. Monitoring + overview
 - [ ] **H.1** (M) Monitoring page — 3 lean widgets: call volume, policy violations over time, PII detections by pattern.

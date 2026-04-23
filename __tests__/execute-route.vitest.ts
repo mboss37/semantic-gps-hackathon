@@ -83,6 +83,7 @@ const routeSteps: RouteStepRow[] = [
     step_order: 1,
     tool_id: T.searchCustomer,
     input_mapping: { name: '$inputs.query' },
+    rollback_input_mapping: null,
     output_capture_key: 'search',
     fallback_route_id: null,
     rollback_tool_id: null,
@@ -96,6 +97,7 @@ const routeSteps: RouteStepRow[] = [
     // Pull the first customer id from the searchCustomer mock result —
     // mockExecuteTool returns `.customers[0].id`.
     input_mapping: { customerId: '$steps.search.customers.0.id' },
+    rollback_input_mapping: null,
     output_capture_key: 'customer',
     fallback_route_id: null,
     rollback_tool_id: null,
@@ -110,6 +112,7 @@ const routeSteps: RouteStepRow[] = [
       customerId: '$steps.customer.id',
       subject: 'Escalation for $inputs.query',
     },
+    rollback_input_mapping: null,
     output_capture_key: null,
     fallback_route_id: null,
     rollback_tool_id: null,

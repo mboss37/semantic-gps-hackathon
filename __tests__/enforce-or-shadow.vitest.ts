@@ -34,10 +34,13 @@ const allowlist = (mode: PolicyRow['enforcement_mode']): PolicyRow => ({
   enforcement_mode: mode,
 });
 
+// Real-looking area code (512 = Austin) — libphonenumber rejects 555-anything
+// as fictional per NANP reservation, so the earlier "Jenny's song" number
+// wouldn't redact even though the old regex would have caught it.
 const resultWithPii = {
   name: 'Jane Doe',
   email: 'jane@example.com',
-  phone: '555-867-5309',
+  phone: '512-867-5309',
 };
 
 describe('runPreCallPolicies (allowlist)', () => {
@@ -120,12 +123,15 @@ describe('runPiiRedaction standalone', () => {
   it('recurses into nested objects and arrays', () => {
     const out = runPiiRedaction({
       customers: [
-        { email: 'a@b.com', phone: '555-111-2222' },
+        // libphonenumber rejects "111" / "123" / "555" exchange prefixes as
+        // reserved per NANP; use a plausible exchange (867) so the parser
+        // accepts it and the fixture reflects production data shape.
+        { email: 'a@b.com', phone: '512-867-2222' },
         { email: 'c@d.com', details: { ssn: '123-45-6789' } },
       ],
     });
     expect(out.match_count).toBeGreaterThanOrEqual(4);
-    expect(JSON.stringify(out.redacted)).not.toMatch(/@b\.com|@d\.com|555-111-2222|123-45-6789/);
+    expect(JSON.stringify(out.redacted)).not.toMatch(/@b\.com|@d\.com|512-867-2222|123-45-6789/);
   });
 
   it('leaves UUIDs, timestamps, and long digit runs alone (no CC false-positive)', () => {

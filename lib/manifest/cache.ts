@@ -97,6 +97,7 @@ export type RouteStepRow = {
   step_order: number;
   tool_id: string;
   input_mapping: Record<string, unknown>;
+  rollback_input_mapping: Record<string, unknown> | null;
   output_capture_key: string | null;
   fallback_route_id: string | null;
   rollback_tool_id: string | null;
@@ -360,3 +361,8 @@ export const loadManifest = async (scope: ManifestScope): Promise<Manifest> => {
 export const invalidateManifest = (): void => {
   cache.clear();
 };
+
+// HMR nonce — bump to force Next.js dev to reload this module after direct
+// DB seeds (which bypass mutation routes and thus invalidateManifest()).
+// Safe to leave in place.
+export const __HMR_NONCE__ = 6;

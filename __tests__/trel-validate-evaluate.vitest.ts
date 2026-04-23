@@ -61,10 +61,10 @@ const baseManifest = (): Manifest => ({
     },
   ],
   route_steps: [
-    { id: uuid(40), route_id: ROUTE.escalation, step_order: 0, tool_id: T.search, input_mapping: {}, output_capture_key: null, fallback_route_id: null, rollback_tool_id: null, created_at: new Date().toISOString() },
-    { id: uuid(41), route_id: ROUTE.escalation, step_order: 1, tool_id: T.getCustomer, input_mapping: {}, output_capture_key: null, fallback_route_id: null, rollback_tool_id: null, created_at: new Date().toISOString() },
-    { id: uuid(42), route_id: ROUTE.escalation, step_order: 2, tool_id: T.createTicket, input_mapping: {}, output_capture_key: null, fallback_route_id: null, rollback_tool_id: null, created_at: new Date().toISOString() },
-    { id: uuid(43), route_id: ROUTE.notify, step_order: 0, tool_id: T.sendEmail, input_mapping: {}, output_capture_key: null, fallback_route_id: null, rollback_tool_id: null, created_at: new Date().toISOString() },
+    { id: uuid(40), route_id: ROUTE.escalation, step_order: 0, tool_id: T.search, input_mapping: {}, rollback_input_mapping: null, output_capture_key: null, fallback_route_id: null, rollback_tool_id: null, created_at: new Date().toISOString() },
+    { id: uuid(41), route_id: ROUTE.escalation, step_order: 1, tool_id: T.getCustomer, input_mapping: {}, rollback_input_mapping: null, output_capture_key: null, fallback_route_id: null, rollback_tool_id: null, created_at: new Date().toISOString() },
+    { id: uuid(42), route_id: ROUTE.escalation, step_order: 2, tool_id: T.createTicket, input_mapping: {}, rollback_input_mapping: null, output_capture_key: null, fallback_route_id: null, rollback_tool_id: null, created_at: new Date().toISOString() },
+    { id: uuid(43), route_id: ROUTE.notify, step_order: 0, tool_id: T.sendEmail, input_mapping: {}, rollback_input_mapping: null, output_capture_key: null, fallback_route_id: null, rollback_tool_id: null, created_at: new Date().toISOString() },
   ],
 });
 
@@ -146,15 +146,19 @@ vi.mock('@anthropic-ai/sdk', () => {
 
 describe('evaluateGoal', () => {
   const originalKey = process.env.ANTHROPIC_API_KEY;
+  const originalModel = process.env.EVALUATE_GOAL_MODEL;
 
   beforeEach(() => {
     mockState.nextReply = null;
     mockState.shouldThrow = false;
+    process.env.EVALUATE_GOAL_MODEL = 'claude-opus-4-7';
   });
 
   afterEach(() => {
     if (originalKey === undefined) delete process.env.ANTHROPIC_API_KEY;
     else process.env.ANTHROPIC_API_KEY = originalKey;
+    if (originalModel === undefined) delete process.env.EVALUATE_GOAL_MODEL;
+    else process.env.EVALUATE_GOAL_MODEL = originalModel;
   });
 
   it('falls back to the keyword scorer when Opus is unreachable', async () => {
