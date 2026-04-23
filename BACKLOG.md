@@ -65,6 +65,7 @@ _(all shipped or pulled into Sprint 8)_
 - [ ] **F.4** (S) Origin health probes (`/api/health/:server_id`, cached flag). ← B.1 → C.4, G.7
 
 ### G. TRel completion + policies + authoring UI
+- [ ] **G.9** (S) **P0 Fri polish** — Policies page: tool-level assignment UI. Currently the row UI only attaches policies to whole servers; tool-level `policy_assignments.tool_id` rows exist in DB (seeded) but can't be created/removed via dashboard. Add a second attach path: "Attach to specific tool…" → server+tool picker → calls `/api/policies/[id]/assignments` with `{tool_id}`. Also surface the current tool-level assignments in the row so users can see the full map. Uncovers the gateway's most important invariant (PII policy on find_contact means every call to that tool gets scrubbed). Demo-critical for the recording.
 - [ ] **G.1** (M) `validate_workflow` + `evaluate_goal` TRel methods (real impls, not stubs). ← B.2 → J.1
 - [ ] **G.3** (L) Route designer UI — React Flow step editor + rollback/fallback wiring. ← B.2, G.2
 - [ ] **G.7** (M) Per-server detail: violation counts + copy-ready MCP client config block + resources/prompts introspect. ← D.1, F.4
