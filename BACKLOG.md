@@ -56,17 +56,13 @@ Open WPs:
 - **G.3** (L) Route designer UI — React Flow step editor + rollback/fallback wiring.
 - **G.7** (M) Per-server detail — violation counts + copy-ready MCP client config block + resources/prompts introspect. ← F.4
 - **G.8** (S) Graph: domain-boundaries toggle + per-server policy count badge.
-- **G.17** (S) Compensation edges for writes beyond GitHub. `chat_post_message` + `create_task` have no `compensated_by` in seed — rollback leaves orphaned Slack messages + SF tasks. Needs new `delete_message` (Slack `chat:write`/`chat:delete` scopes) + `delete_task` (SF) tools + edges. Makes rollback demo honest E2E instead of GitHub-only.
-- **G.18** (S, dev workflow) Manifest cache invalidation endpoint. Direct DB mutations bypass `invalidateManifest()`; Sprint-10 workaround was bumping `__HMR_NONCE__`. Canonical fix: dev-gated `POST /api/_internal/manifest/invalidate` (404 in prod) OR swap singleton Map for DB `revision` int + per-request freshness check.
 
 ### H. Monitoring + overview
 - **H.1** (M) Monitoring page — 3 lean widgets: call volume, policy violations over time, PII detections by pattern.
 - **H.2** (S) Overview dashboard domain filter.
 
 ### I. Opus 4.7 showcase + visual beats
-- **I.1** (M, **P0 stretch**) Extended-thinking blocks live-rendered in Playground governed pane. SSE stream of thinking events → collapsible "Show reasoning" toggle.
 - **I.3** (L, P1 stretch) Opus relationship inference on OpenAPI import. Feed full spec to Opus 4.7 with cached system prompt; user approves/rejects proposals before persist; thinking blocks surface reasoning. 1M-context showcase.
-- **I.4** (M, P1 stretch) Shadow → enforce timeline — 7-day would-have-blocked trail per policy.
 - **I.5** (M, P1 stretch) Managed Agents wrap for demo agent ($5K side prize). Port agent loop from `@anthropic-ai/sdk` manual to Managed Agents API; point at deployed `/api/mcp`; keep SDK fallback. **Apply only to demo agent, never to product gateway.**
 - **I.6** (L, P1 stretch) Playground "Refine with Opus" button backed by Managed Agents. Ingest scenario prompt + both panes' traces + policy events + manifest; return structured suggestions as cards ("flip policy X to enforce", "add produces_input_for edge Y→Z"). Refinement-as-a-service framing. ← I.5
 
