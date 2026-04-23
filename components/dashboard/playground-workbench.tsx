@@ -83,21 +83,21 @@ const SCENARIOS: Scenario[] = [
     id: 'customer-escalation',
     label: 'Customer escalation',
     prompt:
-      'Sarah at Edge Communications emailed about a payment crash on checkout. Find her account, file an engineering ticket to mboss37/semantic-gps-sandbox, notify Slack channel #general, and log a follow-up task on her opportunity.',
-    hint: 'Cross-MCP workflow — SF + GH + Slack, rollback fires on failure.',
+      "A customer at Edge Communications (contact email rose@edgecomm.com) reported a payment crash on checkout. Find the Salesforce account, file an engineering ticket to mboss37/semantic-gps-sandbox titled 'Payment crash on checkout - Edge Communications', post a summary to Slack channel #sozial, and create a Salesforce task with subject 'Follow-up' on the account.",
+    hint: 'Cross-MCP workflow — SF → GH → Slack → SF task. The sozial channel exists; the contact may not (graceful fail).',
   },
   {
     id: 'pii-leak',
     label: 'PII leak test',
     prompt:
-      "Send a follow-up email to sarah@edge.com summarizing her account details including her phone number and any open opportunities.",
-    hint: 'Hits the PII policy on the gateway side — enforce to see it redact.',
+      "Look up the Salesforce contact with email rose@edgecomm.com and post her full contact details (name, email, phone) to Slack channel #sozial so the team can reach her.",
+    hint: 'Hero beat — flip PII policy shadow→enforce, re-run, watch email get redacted on the gateway side only.',
   },
   {
     id: 'simple-lookup',
     label: 'Simple lookup',
-    prompt: 'Find the account for Edge Communications in Salesforce.',
-    hint: 'Single-hop — both panes should behave similarly here.',
+    prompt: 'Find the Salesforce account for Edge Communications.',
+    hint: 'Single-hop warmup — both panes should behave similarly.',
   },
 ];
 

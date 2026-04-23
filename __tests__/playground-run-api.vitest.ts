@@ -1,19 +1,17 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-// WP-J.1: Playground /api/playground/run endpoint. Verifies the NDJSON event
-// stream shape for both modes and that the auth gate blocks unauthenticated
-// callers.
+// WP-J.1 (refactored): Playground /api/playground/run endpoint. Both modes
+// now go through Anthropic's beta mcp_servers connector — the only variable
+// is the URL pointed at /api/mcp vs /api/mcp/raw. Tests verify the NDJSON
+// event stream shape, the URL routing per mode, and the auth gate.
 
 // -- Hoisted mocks -----------------------------------------------------------
 
-const { requireAuthMock, mintTokenMock, standardCreateMock, betaCreateMock, dispatchRawToolMock } =
-  vi.hoisted(() => ({
-    requireAuthMock: vi.fn(),
-    mintTokenMock: vi.fn(),
-    standardCreateMock: vi.fn(),
-    betaCreateMock: vi.fn(),
-    dispatchRawToolMock: vi.fn(),
-  }));
+const { requireAuthMock, mintTokenMock, betaCreateMock } = vi.hoisted(() => ({
+  requireAuthMock: vi.fn(),
+  mintTokenMock: vi.fn(),
+  betaCreateMock: vi.fn(),
+}));
 
 vi.mock('@/lib/auth', async () => {
   const actual = await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth');
@@ -33,19 +31,8 @@ vi.mock('@/lib/supabase/service', () => ({
   }),
 }));
 
-// Raw-dispatch stub — real proxies hit SF/Slack/GitHub; the test just
-// asserts event-shape plumbing, so a canned {content, is_error} pair is
-// enough. Defaults to a benign response; individual tests can override.
-vi.mock('@/lib/playground/raw-dispatch', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/playground/raw-dispatch')>(
-    '@/lib/playground/raw-dispatch',
-  );
-  return { ...actual, dispatchRawTool: dispatchRawToolMock };
-});
-
 vi.mock('@anthropic-ai/sdk', () => {
   class FakeAnthropic {
-    public messages = { create: standardCreateMock };
     public beta = { messages: { create: betaCreateMock } };
   }
   return { default: FakeAnthropic };
@@ -56,13 +43,7 @@ beforeEach(() => {
   process.env.ANTHROPIC_API_KEY = 'sk-test-playground';
   requireAuthMock.mockReset();
   mintTokenMock.mockReset();
-  standardCreateMock.mockReset();
   betaCreateMock.mockReset();
-  dispatchRawToolMock.mockReset();
-  dispatchRawToolMock.mockResolvedValue({
-    content: '{"records":[{"Id":"003XXBOGUS001","Email":"sarah@edge.com"}]}',
-    is_error: false,
-  });
 });
 
 const { POST } = await import('@/app/api/playground/run/route');
@@ -116,30 +97,36 @@ describe('POST /api/playground/run', () => {
     expect(res.status).toBe(400);
   });
 
-  it('streams raw-mode NDJSON: tool_call, tool_result, text, done', async () => {
+  it('streams raw-mode NDJSON: mints a token and points the MCP connector at /api/mcp/raw', async () => {
     requireAuthMock.mockResolvedValueOnce({
       user: { id: 'u1' },
       organization_id: 'org-1',
       role: 'admin',
       supabase: {},
     });
-    // First turn returns a tool_use; second turn stops with text.
-    standardCreateMock
-      .mockResolvedValueOnce({
-        stop_reason: 'tool_use',
-        content: [
-          {
-            type: 'tool_use',
-            id: 'tool-1',
-            name: 'find_contact',
-            input: { email: 'sarah@edge.com' },
-          },
-        ],
-      })
-      .mockResolvedValueOnce({
-        stop_reason: 'end_turn',
-        content: [{ type: 'text', text: 'Found Sarah at Edge.' }],
-      });
+    mintTokenMock.mockResolvedValueOnce({
+      data: { id: 'tok-raw' },
+      error: null,
+    });
+    betaCreateMock.mockResolvedValueOnce({
+      stop_reason: 'end_turn',
+      content: [
+        {
+          type: 'mcp_tool_use',
+          id: 'mcp-r1',
+          name: 'find_contact',
+          input: { email: 'sarah@edge.com' },
+          server_name: 'semantic-gps',
+        },
+        {
+          type: 'mcp_tool_result',
+          tool_use_id: 'mcp-r1',
+          content: [{ type: 'text', text: '{"records":[{"Id":"003XX"}]}' }],
+          is_error: false,
+        },
+        { type: 'text', text: 'Found Sarah.' },
+      ],
+    });
 
     const res = await post({ prompt: 'find sarah', mode: 'raw' });
     expect(res.status).toBe(200);
@@ -159,13 +146,22 @@ describe('POST /api/playground/run', () => {
       stats: { tool_calls: number; ms: number; policy_events?: number };
     };
     expect(done.stats.tool_calls).toBe(1);
-    // raw mode never emits policy_events, so the stats field stays absent.
-    expect(done.stats.policy_events).toBeUndefined();
-    // Gateway path must not have been taken.
-    expect(betaCreateMock).not.toHaveBeenCalled();
+    // Raw mode reports policy_events = 0 by definition — the observable
+    // contrast vs governed.
+    expect(done.stats.policy_events).toBe(0);
+
+    // Both modes use the beta MCP connector; raw mode points at /api/mcp/raw.
+    expect(betaCreateMock).toHaveBeenCalledTimes(1);
+    const callArgs = betaCreateMock.mock.calls[0][0] as {
+      mcp_servers: Array<{ authorization_token?: string; url: string }>;
+      tools: Array<{ type: string; mcp_server_name: string }>;
+    };
+    expect(callArgs.mcp_servers[0].url).toMatch(/\/api\/mcp\/raw$/);
+    expect(callArgs.mcp_servers[0].authorization_token).toMatch(/^sgps_/);
+    expect(callArgs.tools[0].type).toBe('mcp_toolset');
   });
 
-  it('streams gateway-mode NDJSON: mints a token and surfaces mcp_tool_use / mcp_tool_result', async () => {
+  it('streams gateway-mode NDJSON: mints a token and points the MCP connector at /api/mcp', async () => {
     requireAuthMock.mockResolvedValueOnce({
       user: { id: 'u1' },
       organization_id: 'org-2',
@@ -205,22 +201,21 @@ describe('POST /api/playground/run', () => {
     const done = events.at(-1) as {
       stats: { tool_calls: number; policy_events?: number };
     };
-    // gateway mode always reports policy_events (even when zero).
     expect(done.stats.policy_events).toBe(0);
 
-    // Verify the mint happened and the Anthropic call threaded the token.
     expect(mintTokenMock).toHaveBeenCalledTimes(1);
     expect(betaCreateMock).toHaveBeenCalledTimes(1);
     const callArgs = betaCreateMock.mock.calls[0][0] as {
       mcp_servers: Array<{ authorization_token?: string; url: string }>;
     };
     expect(callArgs.mcp_servers[0].authorization_token).toMatch(/^sgps_/);
+    // Governed mode hits /api/mcp (not /api/mcp/raw) — anchor so raw doesn't
+    // accidentally match.
     expect(callArgs.mcp_servers[0].url).toMatch(/\/api\/mcp$/);
-    // And the raw path stayed untouched.
-    expect(standardCreateMock).not.toHaveBeenCalled();
+    expect(callArgs.mcp_servers[0].url).not.toMatch(/\/api\/mcp\/raw$/);
   });
 
-  it('emits an error event when gateway mode cannot mint a token', async () => {
+  it('emits an error event when mode cannot mint a token', async () => {
     requireAuthMock.mockResolvedValueOnce({
       user: { id: 'u1' },
       organization_id: 'org-3',

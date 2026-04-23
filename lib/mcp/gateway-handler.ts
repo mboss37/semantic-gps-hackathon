@@ -65,7 +65,19 @@ export type ScopeResolver = (
   organizationId: string,
 ) => Promise<ManifestScope>;
 
-export const buildGatewayHandler = (resolveScope: ScopeResolver) => {
+export type GatewayHandlerOptions = {
+  // When false, the downstream stateless server strips relationship metadata,
+  // policy enforcement, semantic rewriting, and TRel/execute_route methods.
+  // Used by /api/mcp/raw for the Playground A/B hero. Defaults to true so
+  // the governed surface keeps the full control plane.
+  governed?: boolean;
+};
+
+export const buildGatewayHandler = (
+  resolveScope: ScopeResolver,
+  options: GatewayHandlerOptions = {},
+) => {
+  const governed = options.governed ?? true;
   return async (request: Request): Promise<Response> => {
     const traceId = randomUUID();
     const headers = collectHeaders(request);
@@ -138,7 +150,7 @@ export const buildGatewayHandler = (resolveScope: ScopeResolver) => {
     headers['x-org-id'] = tokenResult.organization_id;
 
     const scope = await resolveScope(request, tokenResult.organization_id);
-    const server = createStatelessServer({ traceId, scope, headers, clientIp });
+    const server = createStatelessServer({ traceId, scope, headers, clientIp, governed });
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,

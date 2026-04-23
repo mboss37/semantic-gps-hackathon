@@ -3,25 +3,29 @@ import { z } from 'zod';
 import { randomBytes } from 'node:crypto';
 import { requireAuth, UnauthorizedError } from '@/lib/auth';
 import { hashToken } from '@/lib/mcp/auth-token';
-import { RAW_TOOL_DEFS, dispatchRawTool } from '@/lib/playground/raw-dispatch';
-import { randomUUID } from 'node:crypto';
 
-// Sprint 8 WP-J.1: Playground A/B run endpoint. Two modes:
-//   - 'raw'     — curated 3-tool subset calling the SAME real SF/Slack/GH
-//                 proxies as the gateway, but bypassing policies, relationship
-//                 hints, rollback, and audit. Both panes burn real API quota
-//                 and land real side effects — the contrast is governance,
-//                 not authenticity.
-//   - 'gateway' — real Opus 4.7 via the Anthropic beta mcp_servers connector
-//                 pointed at our /api/mcp gateway with a bearer token we
-//                 mint on-the-fly for this request (org-scoped, single-use
-//                 purpose). Policies + relationships + audit all fire.
+// Sprint 8 WP-J.1 (refactored): Playground A/B run endpoint. Both modes use
+// Anthropic's beta mcp_servers connector — same Opus, same prompt, same max
+// tokens, same bearer. The ONLY difference is the MCP URL:
+//   - 'raw'     → /api/mcp/raw (no policies, no relationships, no TRel, no
+//                 semantic rewriting, origin tool names only)
+//   - 'gateway' → /api/mcp     (full control plane)
+// The contrast is governance, not model, prompt, or connection shape — that's
+// the whole point of the hero demo.
 //
 // Output is newline-delimited JSON events to keep the client renderer simple.
 // Each pane runs independently via two fetches from the browser.
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+// Model override via env for cheaper local iteration. Defaults to Opus 4.7
+// (production / demo-recording behavior). Local dev sets
+// `PLAYGROUND_MODEL=claude-sonnet-4-6` in .env.local to 5x the cost savings
+// while iterating. Both panes use the SAME model so the contrast stays
+// "governance vs no governance," not "model A vs model B".
+const PLAYGROUND_MODEL = process.env.PLAYGROUND_MODEL ?? 'claude-opus-4-7';
+
 // Extended duration — Opus + MCP roundtrips can run 20-60s.
 export const maxDuration = 120;
 
@@ -79,94 +83,14 @@ const json = (status: number, body: Record<string, unknown>): Response =>
     headers: { 'content-type': 'application/json' },
   });
 
-// -- RAW mode — real upstreams, no control plane -----------------------------
+// -- Shared MCP agent loop ---------------------------------------------------
 //
-// Minimum viable 3-tool subset. Tool descriptions are deliberately bare so
-// Opus gets no relationship hints (`find_account produces_input_for
-// find_contact`), no PII policy scrubs the email, no rollback if
-// `create_issue` succeeds and `chat_post_message` then fails. All dispatch
-// logic + bare tool defs live in `lib/playground/raw-dispatch.ts`.
-
-// Opus agent loop for RAW mode. Real upstreams — same SF/Slack/GitHub proxies
-// as the gateway uses, but WITHOUT the policy stack, relationship hints,
-// rollback, or audit wrapped around them. Both panes burn the same API
-// quota and land the same real side effects; the contrast is in governance,
-// not in authenticity. Max 6 turns so a bad prompt can't run away.
-const runRaw = async (
-  anthropic: Anthropic,
-  prompt: string,
-  organizationId: string,
-  emit: (event: StreamEvent) => void,
-): Promise<void> => {
-  const traceId = randomUUID();
-  const messages: Anthropic.Messages.MessageParam[] = [
-    { role: 'user', content: prompt },
-  ];
-  const maxTurns = 6;
-  let turn = 0;
-
-  while (turn < maxTurns) {
-    turn += 1;
-    const response = await anthropic.messages.create({
-      model: 'claude-opus-4-7',
-      max_tokens: 1024,
-      tools: RAW_TOOL_DEFS,
-      messages,
-    });
-
-    const toolUses: Anthropic.Messages.ToolUseBlock[] = [];
-    for (const block of response.content) {
-      if (block.type === 'text') {
-        emit({ type: 'text', content: block.text });
-      } else if (block.type === 'tool_use') {
-        toolUses.push(block);
-      }
-    }
-
-    if (response.stop_reason !== 'tool_use' || toolUses.length === 0) {
-      return;
-    }
-
-    messages.push({ role: 'assistant', content: response.content });
-
-    const toolResults: Anthropic.Messages.ToolResultBlockParam[] = [];
-    for (const use of toolUses) {
-      const input = (use.input as Record<string, unknown> | null) ?? {};
-      emit({
-        type: 'tool_call',
-        id: use.id,
-        name: use.name,
-        args_preview: argsPreview(input),
-      });
-      const { content, is_error } = await dispatchRawTool(
-        organizationId,
-        use.name,
-        input,
-        traceId,
-      );
-      emit({
-        type: 'tool_result',
-        id: use.id,
-        summary: summarize(content),
-        is_error,
-      });
-      toolResults.push({
-        type: 'tool_result',
-        tool_use_id: use.id,
-        content,
-        is_error,
-      });
-    }
-    messages.push({ role: 'user', content: toolResults });
-  }
-};
-
-// -- GATEWAY mode -----------------------------------------------------------
-//
-// Uses Anthropic's beta mcp_servers connector. Opus calls tools/list +
-// tools/call against our deployed gateway; policies + relationships +
-// audit all fire upstream. We mint a short-lived bearer token scoped to
-// the caller's org so the gateway never sees the user's session cookies.
+// Single code path for both panes. Anthropic's beta `mcp_servers` connector
+// does the tools/list + tools/call round-trips on the server side; we just
+// need to render the `mcp_tool_use` / `mcp_tool_result` blocks back as NDJSON
+// events. `mcp-client-2025-11-20` requires a paired `mcp_toolset` entry
+// whose `mcp_server_name` matches `mcp_servers[].name` exactly (memory
+// 93a1fa1e).
 
 const gatewayBaseUrl = (): string => {
   const explicit = process.env.SEMANTIC_GPS_GATEWAY_URL;
@@ -175,6 +99,8 @@ const gatewayBaseUrl = (): string => {
   if (app && !app.includes('localhost')) return `${app.replace(/\/$/, '')}/api/mcp`;
   return 'https://semantic-gps-hackathon.vercel.app/api/mcp';
 };
+
+const rawBaseUrl = (): string => gatewayBaseUrl().replace(/\/api\/mcp$/, '/api/mcp/raw');
 
 // Service client for the token mint. Reused pattern from the gateway itself.
 const mintPlaygroundToken = async (
@@ -197,28 +123,25 @@ const mintPlaygroundToken = async (
   return { plaintext, id: data.id };
 };
 
-const runGateway = async (
+const runWithMcp = async (
   anthropic: Anthropic,
   prompt: string,
-  gatewayUrl: string,
+  url: string,
   bearerToken: string,
   emit: (event: StreamEvent) => void,
 ): Promise<void> => {
   const response = await anthropic.beta.messages.create({
-    model: 'claude-opus-4-7',
+    model: PLAYGROUND_MODEL,
     max_tokens: 2048,
     betas: ['mcp-client-2025-11-20'],
     mcp_servers: [
       {
         name: 'semantic-gps',
         type: 'url',
-        url: gatewayUrl,
+        url,
         authorization_token: bearerToken,
       },
     ],
-    // MCP beta `mcp-client-2025-11-20` rejects `mcp_servers` without a paired
-    // `mcp_toolset` entry (memory 93a1fa1e). `mcp_server_name` must match
-    // `mcp_servers[].name` exactly.
     tools: [
       {
         type: 'mcp_toolset',
@@ -302,33 +225,30 @@ export const POST = async (request: Request): Promise<Response> => {
       };
 
       try {
-        if (mode === 'raw') {
-          await runRaw(anthropic, prompt, organization_id, emit);
+        // Both modes mint a gateway token — the raw endpoint still lives on
+        // our infra and still requires bearer auth. Customer agents would
+        // authenticate against raw MCPs too; "ungoverned" means no policy
+        // stack, not "open to the world". URL is the only variable.
+        const minted = await mintPlaygroundToken(organization_id);
+        if (!minted) {
+          emit({ type: 'error', message: 'failed to mint gateway token' });
         } else {
-          const minted = await mintPlaygroundToken(organization_id);
-          if (!minted) {
-            emit({ type: 'error', message: 'failed to mint gateway token' });
-          } else {
-            await runGateway(
-              anthropic,
-              prompt,
-              gatewayBaseUrl(),
-              minted.plaintext,
-              emit,
-            );
-          }
+          const url = mode === 'raw' ? rawBaseUrl() : gatewayBaseUrl();
+          await runWithMcp(anthropic, prompt, url, minted.plaintext, emit);
         }
       } catch (e) {
         const message = e instanceof Error ? e.message : 'run failed';
         emit({ type: 'error', message });
       } finally {
         const ms = Math.round(performance.now() - started);
+        // Both modes report policy_events — raw always reports 0 by
+        // definition, which is the observable contrast on the client side.
         emit({
           type: 'done',
           stats: {
             tool_calls: toolCalls,
             ms,
-            ...(mode === 'gateway' ? { policy_events: policyEvents } : {}),
+            policy_events: policyEvents,
           },
         });
         controller.close();
