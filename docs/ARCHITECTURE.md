@@ -207,7 +207,9 @@ CREATE TABLE policies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   builtin_key TEXT NOT NULL CHECK (builtin_key IN (
-    'pii_redaction', 'rate_limit', 'allowlist', 'injection_guard'
+    'pii_redaction', 'rate_limit', 'allowlist', 'injection_guard',
+    'basic_auth', 'client_id', 'ip_allowlist',
+    'business_hours', 'write_freeze'
   )),
   config JSONB DEFAULT '{}'::jsonb,  -- Per-policy knobs (e.g. { "max_rpm": 60 } for rate_limit)
   enforcement_mode TEXT NOT NULL DEFAULT 'shadow' CHECK (enforcement_mode IN ('shadow', 'enforce')),
@@ -509,6 +511,7 @@ Things that will silently bite if not explicitly called out:
 17. **Idempotent migrations unblock first-production `supabase db push`.** `drop constraint if exists`, `where not exists` guards on INSERTs, empty-case-safe DO blocks. Without them, the first push to hosted runs against a partial state and fails loudly.
 18. **Next.js 16 `useSearchParams` requires a Suspense boundary in client pages.** `export const dynamic = 'force-dynamic'` does NOT fix it — v16 is stricter than v15. Canonical fix: split the hook-using form into its own client component, wrap it in `<Suspense>` inside a server page. `tsc --noEmit` + `pnpm test` both pass the broken setup; only `pnpm exec next build` catches it. Always run `next build` on any `app/` page change.
 19. **Run opt-in test flags before committing code they gate.** `VERIFY_REAL_PROXY=1`, `VERIFY_ANTHROPIC=1`, `VERIFY_INTEGRATIONS=1`. Defaults skip them for CI speed, but if the diff touches their scope, the gated tests are the only coverage — skipping them hides regressions until demo day.
+20. **Gateway governs the CALL, downstream governs the DATA.** Policies that duplicate Salesforce Approval Processes / SAP Workflow / ServiceNow CAB / agent-framework cost budgets add zero and pull focus. If agent frameworks or downstream systems have better visibility into the thing, it's not the control plane's policy. Principle cemented Sprint 9 after nearly shipping `budget_cap`; see CLAUDE.md § Key Decisions.
 
 ---
 
