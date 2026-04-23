@@ -3,11 +3,13 @@
 Semantic GPS — MCP control plane for agentic workflows. 5-day hackathon build.
 
 ## Hackathon Mission
-- **Deadline:** Sunday Apr 26 2026, **8:00 PM EST** — submission via CV platform
+- **Deadline:** Sunday Apr 26 2026, **8:00 PM EST** = **Mon Apr 27 02:00 CET** — submission via CV platform
+- **Builder TZ:** Mihael is in **CET (UTC+2)**. Practical build cutoff is **Sat Apr 25 EOD CET**; Sun is recording + upload + contingency only.
 - **Deliverables:** 3-min demo video + public GitHub repo (OSS license) + 100–200 word summary
 - **Judging weights:** Impact 30 / Demo 25 / Opus 4.7 Use 25 / Depth & Execution 20
 - **Side prize to consider:** $5K "Best use of Claude Managed Agents" — worth a look for the demo agent
-- Full schedule, resources, and Day-5 submission checklist in `docs/HACKATHON.md`
+- **Binding constraints are review bandwidth + regression risk, NOT Claude dev-hours.** A sprint's worth of WPs ships in wall-clock minutes; each WP still takes one human review + subagent review + approval cycle. Plan against "max 2 big stretches Fri+Sat," not "how long to code it."
+- Full schedule, reverse-planned build calendar, resources, and Day-5 submission checklist in `docs/HACKATHON.md`
 
 ## Stack
 - **Next.js 16** (App Router, Server Components default, Turbopack) + TypeScript strict

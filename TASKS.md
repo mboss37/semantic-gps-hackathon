@@ -77,6 +77,16 @@
   - Validations: 220 pass / 5 skip / 0 fail, tsc + lint + `next build` clean, `supabase db reset` clean locally, hosted policies verified via MCP `execute_sql`. 3 commits pushed to main.
 
 ## Current:
+### Sprint 10 — Day 5 Thu PM: complete the policy taxonomy (Thu 2026-04-23)
+
+**Goal:** close the 3 uncovered dimensions from the locked taxonomy (network/residency, identity+attribution beyond client_id, idempotency) + retire one review-trap. After this sprint, 12 builtins span all 7 governance dimensions — cleaner narrative for the demo video.
+
+- [ ] **G.13** (M) `geo_fence` global builtin — `{allowed_regions: string[], source: 'header'}`. Runner reads `x-agent-region` vs allowlist; fail-closed on missing header; `source: 'org_setting'` deferred. EU AI Act Aug 2026 narrative hook. 4 tests.
+- [ ] **G.14** (M) `agent_identity_required` global builtin — `{require_headers: string[], verify_signature: boolean, trust_chain_id?: string}`. v1 is header-presence check; `verify_signature: true` returns `signature_verification_not_implemented` block (forward-compatible config). Meta confused-deputy narrative hook. 4 tests.
+- [ ] **G.15** (M) `idempotency_required` global builtin — `{ttl_seconds: number, key_source: 'header' | 'args_hash'}`. New `lib/policies/idempotency-store.ts` mirroring `rate-limiter.ts` Map pattern. `args_hash` uses sha256 of tool_name + stable-stringified args. Verdict `reason: 'duplicate_request'` rides existing `policy_decisions` audit path. 5 tests.
+- [ ] **G.16** (S, hygiene) Env-driven Anthropic model IDs — new `lib/config/models.ts` with `modelPlayground()` + `modelEvaluateGoal()` (fail-loud). Update `app/api/playground/run/route.ts` + `lib/mcp/evaluate-goal.ts` + `.env.example`. 2 tests.
+
+**Streams:** Agent A (combined G.13+G.14+G.15, shared recipe/files — same pattern as Sprint 9 combined G.10+G.11) ‖ Agent B (G.16 disjoint). Single review round.
 
 ## Session Log
 - 2026-04-24 — Sprint 9 shipped + wrapped: 5 core WPs (G.10/G.11/G.9/J.4/J.5) + `policy-config-forms.tsx` 9-file split refactor, 3 commits. G.12 budget_cap retired mid-sprint — user caught it as agent-framework territory, cemented "gateway governs the CALL, downstream governs the DATA" principle into CLAUDE.md + ARCHITECTURE.md. 5 memories harvested (taxonomy, add-builtin-policy recipe, DST via formatToParts, idempotent seed SQL gotchas, hosted migration drift workaround).

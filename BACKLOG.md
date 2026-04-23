@@ -45,11 +45,7 @@ CNA branding leaks into `app/layout.tsx` tab title + `app/page.tsx` marketing sh
 
 ## Sprint queue — daily pulls from here
 
-Originally planned as a 42-WP mega-sprint. Collapsed to daily-sprint cadence 2026-04-22 (CLAUDE.md sweet spot = 3-6 WPs/sprint). Shipped: Sprint 4 Day 1 (A.1, B.1, B.3, B.4, C.1, C.2), Sprint 5 Thu (A.2, B.2, C.3, C.5, D.1, G.5), Sprint 6 (A.4, D.2, F.1, G.2, G.4, G.6), Sprint 7 (A.6, F.2, E.1, J.3 + transport CHECK migration + CI hardening). Sprint 8 in-flight (E.2, E.3, J.3-ext, F.3, I.2, J.1). **15 WPs remaining post-Sprint-8 pull.** Dep convention: `← blocked by X` / `→ blocks Y`. Sizes: S <1h, M 1-3h, L >3h. Pull rule: morning picks WPs whose `← blocked by` edges all landed.
-
-**Projected judge card (all P0 landing):** Impact 9 · Demo 9 · Opus 4.7 Use 8 · Depth 9 → ~87% weighted.
-
-**Critical path remaining:** Sprint 8 (E.2 + E.3 → J.3-ext → J.1) → Sat recording. G.1 + I.1 as stretch post-J.1.
+Shipped sprint history is tracked in `TASKS.md § Completed Sprints` (single source of truth). This file holds only open work. Dep convention: `← blocked by X` / `→ blocks Y`. Sizes: S / M / L (human-dev estimate — Claude wall-clock is fractional; see `docs/HACKATHON.md § Build calendar`). Pull rule: morning picks WPs whose `← blocked by` edges have landed.
 
 ### A. Platform — Auth + Org + Settings
 - [ ] **A.3** (S) Password reset flow (request + submit). ← A.2
@@ -75,10 +71,6 @@ _(all shipped or pulled into Sprint 8)_
 - **Kill switches:** `write_freeze` ✓, destructive-tool-tagging
 - **Idempotency / dedupe:** `idempotency_required`
 
-- [ ] **G.13** (M) `geo_fence` builtin — data residency policy. Config `{allowed_regions: string[], source: 'header'|'org_setting'}`. Pre-call check of `x-agent-region` header or org's configured region against allowlist. EU AI Act Aug 2026 enforcement relevance.
-- [ ] **G.14** (M) `agent_identity_required` builtin — reject calls missing a signed `x-agent-id` / `x-user-on-behalf-of` header. Config `{require_headers: string[], verify_signature: boolean, trust_chain_id?: string}`. Meta confused-deputy incident is the anchor. Pairs with the client_id policy for layered identity.
-- [ ] **G.15** (M) `idempotency_required` builtin — dedupe destructive side-effect calls inside a TTL window. Config `{ttl_seconds: number, key_source: 'header'|'args_hash'}`. Needs a TTL store (in-memory Map with cleanup OR Redis in V2); single-process Map is fine for demo. Reject duplicates within window, return "deduped: true" audit tag.
-- [ ] **G.16** (S, hygiene) Env-driven Anthropic model IDs. `lib/config/models.ts` with `modelPlayground()` + `modelEvaluateGoal()` reading from `PLAYGROUND_MODEL` + `EVALUATE_GOAL_MODEL`, fail loud if unset. Update `app/api/playground/run/route.ts` + `lib/mcp/evaluate-goal.ts` + `.env.example`. Codifies "no hardcoded model IDs in production code" as a review rule.
 - [ ] **G.3** (L) Route designer UI — React Flow step editor + rollback/fallback wiring. ← B.2, G.2
 - [ ] **G.7** (M) Per-server detail: violation counts + copy-ready MCP client config block + resources/prompts introspect. ← D.1, F.4
 - [ ] **G.8** (S) Graph: domain-boundaries toggle + per-server policy count badge. ← B.1
@@ -108,7 +100,7 @@ Reviewer-flagged items from Sprint 5 Day 2. None gate the demo; all improve robu
 - [ ] `app/api/mcp/domain/[slug]/route.ts` + `app/api/mcp/server/[id]/route.ts` — add Zod `safeParse` on `slug` / `id` route params; returns clean 400 instead of Postgres UUID-format error.
 - [ ] `lib/mcp/gateway-handler.ts:30-41` — `x-forwarded-for` trusted unconditionally. Safe on Vercel (platform rewrites it) but spoofable on non-Vercel deploys. Add `TRUSTED_PROXY_ENABLED` env flag before any self-hosted deploy.
 - [ ] `lib/mcp/stateless-server.ts` — `createStatelessServer` at 180 lines, each request handler block (`ListTools`, `CallTool`, `DiscoverRelationships`, `FindWorkflowPath`) extractable to module-level functions.
-- [ ] `lib/policies/enforce.ts:80,84,86` — `as ClientIdConfig` / `as IpAllowlistConfig` / `as AllowlistConfig` casts inherit pre-existing `as Config` pattern without validating what the DB stored. Add per-`builtin_key` Zod schemas inside `evaluatePreCall`.
+- [ ] `lib/policies/enforce.ts` — pre-Sprint-9 runners (`pii_redaction`, `rate_limit`, `allowlist`, `injection_guard`, `basic_auth`, `client_id`, `ip_allowlist`) still use `as Config` casts without validating DB-stored config. Sprint 9 added per-builtin Zod safeParse + fail-closed `*_config_invalid` for `business_hours` + `write_freeze`; retrofit the 7 older runners to the same pattern.
 
 ---
 
@@ -192,7 +184,6 @@ Nav items in `components/app-sidebar.tsx` are label-only. Show a count badge nex
 ### [P2] policy-row micro-fixes
 Flagged by the code reviewer on WP-3.5 commit.
 
-- [ ] `components/dashboard/policy-row.tsx:192` — `className="... border border ..."` duplicate utility, remove one
 - [ ] `components/dashboard/policy-row.tsx:44` — `new Map(assignments)` rebuilt each render; wrap in `useMemo` if assignment count grows past ~20
 
 ### [P2] Replace `export default` in Next.js pages/layouts with named exports

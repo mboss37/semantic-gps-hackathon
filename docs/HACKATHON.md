@@ -63,6 +63,8 @@ Full reference for the Cerebral Valley × Anthropic hackathon. Decision-shaping 
 
 ## Schedule (EST)
 
+Builder (Mihael) operates in **CET (UTC+2)**. EST times shown below; CET = EST + 6 (so 11:00 EST = 17:00 CET, 20:00 EST = 02:00 next-day CET).
+
 | Day | Event |
 |---|---|
 | Tue Apr 21 | **12:00 PM** Virtual kickoff · **12:30 PM** Hacking begins · **5–6 PM** Office hours |
@@ -75,6 +77,30 @@ Full reference for the Cerebral Valley × Anthropic hackathon. Decision-shaping 
 | Tue Apr 28 | **12:00 PM** Final round · **12:45 PM** Winners announced |
 
 Discord: https://anthropic.com/discord — ping `#questions` for help, `#office-hours` daily 5–6 PM EST.
+
+---
+
+## Build calendar (CET, reverse-planned)
+
+**Submission:** Sun Apr 26, 20:00 EST = **Mon Apr 27, 02:00 CET**.
+**Practical cutoff:** Sat Apr 25 EOD CET — Sunday is recording + upload + contingency re-record only.
+
+| Date (CET) | Phase | Slot shape |
+|---|---|---|
+| **Thu Apr 23 PM + evening** | De-risk Saturday | Must-ship polish (CNA landing replacement, email-verify ack, README draft). Attend Managed Agents session 17:00-18:00 CET. First stretch decision (I.5 go/no-go) made AFTER session. |
+| **Fri Apr 24 full day** | Biggest stretch | One of: Track A (multi-tenancy — RLS + invites, 10-sec invite beat in video) OR Track B (Managed Agents — I.5 for demo-agent + I.6 "Refine with Opus" Playground button). **Not both.** |
+| **Sat Apr 25 full day** | Polish + record | Second stretch slot if earned (I.1 extended-thinking render, G-series policy, or hardening pass). Final copy / README / SUBMISSION.md. Record 5 takes of hero by 17:00 CET + edit + upload. |
+| **Sun Apr 26 CET day** | Submit + contingency | SUBMISSION.md finalize, YouTube/Loom/Drive links into it, one contingency re-record window if the Sat take looked off. No feature work. |
+
+### Wall-clock scale rule
+
+The binding constraint for this plan is **NOT Claude dev-hours** — a full sprint's worth of WPs ships in minutes of wall-clock. The real bounds are:
+
+1. **Review bandwidth** — every diff passes through a human read + subagent code review + approval. Each review cycle is the same length whether the WP was S or L.
+2. **Regression risk** — the hero path (governance demo, Playground A/B, real SF/Slack/GH round-trip) is green and pushed. Adding features after that point risks breaking something visible in the recording.
+3. **Recording window** — Sat afternoon CET. Editing + upload + submission doc writing run on human hands, not Claude.
+
+**Implication:** plan against "max 2 big stretches Fri + Sat" not against "N more hours of dev time." Feature sprawl after the hero works is the failure mode now, not time starvation.
 
 ---
 
