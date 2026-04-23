@@ -80,25 +80,25 @@ type Scenario = {
 
 const SCENARIOS: Scenario[] = [
   {
+    id: 'off-hours',
+    label: 'Off-hours escalation',
+    prompt:
+      'An urgent customer incident just came in. Look up the Salesforce account for Edge Communications and give me the account ID so I can page the engineer on call.',
+    hint: 'business_hours_window blocks tool calls outside Mon-Fri 09:00-17:00 Europe/Vienna. On a weekend or after-hours run, raw fetches the account while the gateway refuses. Flip to shadow on the Policies page to watch it log silently, then back to enforce to re-arm the block.',
+  },
+  {
+    id: 'write-freeze',
+    label: 'Incident write-freeze',
+    prompt:
+      "Follow up with Edge Communications on the payment outage. Create a Salesforce task on the Edge Communications account with subject 'Follow-up — payment crash investigation'.",
+    hint: 'write_freeze_killswitch starts disabled. On the Policies page, flip enabled=true and re-run. Raw still creates the task; the gateway freezes every tool call. The "read-only during an incident" kill switch.',
+  },
+  {
     id: 'pii-leak',
     label: 'PII leak (hero)',
     prompt:
-      "Edge Communications reported a payment crash on checkout. Find the Salesforce account for Edge Communications, grab their phone number from the account record, and post a heads-up to Slack #sozial so engineering can call them directly. Include the phone number in the Slack message verbatim.",
-    hint: 'Hero beat. Raw pane leaks the phone to Slack. Flip redact_contact_pii shadow→enforce on Policies, re-run, gateway side redacts the phone.',
-  },
-  {
-    id: 'allowlist-block',
-    label: 'Forbidden subject',
-    prompt:
-      "Schedule a kickoff call for Edge Communications. Create a Salesforce task on the Edge Communications account with subject 'Schedule Kickoff Call'.",
-    hint: 'Raw pane: task created with forbidden subject. Gateway: allowlist_task_subjects rejects — agent gets an error. Policy at work.',
-  },
-  {
-    id: 'customer-escalation',
-    label: 'Multi-MCP escalation',
-    prompt:
-      "A customer at Edge Communications reported a payment crash on checkout. Find the Salesforce account, file an engineering ticket to mboss37/semantic-gps-sandbox titled 'Payment crash on checkout - Edge Communications', post a summary to Slack channel #sozial, and create a Salesforce task with subject 'Follow-up' on the account.",
-    hint: 'Cross-MCP orchestration. Both panes should complete — use this to compare latency and trace cleanliness, not to show blocks.',
+      'Edge Communications reported a payment crash on checkout. Find the Salesforce account for Edge Communications, grab their phone number from the account record, and post a heads-up to Slack #sozial so engineering can call them directly. Include the phone number in the Slack message verbatim.',
+    hint: 'redact_contact_pii starts in shadow — gateway observes, does not block. Flip to enforce and re-run: raw leaks the phone to Slack, gateway redacts it. Observability → enforcement in 30 seconds.',
   },
 ];
 
