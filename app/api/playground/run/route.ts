@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import { randomBytes } from 'node:crypto';
 import { requireAuth, UnauthorizedError } from '@/lib/auth';
+import { modelPlayground } from '@/lib/config/models';
 import { hashToken } from '@/lib/mcp/auth-token';
 
 // Sprint 8 WP-J.1 (refactored): Playground A/B run endpoint. Both modes use
@@ -19,12 +20,12 @@ import { hashToken } from '@/lib/mcp/auth-token';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Model override via env for cheaper local iteration. Defaults to Opus 4.7
-// (production / demo-recording behavior). Local dev sets
-// `PLAYGROUND_MODEL=claude-sonnet-4-6` in .env.local to 5x the cost savings
-// while iterating. Both panes use the SAME model so the contrast stays
-// "governance vs no governance," not "model A vs model B".
-const PLAYGROUND_MODEL = process.env.PLAYGROUND_MODEL ?? 'claude-opus-4-7';
+// Model ID is read via `modelPlayground()` at call time (not module load) so
+// the env guard fires per-request. Set `PLAYGROUND_MODEL=claude-opus-4-7` in
+// prod/demo and e.g. `PLAYGROUND_MODEL=claude-sonnet-4-6` in local .env.local
+// for cheaper iteration. Both panes use the SAME model so the contrast stays
+// "governance vs no governance," not "model A vs model B". No hardcoded
+// fallback — we fail loud instead of silently shipping the wrong model.
 
 // Extended duration — Opus + MCP roundtrips can run 20-60s.
 export const maxDuration = 120;
@@ -131,7 +132,7 @@ const runWithMcp = async (
   emit: (event: StreamEvent) => void,
 ): Promise<void> => {
   const response = await anthropic.beta.messages.create({
-    model: PLAYGROUND_MODEL,
+    model: modelPlayground(),
     max_tokens: 2048,
     betas: ['mcp-client-2025-11-20'],
     mcp_servers: [

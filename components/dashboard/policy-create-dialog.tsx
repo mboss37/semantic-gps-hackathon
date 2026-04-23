@@ -41,6 +41,12 @@ const BUILTIN_DEFAULTS: Record<string, Record<string, unknown>> = {
     end_hour: 17,
   },
   write_freeze: { enabled: false },
+  geo_fence: { allowed_regions: ['eu-west'], source: 'header' },
+  agent_identity_required: {
+    require_headers: ['x-agent-id'],
+    verify_signature: false,
+  },
+  idempotency_required: { ttl_seconds: 300, key_source: 'header' },
 };
 
 type Mode = 'shadow' | 'enforce';
@@ -144,6 +150,9 @@ export const PolicyCreateDialog = ({ servers }: { servers: Array<{ id: string; n
                 <SelectItem value="ip_allowlist">ip_allowlist</SelectItem>
                 <SelectItem value="business_hours">business_hours</SelectItem>
                 <SelectItem value="write_freeze">write_freeze</SelectItem>
+                <SelectItem value="geo_fence">geo_fence</SelectItem>
+                <SelectItem value="agent_identity_required">agent_identity_required</SelectItem>
+                <SelectItem value="idempotency_required">idempotency_required</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -67,7 +67,10 @@ export type PolicyRow = {
     | 'client_id'
     | 'ip_allowlist'
     | 'business_hours'
-    | 'write_freeze';
+    | 'write_freeze'
+    | 'geo_fence'
+    | 'agent_identity_required'
+    | 'idempotency_required';
   config: Record<string, unknown>;
   enforcement_mode: 'shadow' | 'enforce';
 };

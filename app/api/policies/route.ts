@@ -16,6 +16,9 @@ const BUILTIN_KEYS = [
   'ip_allowlist',
   'business_hours',
   'write_freeze',
+  'geo_fence',
+  'agent_identity_required',
+  'idempotency_required',
 ] as const;
 const MODES = ['shadow', 'enforce'] as const;
 

@@ -1,10 +1,13 @@
 import { z } from 'zod';
 import type { Manifest, PolicyAssignmentRow, PolicyRow } from '@/lib/manifest/cache';
 import {
+  runAgentIdentity,
   runAllowlist,
   runBasicAuth,
   runBusinessHours,
   runClientId,
+  runGeoFence,
+  runIdempotency,
   runInjectionGuard,
   runIpAllowlist,
   runPiiRedaction,
@@ -31,6 +34,22 @@ const BusinessHoursConfigSchema = z.object({
 const WriteFreezeConfigSchema = z.object({
   enabled: z.boolean(),
   tool_names: z.array(z.string().min(1)).optional(),
+});
+
+const GeoFenceConfigSchema = z.object({
+  allowed_regions: z.array(z.string().min(1)),
+  source: z.literal('header'),
+});
+
+const AgentIdentityConfigSchema = z.object({
+  require_headers: z.array(z.string().min(1)),
+  verify_signature: z.boolean(),
+  trust_chain_id: z.string().optional(),
+});
+
+const IdempotencyConfigSchema = z.object({
+  ttl_seconds: z.number().int().min(1).max(86400),
+  key_source: z.enum(['header', 'args_hash']),
 });
 
 // The gateway hot-path adapter for policies. Turns an assignment-graph plus
@@ -140,6 +159,30 @@ const evaluatePreCall = (policy: PolicyRow, ctx: PreCallContext): PreCallVerdict
         return { ok: false, reason: 'write_freeze_config_invalid' };
       }
       return runWriteFreeze(ctx.tool_name, parsed.data);
+    }
+    case 'geo_fence': {
+      const parsed = GeoFenceConfigSchema.safeParse(policy.config);
+      if (!parsed.success) {
+        return { ok: false, reason: 'geo_fence_config_invalid' };
+      }
+      return runGeoFence(ctx.headers, parsed.data);
+    }
+    case 'agent_identity_required': {
+      const parsed = AgentIdentityConfigSchema.safeParse(policy.config);
+      if (!parsed.success) {
+        return { ok: false, reason: 'agent_identity_config_invalid' };
+      }
+      return runAgentIdentity(ctx.headers, parsed.data);
+    }
+    case 'idempotency_required': {
+      const parsed = IdempotencyConfigSchema.safeParse(policy.config);
+      if (!parsed.success) {
+        return { ok: false, reason: 'idempotency_config_invalid' };
+      }
+      return runIdempotency(
+        { tool_name: ctx.tool_name, args: ctx.args, headers: ctx.headers },
+        parsed.data,
+      );
     }
     default:
       return null;

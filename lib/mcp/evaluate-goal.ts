@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
+import { modelEvaluateGoal } from '@/lib/config/models';
 import type { Manifest, RouteRow, ToolRow } from '@/lib/manifest/cache';
 import type {
   EvaluateGoalCandidate,
@@ -156,7 +157,7 @@ const rankOpus = async (
   try {
     const client = new Anthropic({ apiKey });
     const response = await client.messages.create({
-      model: 'claude-opus-4-7',
+      model: modelEvaluateGoal(),
       max_tokens: MAX_TOKENS,
       system: [
         {

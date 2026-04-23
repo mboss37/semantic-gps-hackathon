@@ -4,6 +4,10 @@
 // Individual form modules live under `./policy-forms/` (one per builtin) so
 // each stays under the file-size budget and independently diffable.
 
+import {
+  AgentIdentityForm,
+  type AgentIdentityConfig,
+} from './policy-forms/agent-identity-form';
 import { AllowlistForm, type AllowlistConfig } from './policy-forms/allowlist-form';
 import { BasicAuthForm, type BasicAuthConfig } from './policy-forms/basic-auth-form';
 import {
@@ -11,6 +15,11 @@ import {
   type BusinessHoursConfig,
 } from './policy-forms/business-hours-form';
 import { ClientIdForm, type ClientIdConfig } from './policy-forms/client-id-form';
+import { GeoFenceForm, type GeoFenceConfig } from './policy-forms/geo-fence-form';
+import {
+  IdempotencyForm,
+  type IdempotencyConfig,
+} from './policy-forms/idempotency-form';
 import {
   InjectionGuardForm,
   type InjectionGuardConfig,
@@ -26,10 +35,13 @@ import { RateLimitForm, type RateLimitConfig } from './policy-forms/rate-limit-f
 import { WriteFreezeForm, type WriteFreezeConfig } from './policy-forms/write-freeze-form';
 
 export type {
+  AgentIdentityConfig,
   AllowlistConfig,
   BasicAuthConfig,
   BusinessHoursConfig,
   ClientIdConfig,
+  GeoFenceConfig,
+  IdempotencyConfig,
   InjectionGuardConfig,
   InjectionPatternEntry,
   IpAllowlistConfig,
@@ -40,10 +52,13 @@ export type {
 };
 
 export {
+  AgentIdentityForm,
   AllowlistForm,
   BasicAuthForm,
   BusinessHoursForm,
   ClientIdForm,
+  GeoFenceForm,
+  IdempotencyForm,
   InjectionGuardForm,
   IpAllowlistForm,
   PiiRedactionForm,
@@ -61,6 +76,9 @@ export type AnyPolicyConfig =
   | IpAllowlistConfig
   | BusinessHoursConfig
   | WriteFreezeConfig
+  | GeoFenceConfig
+  | AgentIdentityConfig
+  | IdempotencyConfig
   | Record<string, unknown>;
 
 export const PolicyConfigForm = ({
@@ -133,6 +151,27 @@ export const PolicyConfigForm = ({
       return (
         <WriteFreezeForm
           config={config as WriteFreezeConfig}
+          onChange={(c) => onChange(c as Record<string, unknown>)}
+        />
+      );
+    case 'geo_fence':
+      return (
+        <GeoFenceForm
+          config={config as GeoFenceConfig}
+          onChange={(c) => onChange(c as Record<string, unknown>)}
+        />
+      );
+    case 'agent_identity_required':
+      return (
+        <AgentIdentityForm
+          config={config as AgentIdentityConfig}
+          onChange={(c) => onChange(c as Record<string, unknown>)}
+        />
+      );
+    case 'idempotency_required':
+      return (
+        <IdempotencyForm
+          config={config as IdempotencyConfig}
           onChange={(c) => onChange(c as Record<string, unknown>)}
         />
       );
