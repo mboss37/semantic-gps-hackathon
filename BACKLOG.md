@@ -8,6 +8,23 @@
 
 ## Submission-window — still open for Sat + Sun
 
+### [P0 Sat #1] Landing page rewrite — highest ranking lever (M)
+Current landing is black-void hero + text-only pitch + muted grey CTA + Next.js N-logo. Judges see it in 3 seconds and bounce. Estimated ranking: ~350/500 currently; proper landing moves to ~100/500. Higher single-move leverage than any other Sat item — judges see this BEFORE the demo video, BEFORE the dashboard, BEFORE the source. Per CLAUDE.md § Competition Mindset rule #1 (judging signal order), this is the FIRST thing fixed Sat morning.
+
+Required minimum:
+- Plain-English headline — drop jargon stacks; try "Governance + observability for agentic AI. One gateway across every MCP."
+- Bold primary CTA in brand color (not muted grey); secondary CTA for GitHub
+- Hero media slot: 5-10s loop of saga rollback cascade OR Workflow Graph
+- Stat strip: "12 built-in policies · 8 canonical relationship types · 3 demo MCPs unified · Opus 4.7 with extended thinking"
+- Architecture diagram embed (from VISION.md or regenerated)
+- Screenshot grid: Dashboard + Workflow Graph + Playground A/B + Policy timeline
+- "Built with Claude Opus 4.7" badge + stack-logo strip (Next.js · Supabase · Anthropic SDK · React Flow)
+- Kill the Next.js `N` logo in the bottom-left corner
+- Demo video embed above the fold once recorded Sat PM
+- "Submitted to Cerebral Valley hackathon 2026" signal
+
+Approach: plan first per CLAUDE.md, then parallel subagents — hero + copy lane A, stat strip + architecture embed lane B, screenshot grid + polish lane C. Content fill after demo narrative is locked.
+
 ### [P0 Sat AM] Finalize demo narrative
 Code ships regardless of framing. Nail the story Sat morning once all MCPs + routes + policies are live and we can see what the demo actually looks like on screen. Constraint: avoid positioning as an Agentforce competitor (Mihael works at Salesforce). Candidate angles:
 - "Complements Agentforce" — Agentforce for in-SF, Semantic GPS for cross-surface hops (GH/Slack). Governance on the outbound.
