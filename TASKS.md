@@ -103,7 +103,13 @@
 - Sat P0 queued post-sprint: landing page rewrite (highest ranking lever), extract SF/Slack/GitHub to standalone MCPs, onboarding wizard, data-model audit. Competition-mindset rules added to CLAUDE.md (judging signal order, visual polish mandatory, proactive critic mandate).
 - Validations: 291 pass / 5 skip / 0 fail (+22 net), tsc + lint + `next build` clean. 3 commits pushed to main (feat + 2×chore).
 
-## Current:
+## Current: Sprint 14 — Dashboard polish (Thu Apr 23 evening)
+
+Replace fixture data + fill visible placeholder slots so judges browsing the dashboard see live event counts and a populated origin-status on the per-server detail page. All three WPs are P1 + low-risk, single-file or small-scope, no schema changes. Shipped before bed so Friday starts with C.6 fresh.
+
+- [ ] **14.1** (M) Overview chart real data — replace `chart-area-interactive.tsx` 2024 fixture with `/api/gateway-traffic?range=7d|30d|90d` aggregating `mcp_events` by day, split ok/blocked. Reuses `lib/monitoring/fetch.ts` patterns. (Main thread.)
+- [ ] **14.2** (S) F.4 Origin health probes — fills `—` placeholder on `/dashboard/servers/[id]`. `GET /api/servers/[id]/health` does SSRF-guarded HEAD/GET against `origin_url`, renders ✓/✗/— with last-checked timestamp. (Subagent lane A.)
+- [ ] **14.3** (S) Rediscover-tools button per server — "Rediscover tools" button on `/dashboard/servers/[id]`; `POST /api/servers/:id/rediscover` re-runs `discoverTools()`, diffs, invalidates manifest. (Subagent lane B.)
 
 ## Session Log
 - 2026-04-23 — Sprint 13 shipped: 4 WPs (13.1 Routes UI + 13.2 Server detail + 13.3 Monitoring + 13.4 business_hours multi-window). Subagent B premature-completion caught mid-verify → finished in main. Service-role violation caught at review → fixed before commit. Competition-mindset rules + landing-page rewrite queued as #1 Sat P0. 291/5/0. 5 memories harvested. 3 commits pushed.

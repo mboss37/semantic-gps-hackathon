@@ -4,6 +4,8 @@ import { ArrowLeftIcon, ShieldAlertIcon, WrenchIcon, LinkIcon, BookIcon } from '
 import { requireAuth, UnauthorizedError } from '@/lib/auth';
 import { fetchServerDetail, fetchRemoteCapabilities } from '@/lib/servers/fetch';
 import { ServerConfigSnippet } from '@/components/dashboard/server-config-snippet';
+import { ServerHealthBadge } from '@/components/dashboard/server-health-badge';
+import { ServerRediscoverButton } from '@/components/dashboard/server-rediscover-button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
@@ -75,6 +77,7 @@ const ServerDetailPage = async ({ params }: { params: Promise<Params> }) => {
             {detail.tools.length} {detail.tools.length === 1 ? 'tool' : 'tools'} · registered {createdAt}
           </p>
         </div>
+        <ServerRediscoverButton serverId={detail.server.id} />
       </header>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -226,12 +229,7 @@ const ServerDetailPage = async ({ params }: { params: Promise<Params> }) => {
               <CardTitle className="text-sm">Origin status</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-lg text-muted-foreground">—</span>
-                <span className="text-xs text-muted-foreground">
-                  Health probes arrive with F.4.
-                </span>
-              </div>
+              <ServerHealthBadge serverId={detail.server.id} />
             </CardContent>
           </Card>
         </div>

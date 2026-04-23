@@ -123,10 +123,7 @@ Squeeze in between P0 items Fri/Sat if bandwidth allows. None of these are demo-
 - **I.3** Opus relationship inference on OpenAPI import (L). Feed full spec to Opus 4.7 with cached system prompt; user approves/rejects proposals before persist; thinking blocks surface reasoning. 1M-context showcase.
 - **Natural-language policy author** — user types "block PII on external domains after 6pm" → Opus returns JSON matching one of the 12 builtin schemas; user reviews before save. Textarea + "Ask Opus" button in policy editor.
 - **J.2** End-to-end Vercel verification — opt-in Anthropic vitest extended to Playground route. Insurance against deploy drift.
-- **Real event aggregation for Overview chart** — `components/chart-area-interactive.tsx` ships 2024 fixture data. Replace with `/api/gateway-traffic?range=7d|30d|90d` aggregating `mcp_events` by day split by `status === 'ok'` vs `blocked_by_policy`.
-- **Rediscover-tools button per server** — `POST /api/servers/:id/rediscover` re-runs `discoverTools()`, diffs against current table, invalidates manifest.
 - **Supabase realtime for audit page** — swap `setInterval(1000)` for `supabase.channel('mcp_events').on('postgres_changes', ...)` with polling fallback.
-- **F.4** Origin health probes (S) — unblocks C.4 + tightens the per-server detail page's "origin status" placeholder.
 - **C.4** Multi-origin per server + health-driven origin swap (M, blocked by F.4).
 - **G.8** Graph: domain-boundaries toggle + per-server policy count badge (S).
 - **H.2** Overview dashboard domain filter (S).
@@ -134,6 +131,14 @@ Squeeze in between P0 items Fri/Sat if bandwidth allows. None of these are demo-
 - **A.5** Settings page — username + org name edit (S).
 - **`maintenance_windows`** builtin policy — additive to time/state taxonomy (13th builtin).
 - **`destructive_tool_tagging`** builtin policy — additive to kill-switches taxonomy (14th builtin).
+
+### Identified issues (from Sprint 14 code review)
+Concrete rough edges surfaced by reviewers. Not demo-blocking; worth a pass if bandwidth allows before freeze, otherwise V2.
+
+- **Auth-config decode duplication across 5 proxy/auth files** — `lib/mcp/proxy-openapi.ts`, `lib/mcp/proxy-http.ts`, `lib/mcp/salesforce-auth.ts`, `lib/mcp/github-auth.ts`, `lib/mcp/slack-auth.ts` each carry their own copy of `EncryptedAuthSchema` + `AuthConfigSchema` + `decodeAuthConfig`. Consolidate to the new `lib/servers/auth.ts` helper shipped Sprint 14.3. 5-file refactor, needs full proxy retest. 30-60 min.
+- **Rediscover `tools` upsert vs Promise.all fan-out** — `app/api/servers/[id]/rediscover/route.ts::applyDiff` issues N individual `UPDATE` statements instead of one upsert keyed on `(server_id, name)`. Demo-scale (≤20 tools/server) makes it cosmetic; first step is verifying / adding the UNIQUE constraint, may require a migration.
+- **`console.error` leaking Supabase error bodies** — `app/api/gateway-traffic/route.ts:55` and ~10 similar sites across route handlers log raw error objects (can include connection strings / stack traces on infra failures). Swap to a structured logger or strip to typed codes before logging. Codebase-wide sweep.
+- **Rediscover button lacks dry-run preview** — `components/dashboard/server-rediscover-button.tsx` commits the diff without showing users what would change first. Needs a GET endpoint returning `{toAdd, toUpdate, stale}` without writing; users confirm, then POST commits. New WP, not a spot fix.
 
 ---
 

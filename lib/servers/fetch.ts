@@ -18,8 +18,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { decrypt } from '@/lib/crypto/encrypt';
 import { safeFetch, SsrfBlockedError } from '@/lib/security/ssrf-guard';
+import { decodeAuthConfig, type AuthConfig } from '@/lib/servers/auth';
 
 export type ServerDetailRow = {
   id: string;
@@ -220,33 +220,6 @@ const RpcResponse = z.object({
   result: z.unknown().optional(),
   error: z.object({ code: z.number(), message: z.string() }).optional(),
 });
-
-const EncryptedAuthSchema = z.object({ ciphertext: z.string().min(1) });
-
-const AuthConfigSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('none') }),
-  z.object({ type: z.literal('bearer'), token: z.string().min(1) }),
-]);
-
-type AuthConfig = z.infer<typeof AuthConfigSchema>;
-
-const decodeAuthConfig = (raw: unknown): AuthConfig => {
-  if (raw === null || raw === undefined) return { type: 'none' };
-  const envelope = EncryptedAuthSchema.safeParse(raw);
-  if (!envelope.success) {
-    // Legacy plaintext fallback — never stored in prod but keeps tests simple.
-    const plain = AuthConfigSchema.safeParse(raw);
-    return plain.success ? plain.data : { type: 'none' };
-  }
-  try {
-    const plaintext = decrypt(envelope.data.ciphertext);
-    const parsed: unknown = JSON.parse(plaintext);
-    const auth = AuthConfigSchema.safeParse(parsed);
-    return auth.success ? auth.data : { type: 'none' };
-  } catch {
-    return { type: 'none' };
-  }
-};
 
 const parseBody = (text: string, contentType: string): unknown => {
   if (contentType.includes('text/event-stream')) {
