@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { SaveIcon, Trash2Icon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +11,9 @@ import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -26,6 +28,13 @@ type Assignment = {
   tool_id: string | null;
 };
 
+type ToolOption = {
+  id: string;
+  name: string;
+  server_id: string;
+  server_name: string;
+};
+
 type Props = {
   id: string;
   name: string;
@@ -34,14 +43,38 @@ type Props = {
   mode: Mode;
   assignments: Assignment[];
   servers: Array<{ id: string; name: string }>;
+  tools: ToolOption[];
 };
 
-export const PolicyRow = ({ id, name, builtinKey, config, mode, assignments, servers }: Props) => {
+export const PolicyRow = ({
+  id,
+  name,
+  builtinKey,
+  config,
+  mode,
+  assignments,
+  servers,
+  tools,
+}: Props) => {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [configState, setConfigState] = useState<Record<string, unknown>>(config);
   const [attachServerId, setAttachServerId] = useState<string | undefined>(undefined);
+  const [attachToolId, setAttachToolId] = useState<string | undefined>(undefined);
   const serversById = new Map(servers.map((s) => [s.id, s.name]));
+  const toolsById = useMemo(() => new Map(tools.map((t) => [t.id, t])), [tools]);
+
+  // Group tools by server_name so the Attach-to-tool Select renders the same
+  // "server → tool" layout used in relationship-create-dialog.tsx.
+  const groupedTools = useMemo(() => {
+    const byServer = new Map<string, ToolOption[]>();
+    for (const t of tools) {
+      const bucket = byServer.get(t.server_name) ?? [];
+      bucket.push(t);
+      byServer.set(t.server_name, bucket);
+    }
+    return Array.from(byServer.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [tools]);
 
   const patch = async (patchBody: Record<string, unknown>, successMsg: string) => {
     setPending(true);
@@ -111,6 +144,33 @@ export const PolicyRow = ({ id, name, builtinKey, config, mode, assignments, ser
     }
   };
 
+  const onAttachTool = async () => {
+    if (!attachToolId) return;
+    setPending(true);
+    try {
+      const res = await fetch(`/api/policies/${id}/assignments`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ tool_id: attachToolId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const reason =
+          res.status === 403
+            ? 'Cross-org tool rejected'
+            : (data?.error ?? `HTTP ${res.status}`);
+        throw new Error(reason);
+      }
+      toast.success('Attached to tool');
+      setAttachToolId(undefined);
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Attach failed');
+    } finally {
+      setPending(false);
+    }
+  };
+
   const onDetach = async (assignmentId: string) => {
     setPending(true);
     try {
@@ -125,6 +185,18 @@ export const PolicyRow = ({ id, name, builtinKey, config, mode, assignments, ser
     } finally {
       setPending(false);
     }
+  };
+
+  const labelForAssignment = (a: Assignment): string => {
+    if (a.tool_id) {
+      const tool = toolsById.get(a.tool_id);
+      if (tool) return `tool: ${tool.server_name} / ${tool.name}`;
+      return `tool: ${a.tool_id.slice(0, 8)}…`;
+    }
+    if (a.server_id) {
+      return `server: ${serversById.get(a.server_id) ?? a.server_id.slice(0, 8)}`;
+    }
+    return 'org-wide';
   };
 
   return (
@@ -179,15 +251,9 @@ export const PolicyRow = ({ id, name, builtinKey, config, mode, assignments, ser
               {assignments.map((a) => (
                 <li
                   key={a.id}
-                  className="flex items-center justify-between rounded border border bg-background px-3 py-1.5 text-xs"
+                  className="flex items-center justify-between rounded border bg-background px-3 py-1.5 text-xs"
                 >
-                  <span className="text-foreground">
-                    {a.server_id
-                      ? `server: ${serversById.get(a.server_id) ?? a.server_id.slice(0, 8)}`
-                      : a.tool_id
-                        ? `tool: ${a.tool_id.slice(0, 8)}`
-                        : 'org-wide'}
-                  </span>
+                  <span className="text-foreground">{labelForAssignment(a)}</span>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -225,6 +291,37 @@ export const PolicyRow = ({ id, name, builtinKey, config, mode, assignments, ser
               disabled={pending || !attachServerId}
               onClick={onAttachServer}
             >
+              Attach
+            </Button>
+          </div>
+          <div className="mt-3 flex items-end gap-2">
+            <div className="flex-1">
+              <Label className="text-xs text-muted-foreground">Attach to tool</Label>
+              <Select
+                value={attachToolId ?? ''}
+                onValueChange={(v) => setAttachToolId(v ? v : undefined)}
+                disabled={pending || tools.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={tools.length === 0 ? 'No tools yet' : 'Pick a tool'}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {groupedTools.map(([server, toolsInServer]) => (
+                    <SelectGroup key={server}>
+                      <SelectLabel>{server}</SelectLabel>
+                      {toolsInServer.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button size="sm" disabled={pending || !attachToolId} onClick={onAttachTool}>
               Attach
             </Button>
           </div>

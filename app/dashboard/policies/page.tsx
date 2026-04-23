@@ -14,7 +14,9 @@ type PolicyRecord = {
     | 'injection_guard'
     | 'basic_auth'
     | 'client_id'
-    | 'ip_allowlist';
+    | 'ip_allowlist'
+    | 'business_hours'
+    | 'write_freeze';
   config: Record<string, unknown>;
   enforcement_mode: 'shadow' | 'enforce';
   created_at: string;
@@ -29,20 +31,49 @@ type AssignmentRecord = {
 
 type ServerRecord = { id: string; name: string };
 
+type ToolRowRaw = {
+  id: string;
+  name: string;
+  server_id: string;
+  servers: { name: string } | null;
+};
+
+type ToolOption = {
+  id: string;
+  name: string;
+  server_id: string;
+  server_name: string;
+};
+
 const PoliciesPage = async () => {
   const supabase = await createClient();
-  const [policiesRes, assignmentsRes, serversRes] = await Promise.all([
+  // Tools are org-scoped by joining through `servers` (which has
+  // organization_id). RLS is off in the MVP, but the user-scoped Supabase
+  // client still gets everything — we filter client-side by the servers we
+  // already pulled. Keeps this page parallel with the rest of the dashboard.
+  const [policiesRes, assignmentsRes, serversRes, toolsRes] = await Promise.all([
     supabase
       .from('policies')
       .select('id, name, builtin_key, config, enforcement_mode, created_at')
       .order('created_at', { ascending: false }),
     supabase.from('policy_assignments').select('id, policy_id, server_id, tool_id'),
     supabase.from('servers').select('id, name'),
+    supabase
+      .from('tools')
+      .select('id, name, server_id, servers!inner(name)')
+      .order('name'),
   ]);
 
   const policies = (policiesRes.data ?? []) as PolicyRecord[];
   const assignments = (assignmentsRes.data ?? []) as AssignmentRecord[];
   const servers = (serversRes.data ?? []) as ServerRecord[];
+  const toolsRaw = (toolsRes.data ?? []) as unknown as ToolRowRaw[];
+  const tools: ToolOption[] = toolsRaw.map((t) => ({
+    id: t.id,
+    name: t.name,
+    server_id: t.server_id,
+    server_name: t.servers?.name ?? 'unknown',
+  }));
 
   const assignmentsByPolicy = new Map<string, AssignmentRecord[]>();
   for (const a of assignments) {
@@ -84,6 +115,7 @@ const PoliciesPage = async () => {
               mode={p.enforcement_mode}
               assignments={assignmentsByPolicy.get(p.id) ?? []}
               servers={servers}
+              tools={tools}
             />
           ))}
         </div>

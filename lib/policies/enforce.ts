@@ -1,12 +1,15 @@
+import { z } from 'zod';
 import type { Manifest, PolicyAssignmentRow, PolicyRow } from '@/lib/manifest/cache';
 import {
   runAllowlist,
   runBasicAuth,
+  runBusinessHours,
   runClientId,
   runInjectionGuard,
   runIpAllowlist,
   runPiiRedaction,
   runRateLimit,
+  runWriteFreeze,
   type AllowlistConfig,
   type ClientIdConfig,
   type InjectionGuardConfig,
@@ -15,6 +18,20 @@ import {
   type PreCallVerdict,
   type RateLimitConfig,
 } from '@/lib/policies/built-in';
+
+const DAY_ENUM = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+
+const BusinessHoursConfigSchema = z.object({
+  timezone: z.string().min(1),
+  days: z.array(z.enum(DAY_ENUM)).min(1),
+  start_hour: z.number().int().min(0).max(23),
+  end_hour: z.number().int().min(0).max(23),
+});
+
+const WriteFreezeConfigSchema = z.object({
+  enabled: z.boolean(),
+  tool_names: z.array(z.string().min(1)).optional(),
+});
 
 // The gateway hot-path adapter for policies. Turns an assignment-graph plus
 // a call context into a list of decisions (for audit) and — when mode is
@@ -110,6 +127,20 @@ const evaluatePreCall = (policy: PolicyRow, ctx: PreCallContext): PreCallVerdict
     }
     case 'injection_guard':
       return runInjectionGuard(ctx.args, policy.config as InjectionGuardConfig);
+    case 'business_hours': {
+      const parsed = BusinessHoursConfigSchema.safeParse(policy.config);
+      if (!parsed.success) {
+        return { ok: false, reason: 'business_hours_config_invalid' };
+      }
+      return runBusinessHours(new Date(), parsed.data);
+    }
+    case 'write_freeze': {
+      const parsed = WriteFreezeConfigSchema.safeParse(policy.config);
+      if (!parsed.success) {
+        return { ok: false, reason: 'write_freeze_config_invalid' };
+      }
+      return runWriteFreeze(ctx.tool_name, parsed.data);
+    }
     default:
       return null;
   }

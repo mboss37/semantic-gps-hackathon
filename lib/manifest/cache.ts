@@ -65,7 +65,9 @@ export type PolicyRow = {
     | 'injection_guard'
     | 'basic_auth'
     | 'client_id'
-    | 'ip_allowlist';
+    | 'ip_allowlist'
+    | 'business_hours'
+    | 'write_freeze';
   config: Record<string, unknown>;
   enforcement_mode: 'shadow' | 'enforce';
 };

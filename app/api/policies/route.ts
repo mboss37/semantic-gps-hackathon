@@ -14,6 +14,8 @@ const BUILTIN_KEYS = [
   'basic_auth',
   'client_id',
   'ip_allowlist',
+  'business_hours',
+  'write_freeze',
 ] as const;
 const MODES = ['shadow', 'enforce'] as const;
 

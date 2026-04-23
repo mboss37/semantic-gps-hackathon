@@ -34,6 +34,13 @@ const BUILTIN_DEFAULTS: Record<string, Record<string, unknown>> = {
   basic_auth: {},
   client_id: { allowed_ids: [], header_name: 'x-client-id' },
   ip_allowlist: { allowed_cidrs: [] },
+  business_hours: {
+    timezone: 'Europe/Vienna',
+    days: ['mon', 'tue', 'wed', 'thu', 'fri'],
+    start_hour: 9,
+    end_hour: 17,
+  },
+  write_freeze: { enabled: false },
 };
 
 type Mode = 'shadow' | 'enforce';
@@ -135,6 +142,8 @@ export const PolicyCreateDialog = ({ servers }: { servers: Array<{ id: string; n
                 <SelectItem value="basic_auth">basic_auth</SelectItem>
                 <SelectItem value="client_id">client_id</SelectItem>
                 <SelectItem value="ip_allowlist">ip_allowlist</SelectItem>
+                <SelectItem value="business_hours">business_hours</SelectItem>
+                <SelectItem value="write_freeze">write_freeze</SelectItem>
               </SelectContent>
             </Select>
           </div>
