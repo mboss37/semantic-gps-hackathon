@@ -3,12 +3,14 @@
 import * as React from "react"
 import {
   ActivityIcon,
+  GaugeIcon,
   GitMergeIcon,
   GlobeIcon,
   HelpCircleIcon,
   KeyRoundIcon,
   LayoutDashboardIcon,
   NetworkIcon,
+  RouteIcon,
   SettingsIcon,
   ShieldCheckIcon,
   SparklesIcon,
@@ -37,10 +39,12 @@ const data = {
     { title: "Overview", url: "/dashboard", icon: LayoutDashboardIcon },
     { title: "Servers", url: "/dashboard/servers", icon: GlobeIcon },
     { title: "Workflow Graph", url: "/dashboard/graph", icon: NetworkIcon },
+    { title: "Routes", url: "/dashboard/routes", icon: RouteIcon },
     { title: "Playground", url: "/dashboard/playground", icon: SparklesIcon },
     { title: "Relationships", url: "/dashboard/relationships", icon: GitMergeIcon },
     { title: "Tokens", url: "/dashboard/tokens", icon: KeyRoundIcon },
     { title: "Policies", url: "/dashboard/policies", icon: ShieldCheckIcon },
+    { title: "Monitoring", url: "/dashboard/monitoring", icon: GaugeIcon },
     { title: "Audit", url: "/dashboard/audit", icon: ActivityIcon },
   ],
   navSecondary: [

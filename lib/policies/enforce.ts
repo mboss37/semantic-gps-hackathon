@@ -24,12 +24,41 @@ import {
 
 const DAY_ENUM = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 
-const BusinessHoursConfigSchema = z.object({
+// WP-13.4: multi-window + overnight-wrap shape is canonical. Legacy single-
+// window rows (`{timezone, days, start_hour, end_hour}`) still parse via the
+// transform below — no DB migration needed, runner only sees the new shape.
+const BusinessHoursWindowSchema = z.object({
+  timezone: z.string().min(1).optional(),
+  days: z.array(z.enum(DAY_ENUM)).min(1),
+  start_hour: z.number().int().min(0).max(23),
+  end_hour: z.number().int().min(0).max(23),
+});
+
+const NewBusinessHoursSchema = z.object({
+  timezone: z.string().min(1),
+  windows: z.array(BusinessHoursWindowSchema).min(1),
+});
+
+const LegacyBusinessHoursSchema = z.object({
   timezone: z.string().min(1),
   days: z.array(z.enum(DAY_ENUM)).min(1),
   start_hour: z.number().int().min(0).max(23),
   end_hour: z.number().int().min(0).max(23),
 });
+
+const BusinessHoursConfigSchema = z.union([
+  NewBusinessHoursSchema,
+  LegacyBusinessHoursSchema.transform((legacy) => ({
+    timezone: legacy.timezone,
+    windows: [
+      {
+        days: legacy.days,
+        start_hour: legacy.start_hour,
+        end_hour: legacy.end_hour,
+      },
+    ],
+  })),
+]);
 
 const WriteFreezeConfigSchema = z.object({
   enabled: z.boolean(),

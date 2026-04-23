@@ -36,9 +36,9 @@ const BUILTIN_DEFAULTS: Record<string, Record<string, unknown>> = {
   ip_allowlist: { allowed_cidrs: [] },
   business_hours: {
     timezone: 'Europe/Vienna',
-    days: ['mon', 'tue', 'wed', 'thu', 'fri'],
-    start_hour: 9,
-    end_hour: 17,
+    windows: [
+      { days: ['mon', 'tue', 'wed', 'thu', 'fri'], start_hour: 9, end_hour: 17 },
+    ],
   },
   write_freeze: { enabled: false },
   geo_fence: { allowed_regions: ['eu-west'], source: 'header' },

@@ -95,7 +95,14 @@
 - 12.4 Policy shadow→enforce timeline — `GET /api/policies/[id]/timeline?days=N` (Zod 1-30, default 7), JS-side jsonb filter on `policy_decisions` array, zero-filled daily buckets. `/dashboard/policies/[id]` page + Recharts stacked bars (allow/shadow_block/enforce_block). "View timeline" link added to PolicyRow.
 - Validations: 269 pass / 5 skip / 0 fail, tsc + lint + `next build` clean, local db reset clean, hosted synced. 1 commit pushed to main.
 
-## Current:
+## Current: Sprint 13 — Route visibility + self-serve + polish (2026-04-23)
+
+Three gaps left before Saturday recording: routes are invisible in the UI (only exist in DB seed), per-server "copy-paste MCP config" is missing for judges who want to try it themselves, and the dashboard has no monitoring surface for the 12-builtin policy story. Plus: close the last real shape gap in the 12-builtin taxonomy by evolving business_hours config to enterprise shape (multi-window + overnight) instead of hacking around it. Hits Demo 25% + Depth 20%.
+
+- [ ] **13.1** (L, carved) Route designer UI — read-only React Flow canvas per route with step detail panels (tool, input_mapping, rollback_input_mapping, fallback). Inline-edit stretch; create-new deferred. (Main thread.)
+- [ ] **13.2** (M) Per-server detail page — violation counts + copy-ready MCP client config block + resources/prompts introspect. F.4 origin-health dep waived with placeholder. (Subagent lane A.)
+- [ ] **13.3** (M) Monitoring page — 3 widgets (call volume, policy violations over time, PII detections by pattern) over mcp_events. (Subagent lane B.)
+- [ ] **13.4** (M) business_hours multi-window + overnight — config evolves to `{ windows: Array<{ timezone?, days[], start_hour, end_hour }> }`; per-window timezone; overnight spans (start > end wraps midnight); allow-list semantics (any window matches → pass); Zod preprocess for legacy single-window backcompat; seed migration. (Subagent lane C.)
 
 ## Session Log
 - 2026-04-23 — Sprint 12 shipped + wrapped: 4 WPs (I.1 thinking + G.17 compensators + G.18 invalidation + I.4 timeline), 1 commit. Next.js `_` private-folder gotcha caught by subagent B; `__HMR_NONCE__` hack deleted. Honest-A/B principle extended to model capabilities. 269/5/0. 4 memories harvested + 1 updated.

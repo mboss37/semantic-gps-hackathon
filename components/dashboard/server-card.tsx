@@ -1,8 +1,9 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Trash2Icon } from 'lucide-react';
+import { ArrowRightIcon, Trash2Icon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -117,7 +118,7 @@ export const ServerCard = ({ id, name, transport, originUrl, createdAt, tools }:
           </div>
         )}
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex items-center justify-between gap-2">
         <Button
           variant="ghost"
           size="sm"
@@ -127,6 +128,12 @@ export const ServerCard = ({ id, name, transport, originUrl, createdAt, tools }:
         >
           <Trash2Icon className="size-4" />
           Delete
+        </Button>
+        <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
+          <Link href={`/dashboard/servers/${id}`}>
+            View details
+            <ArrowRightIcon className="size-3.5" />
+          </Link>
         </Button>
       </CardFooter>
     </Card>

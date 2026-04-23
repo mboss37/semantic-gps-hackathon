@@ -41,6 +41,34 @@ export const DEFAULT_PII_PATTERNS: readonly PiiPattern[] = [
   },
 ];
 
+// Canonical set of pattern names the runner can emit into `match_samples`.
+// Includes every name in `DEFAULT_PII_PATTERNS` PLUS `phone`, which is
+// produced by the libphonenumber branch in `redactPhones` (not a regex
+// pattern, so it doesn't live in `DEFAULT_PII_PATTERNS`).
+//
+// Consumers (e.g. monitoring dashboard) SHOULD import from here instead of
+// hardcoding a parallel list — if we add a pattern in `DEFAULT_PII_PATTERNS`
+// or a new libphonenumber-style branch, this stays the source of truth.
+export const PII_PATTERN_NAMES: readonly string[] = [
+  'phone',
+  ...DEFAULT_PII_PATTERNS.map((p) => p.name),
+];
+
+const PII_PATTERN_SET: ReadonlySet<string> = new Set(PII_PATTERN_NAMES);
+
+export const isPiiPatternName = (name: string): boolean => PII_PATTERN_SET.has(name);
+
+// `match_samples` entries are shaped as `<pattern_name>:<preview>…` — see
+// the `samples.push(...)` calls in `runPiiRedaction`. This extracts the
+// pattern name prefix; returns null when the sample doesn't match the
+// expected shape or the prefix isn't a known PII pattern.
+export const extractPiiPatternFromSample = (sample: string): string | null => {
+  const idx = sample.indexOf(':');
+  if (idx <= 0) return null;
+  const name = sample.slice(0, idx);
+  return isPiiPatternName(name) ? name : null;
+};
+
 export type PiiRedactionConfig = {
   patterns?: Array<{ name: string; regex: string; replacement?: string }>;
   // Default region used to parse local-format phone numbers that lack a
