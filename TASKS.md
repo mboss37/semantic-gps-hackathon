@@ -4,105 +4,93 @@
 > Completed sprints: keep WPs listed (one line each). Session log: 3 lines max, last 3 sessions.
 
 ## Completed Sprints
-- **Sprint 1 — Setup:** Next.js 16 + React 19 + Tailwind 4 + ESLint 9 scaffold, core + dev deps, shadcn init (Button), `supabase init`, `.env.example`, vitest smoke test, all quality gates green.
-- **Sprint 2 — Infra foundation:**
-  - Hosted Supabase project created (`cgvxeurmulnlbevinmzj`, Central EU) — production target only
-  - `CREDENTIALS_ENCRYPTION_KEY` generated via `openssl rand -base64 32`
-  - Local Supabase stack up (`pnpm supabase start` on :54321); emits `sb_publishable_*` / `sb_secret_*` natively
-  - `.env.local` populated with local stack values; `.env.example` + ARCHITECTURE.md migrated to 2026 canonical env naming
-  - Supabase CLI linked to hosted project (deploy-only)
-  - Migration pipeline proven end-to-end — `20260421173113_bootstrap.sql` applied to local (`db reset`) + hosted (`db push`)
-  - Vercel live at https://semantic-gps-hackathon.vercel.app/ — Supabase Marketplace integration auto-injects URL + publishable + secret; encryption key + Anthropic + app URL added manually
-  - Process rules locked in CLAUDE.md: local-first Supabase (Off-Limits); pull-from-backlog removes-from-backlog; completed sprints persist WPs
-- **Sprint 3 — Core build (spine + gateway + policy swap hero) — closed partial:**
-  - 3.1 Spine libs + core schema (6 tables, auth, proxy, SSRF, encrypt, manifest cache, dev-login)
-  - 3.2 MCP gateway skeleton — Inspector-verified on Vercel, echo tool round-trip, opt-in Anthropic SDK test
-  - 3.3 OpenAPI import + servers CRUD + TRel `discover_relationships` / `find_workflow_path`
-  - 3.4 Policy engine + enforce/shadow toggle (PII + allowlist built-ins) + manifest-aware gateway
-  - 3.5 Dashboard (shadcn dashboard-01) + MCP direct-import tool discovery + server-card tool chips
-  - 3.6 Seed + embedded demo agent — **DEFERRED to Sprint 4 WP-4.18**. Reality check on 2026-04-22 vs. the reference architecture at `/projects/semantic-gps/docs` surfaced that shipping a demo on mocked tool execution, a half-built TRel, and zero real integrations would be a vanity win. Scope got re-drawn.
-- **Sprint 4 — Day 1: schema foundation + real proxies (Wed 2026-04-22):**
-  - A.1 `organizations` + `memberships` schema + `on_auth_user_created` trigger; `servers.user_id` → `organization_id`
-  - B.1 `domains` table + `servers.domain_id` FK; trigger extended to auto-seed default SalesOps domain on signup
-  - B.3 Relationship taxonomy migrated to the stories' 8 types (`produces_input_for`, `requires_before`, `suggests_after`, `mutually_exclusive`, `alternative_to`, `validates`, `compensated_by`, `fallback_to`) — CHECK constraint, manifest type, TRel BFS, graph legend, tests all in sync
-  - B.4 `policy_versions` audit table with AFTER-INSERT/UPDATE trigger snapshotting every policies mutation
-  - C.1 Real OpenAPI HTTP proxy (`lib/mcp/proxy-openapi.ts`) — decrypt `auth_config`, bearer/basic/apikey, path+query+body composition, SSRF-guarded safeFetch, 5xx retry
-  - C.2 Real direct-MCP HTTP-Streamable proxy (`lib/mcp/proxy-http.ts`) — JSON-RPC `tools/call` forward, `application/json` or single-event SSE, Zod boundary validation
-  - Validations: hosted Supabase migrated via `db push`; Tier 2 real-proxy smoke against httpbin.org green; Tier 1 Opus 4.7 → deployed `/api/mcp` → echo tool E2E in 4.87s. Pre-commit review flow updated (subagent reviews, human approves, main writes marker) to kill tooling false positives.
-- **Sprint 5 — Day 2: scoped gateway + routes schema + auth pages (Thu 2026-04-23):**
-  - C.3 `REAL_PROXY_ENABLED` flipped default-on; typed `ExecuteResult` discriminated union; `mcp_events.latency_ms` now prefers upstream wire time
-  - C.5 `tools/list` emits `_meta.relationships: [{ to, type, description }]` per tool when outgoing edges exist; omitted otherwise
-  - B.2 `routes` + `route_steps` tables with ordered steps, `fallback_route_id` (set null), `rollback_tool_id` (set null), `tool_id` (restrict) — unblocks F.1 `execute_route`
-  - D.1 Three-tier scoped gateway: `/api/mcp` (org) + `/api/mcp/domain/[slug]` + `/api/mcp/server/[id]`; shared `buildGatewayHandler(scopeResolver)`; per-scope `Manifest` cache keyed on `ManifestScope` discriminated union
-  - G.5 3 new pre-call policies (`basic_auth`, `client_id`, `ip_allowlist`) fail-closed; `PreCallContext` gained `headers` + `client_ip` threaded from the Request; IPv4 CIDR matcher inline; 25 unit tests
-  - A.2 Supabase email/pw signup + login + logout pages (client form split into its own component for Suspense boundary around `useSearchParams`); `proxy.ts` + dashboard layout redirect to `/login` instead of dev-login; dev-login still available behind env gate for seeded demo
-  - Validations: local `pnpm test` 95/97 ✓, httpbin smoke 2/2 ✓, local gateway curl all 3 scopes ✓, `supabase db push` applied routes + builtin_keys to hosted, deployed gateway curl all 3 scopes ✓, Opus 4.7 → deployed `/api/mcp` E2E 9.76s ✓, `pnpm exec next build` ✓
-- **Sprint 6 — Orchestration + gateway auth + authoring UI (Wed 2026-04-22):**
-  - A.4 Removed dev-login bypass entirely — signup/login via `/login` only; seed.sql top comment updated; zero call sites remain
-  - D.2 Gateway bearer-token auth — `gateway_tokens` migration (org-scoped, SHA-256 hashed), `lib/mcp/auth-token.ts` (parseBearer + hashToken + resolveOrgFromToken with fire-and-forget last_used_at bump), auth enforced in `buildGatewayHandler`, demo token seeded; 5-case test matrix
-  - F.1 `execute_route` MCP method — `lib/mcp/execute-route.ts` orchestrator, ordered step execution, `input_mapping` DSL (`$inputs.<prop>` + `$steps.<capture_key>.<dot.path>` with numeric indices), per-step `runPreCallPolicies` / `runPostCallPolicies`, capture bag, halt-on-error with `halted_at_step`, chained `traceId` audit, MCP `structuredContent` + JSON text wrapper
-  - G.6 Semantic rewriting layer — `tools.display_name` + `display_description` nullable columns; `tools/list` emits display values (fallback to origin); `tools/call` accepts either origin or display name (origin wins on collision); builtin echo unchanged
-  - G.4 Rate-limit + injection-guard runners — in-memory Map rate limiter (60s window, cleanup-on-read) keyed on `x-org-id` > `client_ip` > 'anon'; injection-guard with 5 default patterns (ignore_prior, role_override, im_start, sql_drop, sql_comment_inject); per-`builtin_key` policy config forms replace JSON textarea; 7-key enum in API
-  - G.2 Relationship CRUD API + dashboard UI — `app/api/relationships/{route,[id]/route}.ts` with cross-org enforcement via tool→server→org join; `/dashboard/relationships` table + create dialog + inline description edit; sidebar entry; node-detail panel "+" shortcut pre-fills from-tool
-  - **Postmortem fix (not planned):** service-client hardening — `lib/supabase/service.ts` throws on missing `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SECRET_KEY` instead of silent `?? ''`; gateway-handler wraps in try/catch and returns 4 distinct JSON-RPC reasons (`missing_authorization` 401, `invalid_token` 401, `upstream_db_error` 502, `server_misconfigured` 500) with `error.data.reason` + optional `detail` — addresses Vercel Sensitive env-var dropout (community bug #38722)
-  - Validations: 132/132 tests ✓, lint 0 ✓, tsc 0 ✓, `next build` clean ✓; 8 commits pushed to main
-- **Sprint 7 — Day 2 night: real Salesforce integration + token UI + fallback (Wed 2026-04-22 evening):**
-  - A.6 Gateway token mint + rotate UI — `/dashboard/tokens` + POST/GET/DELETE `/api/gateway-tokens`, plaintext shown ONCE with explicit-dismiss modal, SHA-256 hashed in DB, sidebar entry. Closes the hosted bootstrap gap. 6-test matrix.
-  - F.2 Fallback execution — `execute_route` auto-tries `fallback_to` edge on `origin_error`, emits `fallback_triggered` audit event sharing route's traceId, `fallback_used` + `fallback_also_failed` optional fields on `ExecuteRouteStep`. Single-level structural guard (fallback path never re-enters `runSingleStep`). 4 tests.
-  - E.1 Salesforce OAuth 2.0 Client Credentials + 5 curated tools (find_account, find_contact, get_opportunity, update_opportunity_stage, create_task). No jsforce — raw fetch keeps bundle edge-compatible. Auth seam at `lib/mcp/salesforce-auth.ts` + call/dispatch at `lib/mcp/proxy-salesforce.ts` (both under 400-line cap; refactor split mid-review). Module-level token cache with 60s skew. 9 mocked tests + 1 opt-in `VERIFY_SALESFORCE=1`.
-  - J.3 Real demo seed loaded via Supabase MCP — 1 Demo Salesforce server (encrypted auth_config from local one-shot helper `scripts/seed-j3-encrypt.mjs`), 5 tools, Route `sales_escalation` with 3 steps + F.1 input_mapping (`$inputs.account_name` → `$steps.account.records.0.Id`), 3 relationships (2 produces_input_for + 1 requires_before), 2 policies (PII shadow + allowlist enforce) + assignments. Migration `20260422210000_transport_salesforce.sql` widened CHECK to include `'salesforce'` (E.1 had widened only the TS union — every INSERT would have hit `check_violation`).
-  - **Infra fix (not planned):** CI had been red for 4 commits since Sprint 6. Three-pronged fix: (1) `.github/workflows/ci.yml` gets fake Supabase/encryption env so `createServiceClient` boots + `lib/crypto/encrypt.ts` decodes; (2) 6 DB-integration suites (`auth-org`, `domains`, `gateway-scoped`, `policy-versions`, `relationships-api`, `routes`) widened to `&& !process.env.CI` so they skip on Actions; (3) 4 route suites stub `@/lib/supabase/service` on CI via `__tests__/_helpers/supabase-stub.ts` (Proxy-based chainable that resolves `{data:[],error:null}`) so `logMCPEvent`'s fire-and-forget insert doesn't hang on the fake URL. Bonus: ESLint `argsIgnorePattern: '^_'` honors TS unused-prefix convention.
-  - Validations: 151 pass / 3 skip locally, 129 pass / 25 skip on CI, tsc 0 ✓, lint 0 ✓, `next build` clean ✓; 7 commits pushed to main; CI green for first time since Sprint 6. Deployed Vercel gateway end-to-end verified: bearer → manifest → dispatcher → SF OAuth → SOQL → real `Edge Communications` account row.
 
-- **Sprint 8 — Day 3: cross-MCP orchestration + Playground A/B hero (Thu 2026-04-23):**
-  - E.2 Slack proxy — 3 curated tools (users_lookup_by_email, chat_post_message, conversations_list) via Bot Token; raw fetch, ProxyResult contract, 8 mocked + opt-in real tests.
-  - E.3 GitHub proxy — 4 curated tools (search_issues, create_issue, add_comment, close_issue) via PAT; hand-rolled REST (not federated MCP), User-Agent-required, response projection trims payloads, 9 mocked + opt-in real tests.
-  - F.3 Rollback execution — execute_route walks `compensated_by` edges in REVERSE on ANY halt (origin_error, policy, unauthorized, fallback exhausted, catalog miss); saga best-effort, `rollback_executed` audit events share traceId, 6 test scenarios. Shared `UpstreamError` extracted to `lib/mcp/upstream-error.ts` so all 3 proxies reuse.
-  - J.3-ext Cross-MCP seed — Slack + GitHub servers + 7 new tools + 7 cross-MCP relationships (incl. `gh.create_issue → compensated_by → gh.close_issue`) + `cross_domain_escalation` route; loaded to hosted AND mirrored locally.
-  - J.1 Playground A/B hero — `/dashboard/playground` two-pane workbench, shared prompt + Run button, NDJSON stream of tool calls + results + text + done events. Initially asymmetric (3 tools vs 12) — user caught this — REFACTORED to honest A/B: new `/api/mcp/raw` endpoint (same bearer auth, origin names, no `_meta.relationships`, no policy runs, no TRel extensions) + `stateless-server.ts` `{governed: boolean}` option; both panes use Anthropic beta `mcp_servers` connector, only URL differs.
-  - I.2 Rollback cascade viz — polling-based subscription on mcp_events, edge+node highlight with 400ms stagger on reversed compensated_by chain, dev-gated "Simulate cascade" button, new `/api/mcp-events` org-scoped endpoint, 8 unit-tested event-to-edge mapping cases.
-  - G.1 validate_workflow + evaluate_goal — real impls replace stubs. validate_workflow: offline linter (unknown_tool, missing_prerequisite, mutually_exclusive, policy_blocks) + graph_coverage metric. evaluate_goal: keyword-first ranker with Opus 4.7 second-tier ranker when `ANTHROPIC_API_KEY` present, silent fallback to keywords on any failure, cache_control ephemeral on system prompt.
-  - A.6 Gateway token mint UI + F.2 Fallback (shipped in earlier sessions within this sprint arc) also remain live and integrated.
-  - Validations: 205/5/0 local, tsc + lint + next build clean, E2E verified: Opus → /api/mcp (tunnel) → real SF/Slack/GH → actual side effects (GitHub issue filed, Slack message posted, SF task created). 10 commits pushed to main. Cloudflare quick tunnel replaces Vercel redeploy loop for local iteration.
-  - **Key catch mid-sprint:** original J.1 had 3 tools on raw vs 12 on gateway — that's a structural cheat that confounded the contrast with tool-count bias. Refactored to honest A/B before commit-locking.
+**Sprint 1 — Setup:** Next.js 16 + React 19 + Tailwind 4 + TypeScript-strict + ESLint 9 scaffold, shadcn init, `supabase init`, `.env.example`, vitest smoke; all quality gates green.
 
-- **Sprint 9 — Day 4: gateway-native policy set + demo presets (Fri 2026-04-24):**
-  - G.10 `business_hours` global builtin — `{timezone, days, start_hour, end_hour}` config, DST-safe time-in-timezone via `Intl.DateTimeFormat(...).formatToParts()` with `{timeZone, weekday:'short', hour:'2-digit', hour12:false}`, `'24'→0` hour normalization. 5 tests including Europe/Vienna Mar 29 2026 spring-forward boundary pinned via `vi.setSystemTime(new Date('2026-03-29T01:30:00Z'))`.
-  - G.11 `write_freeze` global builtin — `{enabled, tool_names?}` kill-switch; disabled passes, enabled+no-names blocks all, enabled+subset blocks only listed tools. `enforcement_mode: 'enforce'` but disabled by default so the demo flips live. 5 tests.
-  - G.9 Tool-level policy assignment UI — `policy-row.tsx` second attach path with grouped server→tool Select (reused pattern from `relationship-create-dialog.tsx`), cross-org guard on `POST /api/policies/[id]/assignments` via `tools→servers!inner(organization_id)` join (403 on mismatch), inconsistent `{server_id, tool_id}` pair rejected 400. `invalidateManifest()` on mutate. Integration suite gated on local Supabase + always-on Zod contract smoke.
-  - J.4 Playground preset overhaul — 3 scenarios each isolate ONE governance dimension: off-hours (`business_hours` blocks), write-freeze (kill-switch), PII hero (shadow→enforce). Prompts coerce Opus toward the tool class each policy governs; hints name the exact policy to flip.
-  - J.5 `scripts/sprint9-policy-seed.sql` — idempotent BEGIN/COMMIT: DELETE-by-name (cascades to assignments+versions), INSERT `business_hours_window` enforce global, `write_freeze_killswitch` enforce-but-disabled global, `redact_contact_pii` shadow tool-scoped. `NULL::uuid` casts on global assignments (bare NULL UNION ALL SELECTs 42804). Tool-scoped JOIN silently yields 0 rows when tools absent (empty local). Applied locally via `docker cp + psql -f`, hosted via Supabase MCP `execute_sql` — hosted migration history drift worked around by `apply_migration` direct (prior sessions had left 3 MCP-applied migrations without local files, so `supabase db push` aborted).
-  - Refactor: 9 per-builtin policy forms extracted from `policy-config-forms.tsx` (549→142 lines, dispatcher + barrel) into `components/dashboard/policy-forms/*.tsx` to hold the 400-line-per-file convention. Plus `shared.ts` for `parseLines`/`joinLines`/`DAY_LABELS`/`clampHour`. External `PolicyConfigForm` import path unchanged.
-  - G.12 `budget_cap` cut in planning — agent-framework / LLM-provider territory, not control-plane. Principle cemented: Semantic GPS governs the CALL, downstream systems govern the DATA. If agent frameworks or LLM providers have better visibility into the thing, it's not our policy. Added to CLAUDE.md § Key Decisions + ARCHITECTURE.md § Hard-Won Lessons.
-  - Validations: 220 pass / 5 skip / 0 fail, tsc + lint + `next build` clean, `supabase db reset` clean locally, hosted policies verified via MCP `execute_sql`. 3 commits pushed to main.
+**Sprint 2 — Infra foundation:**
+- Hosted Supabase `cgvxeurmulnlbevinmzj` (Central EU) — production target only; local stack on :54321 (2026 `sb_publishable_*` / `sb_secret_*` key format)
+- Migration pipeline proven local→hosted; Vercel live at https://semantic-gps-hackathon.vercel.app via Supabase Marketplace integration
+- CLAUDE.md process rules locked: local-first Supabase, pull-from-backlog removes-from-backlog, completed sprints persist WPs
 
-- **Sprint 10 — Day 5 Thu PM: policy taxonomy completion + demo-readiness bundle (Thu 2026-04-23):**
-  - G.13 `geo_fence` global builtin — `{allowed_regions: string[], source: 'header'}`, fail-closed on missing `x-agent-region`. EU AI Act narrative hook. Ships with `config_invalid` rejection for non-`'header'` source (forward-compat for org_setting).
-  - G.14 `agent_identity_required` global builtin — `{require_headers: string[], verify_signature: boolean, trust_chain_id?: string}`. v1 header-presence only; `verify_signature: true` returns explicit `signature_verification_not_implemented` so the config surface is forward-compat without KMS/JWK plumbing. Meta confused-deputy narrative hook.
-  - G.15 `idempotency_required` global builtin — `{ttl_seconds, key_source}`, new `lib/policies/idempotency-store.ts` mirroring `rate-limiter.ts` (module-level Map, cleanup-on-read). `args_hash` mode uses sha256 of tool_name + stable-stringified args. Verdict `reason: 'duplicate_request'` rides existing `policy_decisions` audit path.
-  - G.16 env-driven Anthropic model IDs — `lib/config/models.ts` with `modelPlayground()` + `modelEvaluateGoal()` fail-loud on missing env. Playground defaults to Sonnet (cost) via `.env.example`; Opus reserved for `evaluate_goal` (quality on rare path).
-  - Refactor: `lib/policies/built-in.ts` split 562→57 lines into 12 per-runner files under `lib/policies/runners/` + `shared.ts` (PreCallVerdict + getHeader). Barrel re-exports preserve every import site.
-  - **Demo-readiness bundle (unplanned, same sprint):**
-    - `scripts/bootstrap-local-demo.sql` — idempotent SQL mirroring hosted to local: 3 MCPs + 12 tools + 10 edges + 2 routes + 4 policies + 5 assignments. Uses encrypted auth_config ciphertexts copied verbatim from hosted (assumes `CREDENTIALS_ENCRYPTION_KEY` parity).
-    - PII international via `libphonenumber-js` — replaced hand-rolled phone regex that missed parens format. Handles US parens, E.164, UK/DE/FR/JP. Rejects dates/IPs/ZIPs/UUIDs via real numbering-plan validation. 16 new test cases.
-    - Saga rollback `route_steps.rollback_input_mapping jsonb` — execute_route was failing on the hero demo because `create_issue.result {number}` ≠ `close_issue.args {owner, repo, issue_number}`. New column + `CapturedStep {args, result}` bag + backwards-compat resolver. Canonical saga pattern replaces Sprint 8 "best-effort result-verbatim" stub.
-    - CLAUDE.md hard rules: seed local first, local = superset of hosted, `db reset` wipes data-plane seeds.
-    - `docs/DEMO.md` recording playbook — per-story script, live-validation scorecard, recording-day checklist. PII leak ranked hero (86.5) after Slack-auto-linkify visual beat discovered during validation.
-  - E2E validated on local against real SF/Slack/GitHub: #1 PII leak (shadow→enforce redaction), #7 prompt-injection (injection_detected:ignore_prior block), #9 rollback cascade (compensated_count 1, 0 open GH issues post-run), #10 governance overlay (4 policies in one audit row).
-  - Validations: 256 pass / 5 skip / 0 fail, tsc + lint + `next build` clean. 4 commits pushed to main. Hosted synced: `20260425130000_route_step_rollback_input_mapping` migration applied + `injection_guard_default` policy seeded for parity.
+**Sprint 3 — Core spine + gateway skeleton + dashboard:**
+- 3.1 Spine libs + 6-table schema (auth, proxy, SSRF, encrypt, manifest cache)
+- 3.2 MCP gateway Inspector-verified on Vercel; echo tool E2E via Anthropic SDK
+- 3.3 OpenAPI import + servers CRUD + TRel `discover_relationships` / `find_workflow_path`
+- 3.4 Policy engine with shadow/enforce toggle (PII + allowlist built-ins)
+- 3.5 Dashboard (shadcn dashboard-01) + MCP direct-import tool discovery
+- 3.6 Demo agent deferred — reality-check against reference architecture rejected shipping on mocked execution
 
-## Current: Sprint 11 — Submission gates + vision signaling + demo-day ergonomics (Thu 2026-04-23 PM)
+**Sprint 4 — Multi-tenant schema + real proxies (Wed Apr 22):**
+- A.1/B.1 `organizations` + `memberships` + `domains` schema; `on_auth_user_created` trigger auto-seeds org + membership + default SalesOps domain on signup
+- B.3 Relationship taxonomy cut to 8 canonical types (`produces_input_for`, `requires_before`, `suggests_after`, `mutually_exclusive`, `alternative_to`, `validates`, `compensated_by`, `fallback_to`)
+- B.4 `policy_versions` audit table with insert/update trigger
+- C.1 Real OpenAPI HTTP proxy — decrypt auth, SSRF-guarded fetch, 5xx retry
+- C.2 Real direct-MCP HTTP-Streamable proxy — JSON-RPC + single-event SSE, Zod boundary validation
+- Tier-1 Opus 4.7 → deployed `/api/mcp` → echo E2E in 4.87s
 
-Hackathon-submission hard gates plus a vision doc that signals the scalable architecture (split control/data plane, Rust data plane deploy-anywhere, Next.js control plane multi-region) to judges without having to build it. Plus recording-day ergonomics so Sunday doesn't burn on setup.
+**Sprint 5 — Scoped gateway + routes schema + auth pages (Thu Apr 23):**
+- C.3 Real-proxy default-on; typed `ExecuteResult` discriminated union
+- C.5 `tools/list` emits `_meta.relationships` per tool when edges exist
+- B.2 `routes` + `route_steps` tables with `fallback_route_id` + `rollback_tool_id` FKs
+- D.1 Three-tier scoped gateway — `/api/mcp` (org) + `/api/mcp/domain/[slug]` + `/api/mcp/server/[id]`; shared `buildGatewayHandler(scopeResolver)` + per-scope manifest cache
+- G.5 Pre-call policies `basic_auth` + `client_id` + `ip_allowlist` (fail-closed); `PreCallContext` threads headers + client_ip
+- A.2 Supabase email/pw signup + login + logout pages; dev-login removed
 
-- [ ] **11.1** (S) Replace CNA landing + email-verify ack. `app/page.tsx` → thin Semantic GPS landing with "Open Dashboard" CTA, handle `?verified=true` query param toast then redirect to `/dashboard`. `app/layout.tsx` metadata already done. (Subagent lane A.)
-- [ ] **11.2** (S) `README.md` rewrite. 1-para pitch + quickstart (`supabase start` → `.env.local` → `pnpm dev`) + env table + Vercel link + demo video placeholder + 4-bullet Vision teaser linking to VISION.md. (Main thread.)
-- [ ] **11.3** (S) `docs/SUBMISSION.md` — 100-200 word submission summary for CV platform. Closes with one sentence on the control/data-plane split + Rust vision. (Main thread.)
-- [ ] **11.4** (S) `VISION.md` in repo root — ~500-600 words. TL;DR, wedge recap, architecture vision (control plane Next.js multi-region / data plane Rust deploy-anywhere / Navigation Bundle sync), why this wins for agents, roadmap grouped by theme, non-goals, closing. Highly visible to judges via root-level GitHub doc listing. (Main thread.)
-- [ ] **11.5** (S) G.19 demo-data cleanup CLI — `scripts/cleanup-demo-data.mjs`. Idempotent; closes open GH issues on sandbox repo, deletes Slack bot messages in `#general` in last N hours, deletes recent SF Tasks on Edge Communications owned by demo user. Run before each recording take. (Subagent lane B.)
-- [ ] **11.6** (S) Recording-day enforce↔shadow toggle on `policy-row.tsx`. Replace Select with a 1-click Switch/Toggle that PATCHes `enforcement_mode` directly — tighter narrative for live demo flip. (Main thread, after 11.2-11.4.)
+**Sprint 6 — Orchestration + gateway auth + authoring UI:**
+- D.2 Gateway bearer-token auth via `gateway_tokens` (org-scoped, SHA-256 hashed); distinct JSON-RPC error reasons with `error.data.reason`
+- F.1 `execute_route` MCP method — ordered step execution with `input_mapping` DSL (`$inputs.*` + `$steps.<key>.<path>`), per-step policies, capture bag, chained traceId audit
+- G.6 Semantic rewriting — `tools.display_name` + `display_description` nullable columns; origin wins on collision
+- G.4 Rate-limit + injection-guard runners; per-builtin config forms replace JSON textarea
+- G.2 Relationship CRUD API + dashboard UI with cross-org enforcement
+- Service-client hardening — fail-loud on missing env (addresses Vercel Sensitive env-var dropout #38722)
+
+**Sprint 7 — Real Salesforce + token UI + fallback:**
+- A.6 Gateway token mint + rotate UI at `/dashboard/tokens`; plaintext shown once, SHA-256 hashed in DB
+- F.2 Fallback execution — `execute_route` walks `fallback_to` on origin_error, emits `fallback_triggered` audit event
+- E.1 Salesforce OAuth 2.0 Client Credentials + 5 tools (find_account, find_contact, get_opportunity, update_opportunity_stage, create_task); raw fetch, no jsforce
+- J.3 `sales_escalation` route seeded — 3 steps with F.1 input mapping (`$inputs.account_name` → `$steps.account.records.0.Id`)
+- CI fix — DB-integration suites skip on Actions; route suites stub `@/lib/supabase/service` via chainable Proxy helper
+
+**Sprint 8 — Cross-MCP orchestration + Playground A/B hero (Thu Apr 23):**
+- E.2 Slack proxy — 3 tools (users_lookup_by_email, chat_post_message, conversations_list) via Bot Token
+- E.3 GitHub proxy — 4 tools (search_issues, create_issue, add_comment, close_issue) via PAT; response projection trims payloads
+- F.3 Rollback execution — `execute_route` walks `compensated_by` in REVERSE on any halt; shared `UpstreamError` across 3 proxies
+- J.3-ext Cross-MCP seed — Slack + GitHub servers + 7 cross-MCP relationships + `cross_domain_escalation` route
+- J.1 Playground A/B — `/dashboard/playground` two-pane workbench, same Opus 4.7 client, `/api/mcp/raw` vs `/api/mcp`. User caught tool-count asymmetry mid-sprint → refactored to honest A/B with shared `{governed: boolean}` server factory
+- I.2 Rollback cascade viz with 400ms edge-highlight stagger
+- G.1 `validate_workflow` + `evaluate_goal` real implementations; Opus 4.7 second-tier ranker with keyword-first fallback
+- Demo E2E live locally via Cloudflare tunnel + on Vercel against real SF/Slack/GH
+
+**Sprint 9 — Gateway-native policy set + demo presets (Fri Apr 24):**
+- G.10 `business_hours` builtin — timezone-aware, DST-safe via `Intl.DateTimeFormat.formatToParts()`
+- G.11 `write_freeze` kill-switch — disabled by default so the demo flips live
+- G.9 Tool-level policy assignment UI — grouped server→tool Select with cross-org guard
+- J.4 Playground preset overhaul — 3 scenarios each isolate one governance dimension
+- J.5 Idempotent policy seed script — DELETE-by-name + `NULL::uuid` casts on global assignments
+- Refactor: `policy-config-forms.tsx` split into 9 per-builtin files (549→142 lines)
+- G.12 `budget_cap` retired in planning — principle cemented: gateway governs the CALL, downstream governs the DATA
+
+**Sprint 10 — Policy taxonomy completion + demo-readiness bundle (Thu Apr 23 PM):**
+- G.13 `geo_fence` (EU AI Act hook) + G.14 `agent_identity_required` (Meta confused-deputy hook) + G.15 `idempotency_required` (duplicate-request dedupe) — completes 12 builtins across 7 governance dimensions
+- G.16 Env-driven Anthropic model IDs — fail-loud on missing env; Playground default Sonnet for cost, `evaluate_goal` keeps Opus
+- Refactor: `built-in.ts` split 562→57 lines into 12 per-runner files
+- `scripts/bootstrap-local-demo.sql` — idempotent SQL mirroring hosted to local (3 MCPs, 12 tools, 10 edges, 2 routes, 4 policies)
+- libphonenumber-js replaces hand-rolled PII regex — international, rejects dates/IPs/ZIPs/UUIDs via real numbering-plan validation
+- Canonical saga pattern — `route_steps.rollback_input_mapping jsonb` + `CapturedStep {args, result}` bag replaces Sprint 8 result-passthrough stub
+- `docs/DEMO.md` recording playbook; CLAUDE.md hard rules (seed local first, local=superset of hosted)
+- 4 demo stories E2E validated against real SF/Slack/GitHub on local — PII hero promoted after Slack-auto-linkify visual beat
+
+**Sprint 11 — Submission gates + vision signaling + demo-day ergonomics (Thu Apr 23 PM):**
+- 11.1 CNA landing replaced with Semantic GPS page + Supabase `?verified=true` email-verify ack handler
+- 11.2 `README.md` full rewrite — pitch, quickstart, env table, architecture overview, vision teaser
+- 11.3 `docs/SUBMISSION.md` — CV-platform 150-word summary + 25-word elevator pitch
+- 11.4 `VISION.md` in repo root (~600 words) — split control/data plane, Rust data plane deploy-anywhere, Next.js multi-region control plane, Navigation Bundle sync, roadmap. Sits next to README in GitHub's root listing for judge visibility.
+- 11.5 `scripts/cleanup-demo-data.mjs` — idempotent recording-day reset CLI with `--dry-run`, per-subsystem error isolation, SOQL double-escape parity with `proxy-salesforce.ts`
+- 11.6 Policy row Select → ToggleGroup — 1-click shadow↔enforce flip for live demo narrative
+
+## Current:
 
 ## Session Log
-- 2026-04-23 — Sprint 10 shipped + wrapped: 4 planned WPs (G.13/G.14/G.15/G.16 completing the 12-builtin policy taxonomy) + unplanned demo-readiness bundle (local bootstrap SQL, libphonenumber-js PII, canonical saga `rollback_input_mapping`, docs/DEMO.md recording playbook), 4 commits. 4 demo stories E2E validated against real SF/Slack/GitHub on local — PII hero promoted from beat to hero after Slack-auto-linkify visual effect surfaced during validation. 5 memories harvested. 256 pass / 5 skip / 0 fail.
-- 2026-04-24 — Sprint 9 shipped + wrapped: 5 core WPs (G.10/G.11/G.9/J.4/J.5) + `policy-config-forms.tsx` 9-file split refactor, 3 commits. G.12 budget_cap retired mid-sprint — user caught it as agent-framework territory, cemented "gateway governs the CALL, downstream governs the DATA" principle into CLAUDE.md + ARCHITECTURE.md. 5 memories harvested.
-- 2026-04-23 — Sprint 8 shipped + wrapped: 7 planned WPs (E.2, E.3, F.3, J.3-ext, J.1, I.2, G.1) + 1 architectural refactor (honest A/B) + 1 preset tuning commit, 10 commits. Demo now E2E live locally via Cloudflare tunnel + on Vercel. User caught J.1 tool-count asymmetry mid-sprint — refactored before commit-locking. Sonnet model override for cost iteration added. Sprint 9 theme: enterprise-realistic policy set (business_hours, approval chains, PII swap).
+- 2026-04-23 — Sprint 11 shipped: submission-gate landing replacement, README + SUBMISSION.md + root VISION.md, demo-data cleanup CLI, policy row ToggleGroup. 10 files (+515/-91), 1 commit, pushed. Code review clean; three preemptive fixes applied (NaN guard, SOQL escape parity, GH window comment).
+- 2026-04-23 — Sprint 10 shipped + wrapped: G.13/G.14/G.15/G.16 completing 12-builtin policy taxonomy + demo-readiness bundle (local bootstrap, libphonenumber-js PII, canonical saga rollback, DEMO.md playbook). 4 demo stories E2E validated live. 5 memories harvested. 256/5/0.
+- 2026-04-24 — Sprint 9 shipped + wrapped: 5 WPs (G.10/G.11/G.9/J.4/J.5) + `policy-config-forms.tsx` 9-file split. G.12 budget_cap retired mid-sprint — "gateway governs the CALL, downstream governs the DATA" cemented into CLAUDE.md + ARCHITECTURE.md.
