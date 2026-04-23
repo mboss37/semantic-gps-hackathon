@@ -48,6 +48,6 @@ jobs:
           # WP-G.16: model-ID helpers throw on missing env. CI never calls
           # Anthropic for real, but these satisfy the fail-loud guard on any
           # suite that imports the playground route or evaluate-goal helper.
-          PLAYGROUND_MODEL: claude-opus-4-7
+          PLAYGROUND_MODEL: claude-sonnet-4-6
           EVALUATE_GOAL_MODEL: claude-opus-4-7
         run: pnpm test
