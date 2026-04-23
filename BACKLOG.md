@@ -263,6 +263,53 @@ Supabase supports both out of the box; deferred for Sprint 4 to stay focused on 
 - [ ] Email verify flow + page
 - [ ] Rate-limit on `/api/auth/login`, `/signup`, `/forgot-password` (edge middleware or Supabase-native)
 
+### [P0 Fri conditional] Real multi-tenancy — RLS + invite flow
+**CONDITIONAL PULL RULE:** only initiate if (a) all Sprint 8 WPs closed by Thu EOD, AND (b) full Friday available (no other commitments, no Sprint 8 slippage). Decide 9am Fri — if either condition false, DO NOT START. Half-baked multi-org is worse than clean single-admin MVP; RLS bugs can silently empty the whole dashboard 24h before submission.
+
+**Why this is compelling for judging:**
+- Differentiator from Agentforce positioning — "multi-user agent control plane" is a harder pitch to match
+- 10-sec invite-teammate beat in the demo video amplifies the governance story
+- Tells the Opus 4.7 Use story better (agents operating on behalf of real multi-user orgs)
+
+**Scope (locked if pulled, L-sized, ~6-8h):**
+
+1. RLS migration — enable + policies
+   - [ ] `supabase/migrations/20260425100000_rls_multi_tenant.sql`
+   - Enable RLS on: `organizations`, `memberships`, `domains`, `servers`, `tools`, `relationships`, `policies`, `policy_assignments`, `policy_versions`, `routes`, `route_steps`, `gateway_tokens`, `mcp_events`
+   - Policy pattern: `using (organization_id in (select organization_id from memberships where user_id = auth.uid()))` — cached via SECURITY DEFINER helper `public.current_user_orgs()` to avoid N+1 on every query
+   - SECURITY DEFINER RPC for the MCP gateway service-role path (bypasses RLS for cross-org manifest lookups by server_id)
+
+2. Signup trigger refactor
+   - [ ] Skip auto-workspace when an invite code is present in `auth.users.raw_user_meta_data` (`{invite_code: "..."}`)
+   - [ ] Accept the invite: attach membership to the inviting org, don't create a new org
+
+3. Invite flow
+   - [ ] `public.invites` table (id, organization_id, email?, token_hash, expires_at, accepted_at, created_by)
+   - [ ] `POST /api/invites` — generate invite; returns signed link `https://.../invite?token=<jwt>` where JWT payload = `{invite_id, org_id}` signed with `CREDENTIALS_ENCRYPTION_KEY` variant
+   - [ ] `/invite?token=...` — landing page, shows "Join <Org Name>", redirects to `/signup?invite=<token>` or `/login?invite=<token>` (existing user)
+   - [ ] On signup with `?invite=<token>`: pass into `raw_user_meta_data` so trigger picks it up
+   - [ ] On login with `?invite=<token>`: add membership to the inviting org, redirect to `/dashboard`
+
+4. Settings UI (minimal)
+   - [ ] `/dashboard/settings` page — Org Members section: list members (email + role + joined-at), "Copy invite link" button, "Remove member" (only self or admin-of-org)
+   - [ ] Role enum widen: `admin | member` (keep viewer for V2; 2 roles is enough for demo)
+
+5. Migrate existing data
+   - [ ] One-shot SQL via Supabase MCP: audit all existing rows' `organization_id` values; every row must belong to a live org (Demo Org in our case)
+   - [ ] Revoke any lingering broken FKs
+
+6. Verification
+   - [ ] Opt-in vitest (`VERIFY_RLS=1`) that spins up 2 auth users in 2 orgs, asserts cross-org queries return empty
+   - [ ] Manual smoke: sign up new user, invite them, they join, they see the same servers — record a 10-sec clip for the demo
+
+**Cut lines (do NOT pull even if time):**
+- Multiple roles beyond admin/member (viewer, owner-transfer, per-tool permissions)
+- SSO / SCIM
+- Org switching UI (user in multiple orgs) — force single-membership for demo
+- Remove-member cascade review (what happens to tokens they minted? — park for V2)
+
+**Failure mode:** if 4pm Fri hits and RLS is causing dashboard to go empty, REVERT the RLS migration and ship the single-admin MVP. Don't sink the recording window trying to fix multi-tenant in the last 2 hours.
+
 ### [P1 post-hackathon] Signup onboarding: skip auto-workspace when Demo Org exists
 Currently the `on_auth_user_created` trigger ALWAYS creates a fresh `<handle>'s Workspace` for every signup. For demo/onboarding flows where a single shared Demo Org should be the landing pad, this creates 2 problems: (1) user lands in an empty workspace and can't see seeded MCPs, (2) reparenting them to Demo Org requires deleting the auto-workspace, which cascade-nukes any tokens they minted in it.
 
