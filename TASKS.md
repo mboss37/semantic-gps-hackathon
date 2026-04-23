@@ -103,15 +103,18 @@
 - Sat P0 queued post-sprint: landing page rewrite (highest ranking lever), extract SF/Slack/GitHub to standalone MCPs, onboarding wizard, data-model audit. Competition-mindset rules added to CLAUDE.md (judging signal order, visual polish mandatory, proactive critic mandate).
 - Validations: 291 pass / 5 skip / 0 fail (+22 net), tsc + lint + `next build` clean. 3 commits pushed to main (feat + 2×chore).
 
-## Current: Sprint 14 — Dashboard polish (Thu Apr 23 evening)
+**Sprint 14 — Dashboard polish (Thu Apr 23 evening):**
+- 14.1 Overview chart real data — new `/api/gateway-traffic` (GET, range=7d|30d|90d) reusing `fetchCallVolume`; `components/chart-area-interactive.tsx` rewritten to fetch live, 3-series stacked (ok/blocked/error) matching monitoring palette; 2024 hardcoded fixture retired.
+- 14.2 Origin health probes (F.4) — new `/api/servers/[id]/health` with safeFetch HEAD→GET 2s timeout, status `ok|degraded|down|unknown`; `ServerHealthBadge` client component replaces "Health probes arrive with F.4" placeholder on server detail page; includes refresh button + last-checked timestamp.
+- 14.3 Rediscover tools — new `/api/servers/[id]/rediscover` POST, name-keyed diff upserting description/input_schema while preserving `display_name`/`display_description` overrides; `ServerRediscoverButton` client component on server detail header with 8s auto-clear status; `decodeAuthConfig` extracted to `lib/servers/auth.ts` (single source of truth for encrypted envelope + legacy plaintext); `loadServer` + `applyDiff` helpers keep POST under 50-line cap.
+- Review-flagged fixes applied: rediscover handler helper extraction (86→45 lines), chart no-flicker on range change, rediscover status auto-clear. 1 reviewer suggestion (remove `queueMicrotask` in ServerHealthBadge) reverted — the `react-hooks/set-state-in-effect` lint rule DOES fire on memoized setState-callers invoked directly in effect body; kept the deferral with explanatory comment.
+- BACKLOG: new P1 "Identified issues" subsection captures deferred review items (5-file auth-decode dup, Promise.all → upsert needs unique constraint, console.error Supabase body leaks, rediscover dry-run preview endpoint).
+- Subagent B (14.3) exited mid-WP notification — main thread caught via git-status + missing-file verify (Sprint 13 lesson holding up); finished button component + test + page header edit in the main session.
+- Validations: 302 pass / 5 skip / 0 fail (+11 net), tsc + lint + `next build` clean with 3 new routes. 1 commit `4a17a64` pushed to main.
 
-Replace fixture data + fill visible placeholder slots so judges browsing the dashboard see live event counts and a populated origin-status on the per-server detail page. All three WPs are P1 + low-risk, single-file or small-scope, no schema changes. Shipped before bed so Friday starts with C.6 fresh.
-
-- [ ] **14.1** (M) Overview chart real data — replace `chart-area-interactive.tsx` 2024 fixture with `/api/gateway-traffic?range=7d|30d|90d` aggregating `mcp_events` by day, split ok/blocked. Reuses `lib/monitoring/fetch.ts` patterns. (Main thread.)
-- [ ] **14.2** (S) F.4 Origin health probes — fills `—` placeholder on `/dashboard/servers/[id]`. `GET /api/servers/[id]/health` does SSRF-guarded HEAD/GET against `origin_url`, renders ✓/✗/— with last-checked timestamp. (Subagent lane A.)
-- [ ] **14.3** (S) Rediscover-tools button per server — "Rediscover tools" button on `/dashboard/servers/[id]`; `POST /api/servers/:id/rediscover` re-runs `discoverTools()`, diffs, invalidates manifest. (Subagent lane B.)
+## Current:
 
 ## Session Log
+- 2026-04-23 — Sprint 14 shipped: 3 WPs (14.1 overview live + 14.2 origin health + 14.3 rediscover). Subagent B bailed mid-WP, main finished the gap. Reviewer approved with 8 suggestions; fixed 4 easy, BACKLOG'd 4 risky in new P1 "Identified issues" subsection. 302/5/0. 1 commit pushed.
 - 2026-04-23 — Sprint 13 shipped: 4 WPs (13.1 Routes UI + 13.2 Server detail + 13.3 Monitoring + 13.4 business_hours multi-window). Subagent B premature-completion caught mid-verify → finished in main. Service-role violation caught at review → fixed before commit. Competition-mindset rules + landing-page rewrite queued as #1 Sat P0. 291/5/0. 5 memories harvested. 3 commits pushed.
 - 2026-04-23 — Sprint 12 shipped + wrapped: 4 WPs (I.1 thinking + G.17 compensators + G.18 invalidation + I.4 timeline), 1 commit. Next.js `_` private-folder gotcha caught by subagent B; `__HMR_NONCE__` hack deleted. Honest-A/B principle extended to model capabilities. 269/5/0. 4 memories harvested + 1 updated.
-- 2026-04-23 — Sprint 11 shipped: submission-gate landing replacement, README + SUBMISSION.md + root VISION.md, demo-data cleanup CLI, policy row ToggleGroup. 10 files (+515/-91), 1 commit, pushed. Code review clean; three preemptive fixes applied (NaN guard, SOQL escape parity, GH window comment).
