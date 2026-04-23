@@ -11,7 +11,7 @@ export type ServerRow = {
   domain_id: string | null;
   name: string;
   origin_url: string | null;
-  transport: 'http-streamable' | 'openapi' | 'salesforce';
+  transport: 'http-streamable' | 'openapi' | 'salesforce' | 'slack' | 'github';
   openapi_spec: unknown;
   auth_config: unknown;
   created_at: string;

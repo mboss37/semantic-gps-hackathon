@@ -3,6 +3,7 @@ import { decrypt } from '@/lib/crypto/encrypt';
 import { createServiceClient } from '@/lib/supabase/service';
 import { safeFetch, SsrfBlockedError } from '@/lib/security/ssrf-guard';
 import type { ServerRow } from '@/lib/manifest/cache';
+import { UpstreamError } from '@/lib/mcp/upstream-error';
 
 // Auth + token-cache seam for the Salesforce proxy. Split out of
 // `proxy-salesforce.ts` so that file stays under the 400-line cap and so
@@ -27,17 +28,9 @@ export type TokenCacheEntry = {
 
 export type ServerRecord = Pick<ServerRow, 'id' | 'auth_config' | 'transport'>;
 
-export class UpstreamError extends Error {
-  readonly status: number;
-  readonly reason: string;
-  readonly detail?: string;
-  constructor(status: number, reason: string, detail?: string) {
-    super(reason);
-    this.status = status;
-    this.reason = reason;
-    this.detail = detail;
-  }
-}
+// Re-exported so legacy callers (proxy-salesforce, salesforce-proxy tests)
+// keep a single import path. Canonical definition lives in `./upstream-error`.
+export { UpstreamError };
 
 const EncryptedAuthSchema = z.object({ ciphertext: z.string().min(1) });
 
