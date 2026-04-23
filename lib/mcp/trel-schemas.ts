@@ -36,6 +36,32 @@ export const ExecuteRouteRequestSchema = z.object({
   }),
 });
 
+// Planning-time workflow linter. Caller supplies an ordered step list (tool
+// names or ids) and we check it against the manifest's relationship graph +
+// static-config policies. Offline / deterministic — no LLM.
+export const ValidateWorkflowRequestSchema = z.object({
+  method: z.literal('validate_workflow'),
+  params: z.object({
+    steps: z
+      .array(
+        z.object({
+          tool: z.string().min(1).describe('Tool name OR tool UUID — resolver accepts either.'),
+        }),
+      )
+      .min(1),
+  }),
+});
+
+// Goal-to-route matcher. Keyword scorer always; Opus 4.7 ranking when the
+// Anthropic API key is present. Opus path fails silently back to keywords.
+export const EvaluateGoalRequestSchema = z.object({
+  method: z.literal('evaluate_goal'),
+  params: z.object({
+    goal: z.string().min(1).describe('Plain-language goal to rank against manifest routes.'),
+    max_candidates: z.number().int().min(1).max(10).optional(),
+  }),
+});
+
 export type DiscoverRelationshipsParams = z.infer<
   typeof DiscoverRelationshipsRequestSchema
 >['params'];
@@ -43,6 +69,10 @@ export type FindWorkflowPathParams = z.infer<
   typeof FindWorkflowPathRequestSchema
 >['params'];
 export type ExecuteRouteParams = z.infer<typeof ExecuteRouteRequestSchema>['params'];
+export type ValidateWorkflowParams = z.infer<
+  typeof ValidateWorkflowRequestSchema
+>['params'];
+export type EvaluateGoalParams = z.infer<typeof EvaluateGoalRequestSchema>['params'];
 
 export type ExecuteRouteStepStatus =
   | 'ok'
@@ -91,9 +121,48 @@ export type ExecuteRouteResult = {
   rollback_summary?: ExecuteRouteRollbackSummary;
 };
 
+// Result shapes for validate_workflow + evaluate_goal. Exported for test
+// assertions and future callers that want typed responses.
+export type ValidateWorkflowIssueCode =
+  | 'unknown_tool'
+  | 'missing_prerequisite'
+  | 'mutually_exclusive'
+  | 'policy_blocks';
+
+export type ValidateWorkflowIssue = {
+  step_index: number;
+  severity: 'error' | 'warning';
+  code: ValidateWorkflowIssueCode;
+  message: string;
+  tool?: string;
+  expected_preceding_tool?: string;
+};
+
+export type ValidateWorkflowResult = {
+  valid: boolean;
+  issues: ValidateWorkflowIssue[];
+  graph_coverage: number;
+};
+
+export type EvaluateGoalCandidate = {
+  kind: 'route' | 'tool_sequence';
+  id?: string;
+  name?: string;
+  steps: Array<{ tool_name: string; tool_id: string }>;
+  relevance: number;
+  rationale: string;
+};
+
+export type EvaluateGoalResult = {
+  candidates: EvaluateGoalCandidate[];
+  rationale_overall: string;
+};
+
 export const TREL_METHODS = [
   'discover_relationships',
   'find_workflow_path',
   'execute_route',
+  'validate_workflow',
+  'evaluate_goal',
 ] as const;
 export type TrelMethod = (typeof TREL_METHODS)[number];

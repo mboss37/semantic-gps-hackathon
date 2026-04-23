@@ -6,14 +6,18 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { logMCPEvent, redactPayload } from '@/lib/audit/logger';
 import { loadManifest, type ManifestScope } from '@/lib/manifest/cache';
+import { evaluateGoal } from '@/lib/mcp/evaluate-goal';
 import { executeRoute, type PolicyContextBuilder } from '@/lib/mcp/execute-route';
 import { buildCatalog, executeTool } from '@/lib/mcp/tool-dispatcher';
 import { discoverRelationships, findWorkflowPath } from '@/lib/mcp/trel-handlers';
 import {
   DiscoverRelationshipsRequestSchema,
+  EvaluateGoalRequestSchema,
   ExecuteRouteRequestSchema,
   FindWorkflowPathRequestSchema,
+  ValidateWorkflowRequestSchema,
 } from '@/lib/mcp/trel-schemas';
+import { validateWorkflow } from '@/lib/mcp/validate-workflow';
 import { runPostCallPolicies, runPreCallPolicies } from '@/lib/policies/enforce';
 
 // Low-level Server so tools/list + tools/call can merge the builtin echo with
@@ -227,6 +231,42 @@ export const createStatelessServer = ({ traceId, scope, headers, clientIp }: Cre
       status: 'ok',
       latency_ms: Math.round(performance.now() - started),
       payload: { params: req.params, path_length: result.path.length, rationale: result.rationale },
+    });
+    return result;
+  });
+
+  server.setRequestHandler(ValidateWorkflowRequestSchema, async (req) => {
+    const started = performance.now();
+    const manifest = await loadManifest(scope);
+    const result = await validateWorkflow(req.params, manifest);
+    logMCPEvent({
+      trace_id: traceId,
+      method: 'validate_workflow',
+      status: 'ok',
+      latency_ms: Math.round(performance.now() - started),
+      payload: {
+        params: req.params,
+        valid: result.valid,
+        issue_count: result.issues.length,
+        graph_coverage: result.graph_coverage,
+      },
+    });
+    return result;
+  });
+
+  server.setRequestHandler(EvaluateGoalRequestSchema, async (req) => {
+    const started = performance.now();
+    const manifest = await loadManifest(scope);
+    const result = await evaluateGoal(req.params, manifest);
+    logMCPEvent({
+      trace_id: traceId,
+      method: 'evaluate_goal',
+      status: 'ok',
+      latency_ms: Math.round(performance.now() - started),
+      payload: {
+        goal: req.params.goal,
+        candidate_count: result.candidates.length,
+      },
     });
     return result;
   });
