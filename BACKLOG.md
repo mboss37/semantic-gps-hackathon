@@ -263,6 +263,14 @@ Supabase supports both out of the box; deferred for Sprint 4 to stay focused on 
 - [ ] Email verify flow + page
 - [ ] Rate-limit on `/api/auth/login`, `/signup`, `/forgot-password` (edge middleware or Supabase-native)
 
+### [P1 post-hackathon] Signup onboarding: skip auto-workspace when Demo Org exists
+Currently the `on_auth_user_created` trigger ALWAYS creates a fresh `<handle>'s Workspace` for every signup. For demo/onboarding flows where a single shared Demo Org should be the landing pad, this creates 2 problems: (1) user lands in an empty workspace and can't see seeded MCPs, (2) reparenting them to Demo Org requires deleting the auto-workspace, which cascade-nukes any tokens they minted in it.
+
+Options:
+- [ ] Config flag on the trigger: if `SEMANTIC_GPS_SINGLE_ORG_MODE=1` env (or a settings table row), skip org creation and just add membership to the existing first-created org
+- [ ] OR: at dashboard level, detect orphan auto-workspace vs shared Demo Org and prompt the user to "Join Demo Org" with data migration done atomically server-side
+- [ ] Fix the cascade footgun: `gateway_tokens.organization_id` uses ON DELETE CASCADE; rethink for workspace-consolidation scenarios
+
 ### [P1 post-hackathon] Role promotion + member removal + invite flow
 Single-admin MVP in Sprint 4 (first signup = admin of their own org). Multi-user org needs RLS re-enablement + role expansion + invite flow (email + unique link).
 
