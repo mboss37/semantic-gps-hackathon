@@ -34,11 +34,12 @@ Replaces CNA boilerplate. **Required for submission.**
 - [ ] `README.md` — one-paragraph pitch, quickstart (`supabase start` → `.env.local` → `pnpm dev`), env table, Vercel link, demo video embed
 - [ ] `docs/SUBMISSION.md` — 100–200 word written summary for CV platform
 
-### [P0 Sat] Replace CNA landing
-CNA branding leaks into `app/layout.tsx` tab title + `app/page.tsx` marketing shell. Fix before recording.
+### [P0 Sat] Replace CNA landing + email-verify acknowledgement
+CNA branding leaks into `app/layout.tsx` tab title + `app/page.tsx` marketing shell. Separately: Supabase's email-verification link 302s users to our site URL (`/`) on success. Currently that lands on the CNA stub with zero acknowledgement. Fix both together before recording.
 
 - [ ] `app/layout.tsx` — replace metadata (`title: "Create Next App"`, description)
-- [ ] `app/page.tsx` — thin Semantic GPS landing with "Open Dashboard" CTA (or direct redirect to `/dashboard`)
+- [ ] `app/page.tsx` — thin Semantic GPS landing with "Open Dashboard" CTA (or direct redirect to `/dashboard` when logged in)
+- [ ] Handle `?verified=true` query param on the landing (or a dedicated `/auth/confirm` route handler) — show a success banner / toast so email-click feedback is visible, then redirect to `/dashboard` after 2s
 
 ---
 
