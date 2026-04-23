@@ -4,6 +4,8 @@ import { buildCatalog, executeTool, type ToolCatalogEntry } from '@/lib/mcp/tool
 import type {
   ExecuteRouteParams,
   ExecuteRouteResult,
+  ExecuteRouteRollback,
+  ExecuteRouteRollbackSummary,
   ExecuteRouteStep,
   ExecuteRouteStepStatus,
 } from '@/lib/mcp/trel-schemas';
@@ -498,12 +500,167 @@ const haltedResult = (
   }.`,
 });
 
+// Pick the first outgoing compensated_by edge, deterministic by edge id. Same
+// shape as pickFallbackEdge — unreachable to_tool_id returns undefined so a
+// mis-wired compensation is surfaced as "no_compensation_available" rather
+// than crashing rollback.
+const pickCompensationEdge = (
+  toolId: string,
+  manifest: Manifest,
+): { edge: RelationshipRow; tool: ToolRow } | undefined => {
+  const edges = manifest.relationships
+    .filter((r) => r.from_tool_id === toolId && r.relationship_type === 'compensated_by')
+    .slice()
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  for (const edge of edges) {
+    const tool = manifest.tools.find((t) => t.id === edge.to_tool_id);
+    if (tool) return { edge, tool };
+  }
+  return undefined;
+};
+
+// Walk the completed steps in reverse and fire each step's compensated_by
+// tool with the original step's result as args. Best-effort: a compensation
+// that throws or returns !ok is logged + marked compensation_failed, but the
+// walk continues to the next older step. Mutates each step entry in place to
+// annotate `rollback`, and returns the aggregate summary.
+const executeRollback = async (
+  steps: ExecuteRouteStep[],
+  plan: Array<{ step: RouteStepRow; tool: ToolRow }>,
+  manifest: Manifest,
+  ctx: ExecuteRouteCtx,
+): Promise<ExecuteRouteRollbackSummary> => {
+  const catalog = buildCatalog(manifest);
+  const summary: ExecuteRouteRollbackSummary = {
+    attempted: true,
+    compensated_count: 0,
+    skipped_count: 0,
+    failed_count: 0,
+  };
+
+  // The final step entry is the failing one — it never completed, so skip it.
+  // Walk from the second-last step backwards to step 0.
+  for (let i = steps.length - 2; i >= 0; i -= 1) {
+    const stepEntry = steps[i];
+    const planPair = plan.find((p) => p.step.step_order === stepEntry?.step_order);
+    if (!stepEntry || !planPair) continue;
+
+    const compensation = pickCompensationEdge(planPair.tool.id, manifest);
+    if (!compensation) {
+      const rollback: ExecuteRouteRollback = {
+        attempted: false,
+        status: 'no_compensation_available',
+      };
+      stepEntry.rollback = rollback;
+      summary.skipped_count += 1;
+      continue;
+    }
+
+    const compEntry = findCatalogEntry(catalog, compensation.tool);
+    if (!compEntry) {
+      const rollback: ExecuteRouteRollback = {
+        attempted: false,
+        status: 'no_compensation_available',
+      };
+      stepEntry.rollback = rollback;
+      summary.skipped_count += 1;
+      continue;
+    }
+
+    // Pass the ORIGINAL step's result as args — duck-typed against the
+    // compensation tool's inputSchema inside executeTool. Non-object results
+    // (rare) get wrapped so the dispatcher always sees a record.
+    const originalResult = stepEntry.result;
+    const compArgs: Record<string, unknown> =
+      originalResult && typeof originalResult === 'object' && !Array.isArray(originalResult)
+        ? (originalResult as Record<string, unknown>)
+        : { value: originalResult };
+
+    try {
+      const exec = await executeTool(manifest, compEntry, compArgs, { traceId: ctx.traceId });
+      if (exec.ok) {
+        stepEntry.rollback = {
+          attempted: true,
+          status: 'ok',
+          compensation_tool_name: compensation.tool.name,
+        };
+        summary.compensated_count += 1;
+        logMCPEvent({
+          trace_id: ctx.traceId,
+          server_id: compensation.tool.server_id,
+          tool_name: compensation.tool.name,
+          method: 'execute_route.rollback',
+          status: 'rollback_executed',
+          payload: {
+            original_tool: planPair.tool.name,
+            compensation_tool: compensation.tool.name,
+            original_step_order: stepEntry.step_order,
+            result: redactPayload(exec.result),
+          },
+        });
+        continue;
+      }
+      stepEntry.rollback = {
+        attempted: true,
+        status: 'compensation_failed',
+        compensation_tool_name: compensation.tool.name,
+        error: exec.error,
+      };
+      summary.failed_count += 1;
+      logMCPEvent({
+        trace_id: ctx.traceId,
+        server_id: compensation.tool.server_id,
+        tool_name: compensation.tool.name,
+        method: 'execute_route.rollback',
+        status: 'rollback_executed',
+        payload: {
+          original_tool: planPair.tool.name,
+          compensation_tool: compensation.tool.name,
+          original_step_order: stepEntry.step_order,
+          error: exec.error,
+        },
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      stepEntry.rollback = {
+        attempted: true,
+        status: 'compensation_failed',
+        compensation_tool_name: compensation.tool.name,
+        error: message,
+      };
+      summary.failed_count += 1;
+      logMCPEvent({
+        trace_id: ctx.traceId,
+        server_id: compensation.tool.server_id,
+        tool_name: compensation.tool.name,
+        method: 'execute_route.rollback',
+        status: 'rollback_executed',
+        payload: {
+          original_tool: planPair.tool.name,
+          compensation_tool: compensation.tool.name,
+          original_step_order: stepEntry.step_order,
+          error: message,
+        },
+      });
+    }
+  }
+
+  return summary;
+};
+
+export type ExecuteRouteOptions = {
+  autoRollbackOnHalt?: boolean;
+};
+
 export const executeRoute = async (
   params: ExecuteRouteParams,
   manifest: Manifest,
   policyCtxBuilder: PolicyContextBuilder,
   ctx: ExecuteRouteCtx,
+  options: ExecuteRouteOptions = {},
 ): Promise<ExecuteRouteResult> => {
+  const autoRollbackOnHalt = options.autoRollbackOnHalt ?? true;
+
   const plan = buildPlan(params.route_id, manifest);
   if ('error' in plan) return plan.error;
 
@@ -515,7 +672,14 @@ export const executeRoute = async (
     const resolved = resolveEntry(pair, catalog);
     if ('terminalStep' in resolved) {
       steps.push(resolved.terminalStep);
-      return { ...haltedResult(params.route_id, steps, resolved.terminalStep), rationale: resolved.rationale };
+      const halted = {
+        ...haltedResult(params.route_id, steps, resolved.terminalStep),
+        rationale: resolved.rationale,
+      };
+      if (autoRollbackOnHalt && steps.length > 1) {
+        halted.rollback_summary = await executeRollback(steps, plan.steps, manifest, ctx);
+      }
+      return halted;
     }
 
     const stepResult = await runSingleStep(
@@ -529,7 +693,11 @@ export const executeRoute = async (
     );
     steps.push(stepResult);
     if (stepResult.status !== 'ok') {
-      return haltedResult(params.route_id, steps, stepResult);
+      const halted = haltedResult(params.route_id, steps, stepResult);
+      if (autoRollbackOnHalt && steps.length > 1) {
+        halted.rollback_summary = await executeRollback(steps, plan.steps, manifest, ctx);
+      }
+      return halted;
     }
   }
 

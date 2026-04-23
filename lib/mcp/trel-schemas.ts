@@ -56,6 +56,13 @@ export type ExecuteRouteFallbackUsed = {
   original_error: string;
 };
 
+export type ExecuteRouteRollback = {
+  attempted: boolean;
+  status: 'ok' | 'no_compensation_available' | 'compensation_failed';
+  compensation_tool_name?: string;
+  error?: string;
+};
+
 export type ExecuteRouteStep = {
   step_order: number;
   tool_name: string;
@@ -65,6 +72,14 @@ export type ExecuteRouteStep = {
   error?: string;
   fallback_used?: ExecuteRouteFallbackUsed;
   fallback_also_failed?: boolean;
+  rollback?: ExecuteRouteRollback;
+};
+
+export type ExecuteRouteRollbackSummary = {
+  attempted: boolean;
+  compensated_count: number;
+  skipped_count: number;
+  failed_count: number;
 };
 
 export type ExecuteRouteResult = {
@@ -73,6 +88,7 @@ export type ExecuteRouteResult = {
   steps: ExecuteRouteStep[];
   halted_at_step?: number;
   rationale: string;
+  rollback_summary?: ExecuteRouteRollbackSummary;
 };
 
 export const TREL_METHODS = [

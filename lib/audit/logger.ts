@@ -12,6 +12,7 @@ export type McpEventStatus =
   | 'blocked_by_policy'
   | 'origin_error'
   | 'fallback_triggered'
+  | 'rollback_executed'
   | 'invalid_input'
   | 'unauthorized';
 
