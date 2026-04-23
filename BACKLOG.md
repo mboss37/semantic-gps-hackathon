@@ -6,10 +6,58 @@
 
 ---
 
-## Submission-window — still open for Sat + Sun
+## Submission-window — Fri ship + Sat polish + Sun record
 
-### [P0 Sat #1] Landing page rewrite — highest ranking lever (M)
-Current landing is black-void hero + text-only pitch + muted grey CTA + Next.js N-logo. Judges see it in 3 seconds and bounce. Estimated ranking: ~350/500 currently; proper landing moves to ~100/500. Higher single-move leverage than any other Sat item — judges see this BEFORE the demo video, BEFORE the dashboard, BEFORE the source. Per CLAUDE.md § Competition Mindset rule #1 (judging signal order), this is the FIRST thing fixed Sat morning.
+Shipping days (CET): **Fri Apr 24 + Sat Apr 25** (2 full days). Recording day: **Sun Apr 26** (full CET day available; submission due Sun 20:00 EST = Mon 02:00 CET). Ordered by judging-signal leverage per CLAUDE.md § Competition Mindset rule #7, not by size.
+
+---
+
+### Friday Apr 24 (CET) — Big shipping day: enterprise shape
+
+Retire the demo-level scaffolding before Saturday's polish pass. All three are enterprise-signal work — judges who browse the source see an enterprise-shaped codebase, not a hackathon scaffold. Order within the day is by architectural risk (do the scariest refactor first while fresh).
+
+#### [P0 Fri] C.6 — Extract SF/Slack/GitHub to standalone MCP servers (L)
+Move `lib/mcp/proxy-salesforce.ts` + `proxy-slack.ts` + `proxy-github.ts` out of the gateway. New top-level `mcps/` folder (monorepo), each a standalone Node/Bun app exposing MCP HTTP-Streamable and internally translating to the respective REST API. Demo org registers their URLs via the normal `POST /api/servers` flow — identical to how any tenant would register a third-party MCP. Gateway loses three files and treats every upstream identically.
+- Structure: `mcps/salesforce-mcp/`, `mcps/slack-mcp/`, `mcps/github-mcp/` — each with its own `package.json` + Vercel/Fly deploy pipeline
+- Each owns its OAuth / credential path (server-side env vars for demo; per-org creds in V2)
+- Bootstrap script re-registers the three against local + hosted demo orgs
+- Removes `lib/mcp/proxy-*.ts` entirely; `lib/mcp/tool-dispatcher.ts` dispatches only `openapi` + `http-streamable` — no vendor branches
+
+#### [P0 Fri] A.7 — First-signup onboarding wizard (M)
+Replaces the `<handle>'s Workspace` auto-org hack. Post-signup flow: `/onboarding` route gated by a `profile_completed boolean` flag (new column on `memberships` or new `profiles` table). Collects first_name + last_name + company + org_name. Refactors the `on_auth_user_created` trigger — user-named org replaces auto-generated name. Redirects to `/dashboard` on completion. Supersedes the V2 `[P1] Signup onboarding — skip auto-workspace` entry (now dropped).
+
+#### [P0 Fri] K.1 — Enterprise data-model audit + fixes (M)
+Concrete gaps surfaced during Sprint 13 review:
+- `mcp_events` missing `organization_id` column — every monitoring/audit query joins through `servers.id` today. Add column, backfill via existing `server_id → servers.organization_id` lookup, update all writers.
+- `organizations` has no billing metadata — add `plan`, `trial_ends_at`, `billing_email`, `created_by` nullable columns. Signal enterprise readiness.
+- `memberships.role` CHECK locked to `'admin'` — widen to `admin | member` (no further roles for MVP).
+- `domains` concept is underused (one auto-seeded "SalesOps" per signup) — promote to "environments" (prod/staging) semantics OR drop the table entirely. Decide + execute.
+- `gateway_tokens.organization_id` ON DELETE CASCADE footgun — delete org → tokens vanish without audit. Evaluate soft-delete alternative.
+- Policy-fork vs policy-reference model review — today assignments are the fork point; document the invariant or refactor.
+
+Deliverable: one migration with the clean schema changes + updated writers + a one-paragraph note in `docs/ARCHITECTURE.md` on the final multi-tenant shape.
+
+---
+
+### Saturday Apr 25 (CET) — Final polish: landing page + demo prep
+
+Day centerpiece is the landing page rewrite, AFTER demo narrative is locked in the AM. Recording is Sunday — Saturday is when the product's front door gets its judging-signal polish and the demo gets rehearsed through the Playground UI.
+
+#### [P0 Sat AM] Finalize demo narrative
+Code ships regardless of framing. Nail the story Sat morning once all MCPs + routes + policies are live and we can see what the demo actually looks like on screen. Constraint: avoid positioning as an Agentforce competitor (Mihael works at Salesforce). Candidate angles:
+- "Complements Agentforce" — Agentforce for in-SF, Semantic GPS for cross-surface hops (GH/Slack). Governance on the outbound.
+- AI security / trust — agent leaks, prompt injection, data exfiltration news lines up with the gateway's capability set. Natural fit for "Keep Thinking" $5K prize.
+- DevOps-first fallback — GH issue → Linear/Jira → Slack → PagerDuty. Lowest-risk if SF angle feels close to the line.
+
+Deliverables once picked: ≤15-word pitch, Playground A/B pane script, PII target tool, README positioning paragraph.
+
+#### [P0 Sat AM] Validate Playground presets against live agent flow
+Sprint 10 validation tested gateway behaviour via direct JSON-RPC, NOT the Playground UI's Anthropic agent loop. Before Sunday recording, drive each preset through the actual UI to confirm tool picks + pane contrast + tunnel wiring. Rewrite prompts if agent picks the wrong tool order.
+- Start `cloudflared tunnel --url http://localhost:3000`, point `NEXT_PUBLIC_APP_URL` at it
+- Run each preset on `/dashboard/playground`; screen-record both panes; match against DEMO.md script
+
+#### [P0 Sat PM] Landing page rewrite — highest ranking lever (M)
+Current landing is black-void hero + text-only pitch + muted grey CTA + Next.js N-logo. Judges see it in 3 seconds and bounce. Estimated ranking: ~350/500 currently; proper landing moves to ~100/500. Per CLAUDE.md § Competition Mindset rule #1, this is the single highest-leverage Sat move — judges see this BEFORE the demo video, BEFORE the dashboard, BEFORE the source.
 
 Required minimum:
 - Plain-English headline — drop jargon stacks; try "Governance + observability for agentic AI. One gateway across every MCP."
@@ -20,56 +68,25 @@ Required minimum:
 - Screenshot grid: Dashboard + Workflow Graph + Playground A/B + Policy timeline
 - "Built with Claude Opus 4.7" badge + stack-logo strip (Next.js · Supabase · Anthropic SDK · React Flow)
 - Kill the Next.js `N` logo in the bottom-left corner
-- Demo video embed above the fold once recorded Sat PM
+- Demo video embed above the fold once Sunday's recording is up
 - "Submitted to Cerebral Valley hackathon 2026" signal
 
-Approach: plan first per CLAUDE.md, then parallel subagents — hero + copy lane A, stat strip + architecture embed lane B, screenshot grid + polish lane C. Content fill after demo narrative is locked.
-
-### [P0 Sat AM] Finalize demo narrative
-Code ships regardless of framing. Nail the story Sat morning once all MCPs + routes + policies are live and we can see what the demo actually looks like on screen. Constraint: avoid positioning as an Agentforce competitor (Mihael works at Salesforce). Candidate angles:
-- "Complements Agentforce" — Agentforce for in-SF, Semantic GPS for cross-surface hops (GH/Slack). Governance on the outbound.
-- AI security / trust — agent leaks, prompt injection, data exfiltration news lines up with the gateway's capability set. Natural fit for "Keep Thinking" $5K prize.
-- DevOps-first fallback — GH issue → Linear/Jira → Slack → PagerDuty. Lowest-risk if SF angle feels close to the line.
-
-Deliverables once picked: ≤15-word pitch, Playground A/B pane script, PII target tool, README positioning paragraph.
-
-### [P0 Sat AM] Record demo clip — CANNOT SLIP
-Saturday recording IS the submission video. Sunday is for summary + upload only, not debugging.
-- Hero scenario (~75s) + OpenAPI import (~45s) + workflow graph (~30s) + intro/outro (~30s) = 3 min
-- Cut in iMovie / DaVinci, scripted voiceover, no filler
-- Upload to YouTube unlisted + Loom + Drive; paste 3 URLs into `docs/SUBMISSION.md`
-
-### [P0 Sat AM] Validate Playground presets against live agent flow
-Sprint 10 validation tested gateway behaviour via direct JSON-RPC, NOT the Playground UI's Anthropic agent loop. Before recording, drive each preset through the actual UI to confirm tool picks + pane contrast + tunnel wiring. Rewrite prompts if agent picks the wrong tool order.
-- Start `cloudflared tunnel --url http://localhost:3000`, point `NEXT_PUBLIC_APP_URL` at it
-- Run each preset on `/dashboard/playground`; screen-record both panes; match against DEMO.md script
+Approach: plan first per CLAUDE.md, then parallel subagents — hero + copy lane A, stat strip + architecture embed lane B, screenshot grid + polish lane C. Content derives from Sat AM's finalized narrative.
 
 ---
 
-## Saturday — enterprise shape (P0)
+### Sunday Apr 26 (CET) — Record + submit
 
-Approved 2026-04-23. All three tackled tomorrow before recording. Retires the demo-level scaffolding that would be obvious to any enterprise judge reviewing the repo.
+Full CET day available. No feature work — only recording, doc polish, and the submission itself. Submission deadline: 20:00 EST = **Mon Apr 27 02:00 CET**.
 
-### [P0 Sat] C.6 — Extract SF/Slack/GitHub to standalone MCP servers (L)
-Move `lib/mcp/proxy-salesforce.ts` + `proxy-slack.ts` + `proxy-github.ts` out of the gateway. New top-level `mcps/` folder (monorepo), each a standalone Node/Bun app exposing MCP HTTP-Streamable and internally translating to the respective REST API. Demo org registers their URLs via the normal `POST /api/servers` flow — identical to how any tenant would register a third-party MCP. Gateway loses three files and treats every upstream identically.
-- Structure: `mcps/salesforce-mcp/`, `mcps/slack-mcp/`, `mcps/github-mcp/` — each with its own `package.json` + Vercel/Fly deploy pipeline
-- Each owns its OAuth / credential path (server-side env vars for demo; per-org creds in V2)
-- Bootstrap script re-registers the three against local + hosted demo orgs
-- Removes `lib/mcp/proxy-*.ts` entirely; `lib/mcp/tool-dispatcher.ts` dispatches only `openapi` + `http-streamable` — no vendor branches
-
-### [P0 Sat] A.7 — First-signup onboarding wizard (M)
-Replaces the `<handle>'s Workspace` auto-org hack. Post-signup flow: `/onboarding` route gated by a `profile_completed boolean` flag (new column on `memberships` or new `profiles` table). Collects first_name + last_name + company + org_name. Refactors the `on_auth_user_created` trigger — user-named org replaces auto-generated name. Redirects to `/dashboard` on completion. Supersedes the V2 `[P1] Signup onboarding — skip auto-workspace` entry (now dropped).
-
-### [P0 Sat] K.1 — Enterprise data-model audit + fixes (M)
-Concrete gaps surfaced during Sprint 13 review:
-- `mcp_events` missing `organization_id` column — every monitoring/audit query joins through `servers.id` today. Add column, backfill via existing `server_id → servers.organization_id` lookup, update all writers.
-- `organizations` has no billing metadata — add `plan`, `trial_ends_at`, `billing_email`, `created_by` nullable columns. Signal enterprise readiness.
-- `memberships.role` CHECK locked to `'admin'` — widen to `admin | member` (no further roles for MVP).
-- `domains` concept is underused (one auto-seeded "SalesOps" per signup) — promote to "environments" (prod/staging) semantics OR drop the table entirely. Decide + execute.
-- `gateway_tokens.organization_id` ON DELETE CASCADE footgun — delete org → tokens vanish without audit. Evaluate soft-delete alternative.
-- Policy-fork vs policy-reference model review — today assignments are the fork point; document the invariant or refactor.
-
-Deliverable: one migration with the clean schema changes + updated writers + a one-paragraph note in `docs/ARCHITECTURE.md` on the final multi-tenant shape.
+- [ ] Record 3-min demo video — hero ~75s + OpenAPI import ~45s + workflow graph ~30s + intro/outro ~30s. Do 5 takes; pick best.
+- [ ] Cut in iMovie / DaVinci, scripted voiceover from Sat AM's narrative, no filler.
+- [ ] Upload to YouTube unlisted + Loom + Drive; paste 3 URLs into `docs/SUBMISSION.md`.
+- [ ] README final pass — any drift since Sprint 11 rewrite, demo links, env table parity with `.env.example`.
+- [ ] SUBMISSION.md finalize — 150-word summary locked, repo + live + vision + demo video links in.
+- [ ] Embed Sunday's demo video above the fold on landing page (slot left open Sat PM).
+- [ ] Submit via CV platform before 20:00 EST = Mon 02:00 CET.
+- [ ] Contingency re-record window if first take looks off — full Sun day gives 2-3 takes worth of buffer.
 
 ---
 

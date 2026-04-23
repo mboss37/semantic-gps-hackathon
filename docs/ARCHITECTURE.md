@@ -100,6 +100,12 @@ semantic-gps/
 │   │   ├── trel-handlers.ts     # discover_relationships, find_workflow_path, validate_workflow
 │   │   ├── trel-schemas.ts      # Zod schemas for TRel methods
 │   │   └── types.ts             # MCP + TRel shared types
+│   ├── routes/
+│   │   └── fetch.ts             # Sprint 13: Route + route_steps read helpers (cross-org-safe, tool/fallback name resolution)
+│   ├── servers/
+│   │   └── fetch.ts             # Sprint 13: Server detail + 7d violation agg + remote resources/prompts introspection
+│   ├── monitoring/
+│   │   └── fetch.ts             # Sprint 13: mcp_events aggregations — call volume, policy blocks, PII by pattern
 │   ├── manifest/
 │   │   ├── cache.ts             # In-memory cache + load from DB
 │   │   └── invalidate.ts        # Called after ANY mutation touching servers/tools/policies/relationships
@@ -522,6 +528,7 @@ Things that will silently bite if not explicitly called out:
 19. **Run opt-in test flags before committing code they gate.** `VERIFY_REAL_PROXY=1`, `VERIFY_ANTHROPIC=1`, `VERIFY_INTEGRATIONS=1`. Defaults skip them for CI speed, but if the diff touches their scope, the gated tests are the only coverage — skipping them hides regressions until demo day.
 20. **Gateway governs the CALL, downstream governs the DATA.** Policies that duplicate Salesforce Approval Processes / SAP Workflow / ServiceNow CAB / agent-framework cost budgets add zero and pull focus. If agent frameworks or downstream systems have better visibility into the thing, it's not the control plane's policy. Principle cemented Sprint 9 after nearly shipping `budget_cap`; see CLAUDE.md § Key Decisions.
 21. **Next.js 16 treats `_`-prefixed folders as private and excludes them from routing.** An ops endpoint at `app/api/_internal/manifest/invalidate/route.ts` 404s silently at every environment — the underscore makes the whole folder a build-time private folder (no route emitted). Use `app/api/internal/...` + runtime env gate (`NODE_ENV === 'production' && !MANIFEST_INTROSPECTION_ENABLED`) inside the handler instead. `tsc` + `lint` + `test` all pass the broken setup; only `pnpm exec next build`'s route table reveals the missing route. Caught Sprint 12 WP-G.18.
+22. **Background-subagent `completed` notifications can fire on premature exit.** Sprint 13 Subagent B (Monitoring page, 7 spec'd files) reported DONE with only 2 files written; its final transcript line was "### Step 2: Create `lib/monitoring/fetch.ts`" — it bailed mid-work but was marked complete anyway. Verify before trusting: `git status --porcelain` shows expected untracked files, `pnpm test` pass count matches the expected delta from the prompt (always specify "baseline → expected"), `pnpm exec next build` route table shows new routes. If any mismatch, re-dispatch with explicit finish prompt or complete in main thread. Never proceed to combined code-review on unverified subagent output.
 
 ---
 
