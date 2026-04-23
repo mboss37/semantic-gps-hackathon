@@ -11,6 +11,40 @@ Semantic GPS — MCP control plane for agentic workflows. 5-day hackathon build.
 - **Binding constraints are review bandwidth + regression risk, NOT Claude dev-hours.** A sprint's worth of WPs ships in wall-clock minutes; each WP still takes one human review + subagent review + approval cycle. Plan against "max 2 big stretches Fri+Sat," not "how long to code it."
 - Full schedule, reverse-planned build calendar, resources, and Day-5 submission checklist in `docs/HACKATHON.md`
 
+## Competition Mindset (hard rules during the hackathon window)
+
+**Stakes:** ~500 submissions. Top 3 get prize money. A $5K side prize for Managed Agents. Every unshipped piece of polish is a ranking slot lost. This is a competition, not a homework project. Act accordingly.
+
+### 1. Judging signal order
+Judges see, in this order: **landing page → demo video → dashboard → code.** Every choice optimizes for the first unseen. Code quality (20% Depth) is last-mile; the other 80% (Impact 30 + Demo 25 + Opus 4.7 Use 25) is what judges SEE. Do not over-invest in depth while the front door looks like a hello world.
+
+### 2. Visual polish is not optional
+A page or feature without a screenshot in the README, a video beat, or a demo clip **does not exist for judging purposes.** Flag missing visual artifacts the same way we flag missing tests. If a WP ships without a demo-visible beat, it's incomplete — not done.
+
+### 3. First-impression rule
+The landing page is the tasting menu. It must communicate WHAT, WHY, and WHO in 3 seconds without scrolling. Text-only hero = automatic downgrade. Required minimum for any user-facing entry point (landing, README, dashboard overview): hero screenshot or video loop, plain-English subhead (no jargon stacks), loud primary CTA in brand color (not muted grey), architecture diagram or stat badges below the fold.
+
+### 4. Proactive critic mandate
+When Mihael shares any user-visible artifact — landing page, README, demo script, dashboard screen, Playground preset, vision doc — **critique it unprompted.** Do not wait for "is this good?" Flag weak CTAs, missing screenshots, jargon subheads, dead-end buttons, boilerplate residue, CNA leftovers, placeholder text, generic icons, muted-grey buttons, black-void heroes. On sight. With a fix proposed.
+
+### 5. Anti-patterns that auto-downgrade rank
+Flag and fix immediately, never ship with these:
+- Black-void hero with text only (no screenshot / video / diagram)
+- Grey or low-contrast primary CTA
+- Next.js `N` logo in the corner (unmistakable boilerplate fingerprint)
+- README that reads like a spec, not a pitch
+- Missing embedded demo clip above the fold
+- Missing architecture diagram anywhere visible
+- Signup that drops users into an empty dashboard with zero onboarding
+- Jargon subheads ("control plane for MCP agents" — what does this MEAN to a judge who doesn't know MCP?)
+- Placeholder copy, dead links, lorem-ipsum anywhere user-visible
+
+### 6. Ship polish like a startup, not homework
+Hackathon quality ≠ homework quality. Add logos, motion, gradients, animated demos, screenshot captures with annotations, GIFs of the saga rollback cascade, short Loom thumbnails. Stress-test the landing against top-rated Product Hunt launches of the week. If it looks like a student project, it ranks like one.
+
+### 7. Rank-conscious proposals
+When proposing a sprint, a WP, or a change, name the ranking slot it moves. "This lifts us from ~300/500 to ~100/500 because judges now see the saga rollback in motion" > "this adds a GIF to the README." Tie every piece of work to a judging-weight signal or a first-impression beat — or kill it.
+
 ## Stack
 - **Next.js 16** (App Router, Server Components default, Turbopack) + TypeScript strict
 - **Supabase** (Postgres + Auth) — local-first dev via `pnpm supabase start`, hosted for prod (`cgvxeurmulnlbevinmzj`)

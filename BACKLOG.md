@@ -27,8 +27,32 @@ Sprint 10 validation tested gateway behaviour via direct JSON-RPC, NOT the Playg
 - Start `cloudflared tunnel --url http://localhost:3000`, point `NEXT_PUBLIC_APP_URL` at it
 - Run each preset on `/dashboard/playground`; screen-record both panes; match against DEMO.md script
 
-### [P0 Sat AM] Recording-day env — `SEMANTIC_GPS_DEMO_MODE`
-Env var that auto-loosens default policy enforcement on startup so Sunday recording doesn't trip the business-hours window cold. Reads the env on `createServiceClient` boot; defaults to off.
+---
+
+## Saturday — enterprise shape (P0)
+
+Approved 2026-04-23. All three tackled tomorrow before recording. Retires the demo-level scaffolding that would be obvious to any enterprise judge reviewing the repo.
+
+### [P0 Sat] C.6 — Extract SF/Slack/GitHub to standalone MCP servers (L)
+Move `lib/mcp/proxy-salesforce.ts` + `proxy-slack.ts` + `proxy-github.ts` out of the gateway. New top-level `mcps/` folder (monorepo), each a standalone Node/Bun app exposing MCP HTTP-Streamable and internally translating to the respective REST API. Demo org registers their URLs via the normal `POST /api/servers` flow — identical to how any tenant would register a third-party MCP. Gateway loses three files and treats every upstream identically.
+- Structure: `mcps/salesforce-mcp/`, `mcps/slack-mcp/`, `mcps/github-mcp/` — each with its own `package.json` + Vercel/Fly deploy pipeline
+- Each owns its OAuth / credential path (server-side env vars for demo; per-org creds in V2)
+- Bootstrap script re-registers the three against local + hosted demo orgs
+- Removes `lib/mcp/proxy-*.ts` entirely; `lib/mcp/tool-dispatcher.ts` dispatches only `openapi` + `http-streamable` — no vendor branches
+
+### [P0 Sat] A.7 — First-signup onboarding wizard (M)
+Replaces the `<handle>'s Workspace` auto-org hack. Post-signup flow: `/onboarding` route gated by a `profile_completed boolean` flag (new column on `memberships` or new `profiles` table). Collects first_name + last_name + company + org_name. Refactors the `on_auth_user_created` trigger — user-named org replaces auto-generated name. Redirects to `/dashboard` on completion. Supersedes the V2 `[P1] Signup onboarding — skip auto-workspace` entry (now dropped).
+
+### [P0 Sat] K.1 — Enterprise data-model audit + fixes (M)
+Concrete gaps surfaced during Sprint 13 review:
+- `mcp_events` missing `organization_id` column — every monitoring/audit query joins through `servers.id` today. Add column, backfill via existing `server_id → servers.organization_id` lookup, update all writers.
+- `organizations` has no billing metadata — add `plan`, `trial_ends_at`, `billing_email`, `created_by` nullable columns. Signal enterprise readiness.
+- `memberships.role` CHECK locked to `'admin'` — widen to `admin | member` (no further roles for MVP).
+- `domains` concept is underused (one auto-seeded "SalesOps" per signup) — promote to "environments" (prod/staging) semantics OR drop the table entirely. Decide + execute.
+- `gateway_tokens.organization_id` ON DELETE CASCADE footgun — delete org → tokens vanish without audit. Evaluate soft-delete alternative.
+- Policy-fork vs policy-reference model review — today assignments are the fork point; document the invariant or refactor.
+
+Deliverable: one migration with the clean schema changes + updated writers + a one-paragraph note in `docs/ARCHITECTURE.md` on the final multi-tenant shape.
 
 ---
 
@@ -53,18 +77,15 @@ Policy taxonomy garnish (seven dimensions already covered — these are additive
 - Kill switches — `destructive_tool_tagging` builtin
 
 Open WPs:
-- **G.3** (L) Route designer UI — React Flow step editor + rollback/fallback wiring.
-- **G.7** (M) Per-server detail — violation counts + copy-ready MCP client config block + resources/prompts introspect. ← F.4
 - **G.8** (S) Graph: domain-boundaries toggle + per-server policy count badge.
 
 ### H. Monitoring + overview
-- **H.1** (M) Monitoring page — 3 lean widgets: call volume, policy violations over time, PII detections by pattern.
 - **H.2** (S) Overview dashboard domain filter.
 
 ### I. Opus 4.7 showcase + visual beats
 - **I.3** (L, P1 stretch) Opus relationship inference on OpenAPI import. Feed full spec to Opus 4.7 with cached system prompt; user approves/rejects proposals before persist; thinking blocks surface reasoning. 1M-context showcase.
-- **I.5** (M, P1 stretch) Managed Agents wrap for demo agent ($5K side prize). Port agent loop from `@anthropic-ai/sdk` manual to Managed Agents API; point at deployed `/api/mcp`; keep SDK fallback. **Apply only to demo agent, never to product gateway.**
-- **I.6** (L, P1 stretch) Playground "Refine with Opus" button backed by Managed Agents. Ingest scenario prompt + both panes' traces + policy events + manifest; return structured suggestions as cards ("flip policy X to enforce", "add produces_input_for edge Y→Z"). Refinement-as-a-service framing. ← I.5
+- **I.5** (M, P2 stretch) Managed Agents wrap for demo agent ($5K side prize). Port agent loop from `@anthropic-ai/sdk` manual to Managed Agents API; point at deployed `/api/mcp`; keep SDK fallback. **Apply only to demo agent, never to product gateway.** Demoted Sprint 13 — deprioritized against Route designer visibility.
+- **I.6** (L, P2 stretch) Playground "Refine with Opus" button backed by Managed Agents. Ingest scenario prompt + both panes' traces + policy events + manifest; return structured suggestions as cards ("flip policy X to enforce", "add produces_input_for edge Y→Z"). Refinement-as-a-service framing. ← I.5
 
 ### J. Demo + verification
 - **J.2** (M) End-to-end verification against Vercel — opt-in Anthropic vitest extended to Playground route.
@@ -143,9 +164,6 @@ Enable RLS on all app tables (with SECURITY DEFINER helper `public.current_user_
 
 ### [P1] Email verification + rate-limit on auth endpoints
 Supabase-native for both; deferred for demo focus.
-
-### [P1] Signup onboarding — skip auto-workspace
-Current trigger always creates `<handle>'s Workspace`. For shared-Demo-Org flows the user lands in an empty workspace. Fix via `SEMANTIC_GPS_SINGLE_ORG_MODE` env (skip org creation, attach membership to first org) OR dashboard-level prompt to join shared Demo Org with atomic reparent. Also fix `gateway_tokens.organization_id` ON DELETE CASCADE footgun.
 
 ### [P2] Custom policy DSL
 Grammar + parser + AST evaluator + syntax-highlight editor. 2-day product. Distinct from NL policy author (which targets existing builtin schemas).
