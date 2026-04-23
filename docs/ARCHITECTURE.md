@@ -209,7 +209,8 @@ CREATE TABLE policies (
   builtin_key TEXT NOT NULL CHECK (builtin_key IN (
     'pii_redaction', 'rate_limit', 'allowlist', 'injection_guard',
     'basic_auth', 'client_id', 'ip_allowlist',
-    'business_hours', 'write_freeze'
+    'business_hours', 'write_freeze',
+    'geo_fence', 'agent_identity_required', 'idempotency_required'
   )),
   config JSONB DEFAULT '{}'::jsonb,  -- Per-policy knobs (e.g. { "max_rpm": 60 } for rate_limit)
   enforcement_mode TEXT NOT NULL DEFAULT 'shadow' CHECK (enforcement_mode IN ('shadow', 'enforce')),
@@ -249,13 +250,19 @@ CREATE TABLE routes (
 );
 
 -- Route steps: ordered tool calls inside a route, with output->input threading,
--- per-step fallback (alt-route), and compensating rollback tool reference.
+-- per-step fallback (alt-route), compensating rollback tool reference, and
+-- explicit rollback_input_mapping so saga compensation resolves the right
+-- shape for the compensator (canonical pattern, Sprint 10).
 CREATE TABLE route_steps (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   route_id UUID NOT NULL REFERENCES routes(id) ON DELETE CASCADE,
   step_order INT NOT NULL,
   tool_id UUID NOT NULL REFERENCES tools(id) ON DELETE RESTRICT,
   input_mapping JSONB NOT NULL DEFAULT '{}'::jsonb,
+  rollback_input_mapping JSONB,                -- same DSL as input_mapping;
+                                               --   $steps.<key>.args.<path>
+                                               --   $steps.<key>.result.<path>
+                                               --   $inputs.<field>
   output_capture_key TEXT,
   fallback_route_id UUID REFERENCES routes(id) ON DELETE SET NULL,
   rollback_tool_id UUID REFERENCES tools(id) ON DELETE SET NULL,
