@@ -65,6 +65,29 @@ _(all shipped or pulled into Sprint 8)_
 - [ ] **F.4** (S) Origin health probes (`/api/health/:server_id`, cached flag). ← B.1 → C.4, G.7
 
 ### G. TRel completion + policies + authoring UI
+
+**Policy taxonomy (locked).** Semantic GPS governs the CALL; downstream systems govern the DATA. Policies must be gateway-native:
+- **Time / state gates:** `business_hours`, `write_freeze`, maintenance windows
+- **Rate / cost / budget:** `rate_limit` ✓, `budget_cap`
+- **Identity + attribution:** `client_id` ✓, `agent_identity_required`
+- **Network / data residency:** `ip_allowlist` ✓, `geo_fence`
+- **Data hygiene:** `pii_redaction` ✓, `injection_guard` ✓
+- **Kill switches:** `write_freeze`, destructive-tool-tagging
+- **Idempotency / dedupe:** `idempotency_required`
+
+**Explicitly NOT in scope** (overlap with downstream — won't build):
+- Approval workflows → Salesforce Approval Processes, SAP Workflow, ServiceNow CAB
+- Transaction integrity → downstream DB
+- Business rules → SF validation rules / SAP authorizations
+- RBAC on records → downstream role / entitlement systems
+- Field validation → schema / page layout
+- Dry-run / sandbox → SF sandboxes, SAP test clients
+
+- [ ] **G.12** (M) **Sprint 9 stretch** — `budget_cap` global builtin — $47K runaway narrative. Config `{window: 'hour'|'day', max_calls: number}`. Pre-call DB count on `mcp_events` for org + window. **Perf risk:** hot-path DB read; consider composite index on `(organization_id, created_at)`.
+- [ ] **G.13** (M) `geo_fence` builtin — data residency policy. Config `{allowed_regions: string[], source: 'header'|'org_setting'}`. Pre-call check of `x-agent-region` header or org's configured region against allowlist. EU AI Act Aug 2026 enforcement relevance.
+- [ ] **G.14** (M) `agent_identity_required` builtin — reject calls missing a signed `x-agent-id` / `x-user-on-behalf-of` header. Config `{require_headers: string[], verify_signature: boolean, trust_chain_id?: string}`. Meta confused-deputy incident is the anchor. Pairs with the client_id policy for layered identity.
+- [ ] **G.15** (M) `idempotency_required` builtin — dedupe destructive side-effect calls inside a TTL window. Config `{ttl_seconds: number, key_source: 'header'|'args_hash'}`. Needs a TTL store (in-memory Map with cleanup OR Redis in V2); single-process Map is fine for demo. Reject duplicates within window, return "deduped: true" audit tag.
+- [ ] **G.16** (S, hygiene) Env-driven Anthropic model IDs. `lib/config/models.ts` with `modelPlayground()` + `modelEvaluateGoal()` reading from `PLAYGROUND_MODEL` + `EVALUATE_GOAL_MODEL`, fail loud if unset. Update `app/api/playground/run/route.ts` + `lib/mcp/evaluate-goal.ts` + `.env.example`. Codifies "no hardcoded model IDs in production code" as a review rule.
 - [ ] **G.9** (S) **P0 Fri polish** — Policies page: tool-level assignment UI. Currently the row UI only attaches policies to whole servers; tool-level `policy_assignments.tool_id` rows exist in DB (seeded) but can't be created/removed via dashboard. Add a second attach path: "Attach to specific tool…" → server+tool picker → calls `/api/policies/[id]/assignments` with `{tool_id}`. Also surface the current tool-level assignments in the row so users can see the full map. Uncovers the gateway's most important invariant (PII policy on find_contact means every call to that tool gets scrubbed). Demo-critical for the recording.
 - [ ] **G.1** (M) `validate_workflow` + `evaluate_goal` TRel methods (real impls, not stubs). ← B.2 → J.1
 - [ ] **G.3** (L) Route designer UI — React Flow step editor + rollback/fallback wiring. ← B.2, G.2
