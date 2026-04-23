@@ -11,6 +11,7 @@ import {
   NetworkIcon,
   SettingsIcon,
   ShieldCheckIcon,
+  SparklesIcon,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -36,6 +37,7 @@ const data = {
     { title: "Overview", url: "/dashboard", icon: LayoutDashboardIcon },
     { title: "Servers", url: "/dashboard/servers", icon: GlobeIcon },
     { title: "Workflow Graph", url: "/dashboard/graph", icon: NetworkIcon },
+    { title: "Playground", url: "/dashboard/playground", icon: SparklesIcon },
     { title: "Relationships", url: "/dashboard/relationships", icon: GitMergeIcon },
     { title: "Tokens", url: "/dashboard/tokens", icon: KeyRoundIcon },
     { title: "Policies", url: "/dashboard/policies", icon: ShieldCheckIcon },
