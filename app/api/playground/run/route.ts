@@ -216,6 +216,15 @@ const runGateway = async (
         authorization_token: bearerToken,
       },
     ],
+    // MCP beta `mcp-client-2025-11-20` rejects `mcp_servers` without a paired
+    // `mcp_toolset` entry (memory 93a1fa1e). `mcp_server_name` must match
+    // `mcp_servers[].name` exactly.
+    tools: [
+      {
+        type: 'mcp_toolset',
+        mcp_server_name: 'semantic-gps',
+      },
+    ],
     messages: [{ role: 'user', content: prompt }],
   });
 
