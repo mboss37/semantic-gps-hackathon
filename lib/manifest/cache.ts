@@ -361,8 +361,3 @@ export const loadManifest = async (scope: ManifestScope): Promise<Manifest> => {
 export const invalidateManifest = (): void => {
   cache.clear();
 };
-
-// HMR nonce — bump to force Next.js dev to reload this module after direct
-// DB seeds (which bypass mutation routes and thus invalidateManifest()).
-// Safe to leave in place.
-export const __HMR_NONCE__ = 7;

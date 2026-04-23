@@ -57,13 +57,13 @@ export const soqlEscape = (s: string): string =>
   s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
 type CallInit = {
-  method: 'GET' | 'POST' | 'PATCH';
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   path: string;
   body?: Record<string, unknown>;
 };
 
 // Generic Salesforce REST call with 401 single-retry (refresh token) and 5xx
-// single-retry. Returns `null` body on 204 No Content (PATCH responses).
+// single-retry. Returns `null` body on 204 No Content (PATCH + DELETE responses).
 const sfCall = async (
   serverId: string,
   auth: SalesforceAuthConfig,
@@ -173,6 +173,12 @@ const CreateTaskArgs = z.object({
   subject: z.string().min(1).max(255),
   whatId: z.string().regex(/^[a-zA-Z0-9]{15,18}$/),
 });
+// Compensator for create_task (WP-12.2 / G.17). Salesforce SObject DELETE
+// returns 204 No Content — sfCall's `!text` branch already yields body: null,
+// so we synthesise the result shape from the validated id.
+const DeleteTaskArgs = z.object({
+  id: z.string().regex(/^[a-zA-Z0-9]{15,18}$/),
+});
 
 const dispatchTool = async (
   serverId: string,
@@ -236,6 +242,16 @@ const dispatchTool = async (
         ? (body as { id: string }).id
         : null;
     return { id: idGuess, success: true };
+  }
+
+  if (toolName === 'delete_task') {
+    const parsed = DeleteTaskArgs.safeParse(args);
+    if (!parsed.success) throw new UpstreamError(400, 'invalid_input');
+    await sfCall(serverId, auth, token, {
+      method: 'DELETE',
+      path: `/services/data/${SALESFORCE_API_VERSION}/sobjects/Task/${encodeURIComponent(parsed.data.id)}`,
+    });
+    return { id: parsed.data.id, success: true };
   }
 
   throw new UpstreamError(400, 'unknown_tool');

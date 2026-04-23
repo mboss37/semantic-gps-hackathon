@@ -216,6 +216,77 @@ describe('POST /api/playground/run', () => {
     expect(callArgs.mcp_servers[0].url).not.toMatch(/\/api\/mcp\/raw$/);
   });
 
+  it('streams thinking blocks as their own event type + accumulates thinking_chars in stats', async () => {
+    requireAuthMock.mockResolvedValueOnce({
+      user: { id: 'u1' },
+      organization_id: 'org-think',
+      role: 'admin',
+      supabase: {},
+    });
+    mintTokenMock.mockResolvedValueOnce({
+      data: { id: 'tok-think' },
+      error: null,
+    });
+    // Extended thinking returns blocks interleaved with text/tool_use.
+    // Shape: { type: 'thinking', thinking: string, signature: string }.
+    betaCreateMock.mockResolvedValueOnce({
+      stop_reason: 'end_turn',
+      content: [
+        {
+          type: 'thinking',
+          thinking: 'User wants Edge Communications account. find_account first.',
+          signature: 'sig-a',
+        },
+        {
+          type: 'mcp_tool_use',
+          id: 'mcp-1',
+          name: 'find_account',
+          input: { query: 'Edge Communications' },
+          server_name: 'semantic-gps',
+        },
+        {
+          type: 'mcp_tool_result',
+          tool_use_id: 'mcp-1',
+          content: [{ type: 'text', text: '{"records":[{"Id":"001XX"}]}' }],
+          is_error: false,
+        },
+        {
+          type: 'thinking',
+          thinking: 'Got the account. Now post a Slack heads-up.',
+          signature: 'sig-b',
+        },
+        { type: 'text', text: 'Done.' },
+      ],
+    });
+    // Also verify the thinking parameter is sent on the request.
+    const res = await post({ prompt: 'edge follow-up', mode: 'gateway' });
+    expect(res.status).toBe(200);
+
+    const events = await readNdjson(res);
+    const thinkingEvents = events.filter((e) => e.type === 'thinking');
+    expect(thinkingEvents).toHaveLength(2);
+    expect(thinkingEvents[0].content).toMatch(/find_account first/);
+    expect(thinkingEvents[1].content).toMatch(/Slack/);
+
+    const done = events.at(-1) as {
+      stats: { thinking_chars?: number; tool_calls: number };
+    };
+    expect(done.stats.thinking_chars).toBeGreaterThan(0);
+    expect(done.stats.thinking_chars).toBe(
+      (thinkingEvents[0].content as string).length + (thinkingEvents[1].content as string).length,
+    );
+
+    // Request param sanity — thinking must be enabled on the call.
+    const callArgs = betaCreateMock.mock.calls[0][0] as {
+      thinking?: { type: string; budget_tokens: number };
+      max_tokens: number;
+    };
+    expect(callArgs.thinking?.type).toBe('enabled');
+    expect(callArgs.thinking?.budget_tokens).toBeGreaterThan(0);
+    // max_tokens must exceed budget_tokens so final text + tools have room.
+    expect(callArgs.max_tokens).toBeGreaterThan(callArgs.thinking?.budget_tokens ?? 0);
+  });
+
   it('emits an error event when mode cannot mint a token', async () => {
     requireAuthMock.mockResolvedValueOnce({
       user: { id: 'u1' },

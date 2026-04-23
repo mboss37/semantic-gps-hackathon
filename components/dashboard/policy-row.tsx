@@ -1,8 +1,9 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
-import { SaveIcon, Trash2Icon } from 'lucide-react';
+import { LineChartIcon, SaveIcon, Trash2Icon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -329,7 +330,13 @@ export const PolicyRow = ({
           </div>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex items-center justify-between gap-2">
+        <Button variant="outline" size="sm" asChild title="View 7-day timeline">
+          <Link href={`/dashboard/policies/${id}`}>
+            <LineChartIcon className="size-4" />
+            View timeline
+          </Link>
+        </Button>
         <Button
           variant="outline"
           size="sm"

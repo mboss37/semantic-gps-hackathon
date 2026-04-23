@@ -121,6 +121,13 @@ SELECT s.id,
        '{"type":"object","required":["subject","whatId"],"properties":{"whatId":{"type":"string"},"subject":{"type":"string"}}}'::jsonb
   FROM public.servers s WHERE s.name = 'Demo Salesforce';
 
+INSERT INTO public.tools (server_id, name, description, input_schema)
+SELECT s.id,
+       'delete_task',
+       'Delete a Salesforce Task by Id. Compensator for create_task on saga rollback.',
+       '{"type":"object","required":["id"],"properties":{"id":{"type":"string","pattern":"^[a-zA-Z0-9]{15,18}$"}}}'::jsonb
+  FROM public.servers s WHERE s.name = 'Demo Salesforce';
+
 -- Slack
 INSERT INTO public.tools (server_id, name, description, input_schema)
 SELECT s.id,
@@ -141,6 +148,13 @@ SELECT s.id,
        'conversations_list',
        'List Slack channels the bot has access to',
        '{"type":"object","required":[],"properties":{"limit":{"type":"integer","maximum":1000,"minimum":1},"types":{"type":"string"}}}'::jsonb
+  FROM public.servers s WHERE s.name = 'Demo Slack';
+
+INSERT INTO public.tools (server_id, name, description, input_schema)
+SELECT s.id,
+       'delete_message',
+       'Delete a previously-posted Slack message. Compensator for chat_post_message on saga rollback.',
+       '{"type":"object","required":["channel","ts"],"properties":{"channel":{"type":"string","minLength":1},"ts":{"type":"string","minLength":1}}}'::jsonb
   FROM public.servers s WHERE s.name = 'Demo Slack';
 
 -- GitHub
@@ -248,6 +262,24 @@ SELECT ft.id, tt.id, 'compensated_by', 'Rollback: close the GitHub issue that wa
  WHERE ft.name = 'create_issue' AND fs.name = 'Demo GitHub'
    AND ts.name = 'Demo GitHub';
 
+-- Slack: chat_post_message → delete_message (compensated_by) — rollback edge
+INSERT INTO public.relationships (from_tool_id, to_tool_id, relationship_type, description)
+SELECT ft.id, tt.id, 'compensated_by', 'Saga compensator: deletes the posted Slack message on rollback.'
+  FROM public.tools ft JOIN public.servers fs ON fs.id = ft.server_id
+       JOIN public.tools tt ON tt.name = 'delete_message'
+       JOIN public.servers ts ON ts.id = tt.server_id
+ WHERE ft.name = 'chat_post_message' AND fs.name = 'Demo Slack'
+   AND ts.name = 'Demo Slack';
+
+-- Salesforce: create_task → delete_task (compensated_by) — rollback edge
+INSERT INTO public.relationships (from_tool_id, to_tool_id, relationship_type, description)
+SELECT ft.id, tt.id, 'compensated_by', 'Saga compensator: deletes the SF Task on rollback.'
+  FROM public.tools ft JOIN public.servers fs ON fs.id = ft.server_id
+       JOIN public.tools tt ON tt.name = 'delete_task'
+       JOIN public.servers ts ON ts.id = tt.server_id
+ WHERE ft.name = 'create_task' AND fs.name = 'Demo Salesforce'
+   AND ts.name = 'Demo Salesforce';
+
 -- GH → Slack: create_issue → chat_post_message (suggests_after)
 INSERT INTO public.relationships (from_tool_id, to_tool_id, relationship_type, description)
 SELECT ft.id, tt.id, 'suggests_after', 'After filing an engineering ticket, post the issue URL into the #cs-escalations channel.'
@@ -328,13 +360,26 @@ SELECT r.id, 3, t.id,
   FROM public.routes r, public.tools t JOIN public.servers s ON s.id = t.server_id
  WHERE r.name = 'cross_domain_escalation' AND t.name = 'create_issue' AND s.name = 'Demo GitHub';
 
-INSERT INTO public.route_steps (route_id, step_order, tool_id, input_mapping, output_capture_key)
-SELECT r.id, 4, t.id, '{"text":"$inputs.slack_message","channel":"#general"}'::jsonb, 'notification'
+-- Step 4 posts to Slack. rollback_input_mapping derives delete_message's
+-- {channel, ts} from the captured result so a saga halt (step 5 failing)
+-- unwinds the Slack message instead of leaving it orphaned on the channel.
+INSERT INTO public.route_steps (route_id, step_order, tool_id, input_mapping, output_capture_key, rollback_input_mapping)
+SELECT r.id, 4, t.id,
+       '{"text":"$inputs.slack_message","channel":"#general"}'::jsonb,
+       'notification',
+       jsonb_build_object('channel', '$steps.notification.result.channel', 'ts', '$steps.notification.result.ts')
   FROM public.routes r, public.tools t JOIN public.servers s ON s.id = t.server_id
  WHERE r.name = 'cross_domain_escalation' AND t.name = 'chat_post_message' AND s.name = 'Demo Slack';
 
-INSERT INTO public.route_steps (route_id, step_order, tool_id, input_mapping, output_capture_key)
-SELECT r.id, 5, t.id, '{"whatId":"$steps.account.records.0.Id","subject":"$inputs.task_subject"}'::jsonb, 'task'
+-- Step 5 creates an SF Task. rollback_input_mapping pulls the Task Id out of
+-- the create_task result so delete_task compensates correctly on later halts
+-- (not strictly needed today since step 5 is terminal, but required for
+-- correctness if we extend the saga with more downstream steps).
+INSERT INTO public.route_steps (route_id, step_order, tool_id, input_mapping, output_capture_key, rollback_input_mapping)
+SELECT r.id, 5, t.id,
+       '{"whatId":"$steps.account.records.0.Id","subject":"$inputs.task_subject"}'::jsonb,
+       'task',
+       jsonb_build_object('id', '$steps.task.result.id')
   FROM public.routes r, public.tools t JOIN public.servers s ON s.id = t.server_id
  WHERE r.name = 'cross_domain_escalation' AND t.name = 'create_task' AND s.name = 'Demo Salesforce';
 

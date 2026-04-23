@@ -104,6 +104,13 @@ const ConversationsListArgs = z.object({
   types: z.string().max(200).optional(),
   limit: z.number().int().positive().max(1000).optional(),
 });
+// Compensator for chat_post_message (WP-12.2 / G.17). Slack message timestamps
+// are floating-point strings like "1699999999.123456"; we only validate length
+// + non-empty here and let Slack reject malformed ts upstream.
+const DeleteMessageArgs = z.object({
+  channel: z.string().min(1).max(200),
+  ts: z.string().min(1).max(64),
+});
 
 // Project verbose Slack user objects down to the 5 fields callers actually
 // need. Keeps tool output predictable for downstream policy + UI code.
@@ -191,6 +198,20 @@ const dispatchTool = async (
       limit: parsed.data.limit ?? 100,
     });
     return projectChannels(body);
+  }
+
+  if (toolName === 'delete_message') {
+    const parsed = DeleteMessageArgs.safeParse(args);
+    if (!parsed.success) throw new UpstreamError(400, 'invalid_input');
+    const { body } = await slackCall(auth, 'chat.delete', {
+      channel: parsed.data.channel,
+      ts: parsed.data.ts,
+    });
+    return {
+      ok: body.ok ?? true,
+      channel: body.channel ?? parsed.data.channel,
+      ts: body.ts ?? parsed.data.ts,
+    };
   }
 
   throw new UpstreamError(400, 'unknown_tool');

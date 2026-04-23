@@ -384,4 +384,87 @@ describe('proxySalesforce', () => {
       await stopUpstream(server);
     }
   });
+
+  it('dispatches delete_task as a REST DELETE and projects {id, success:true} on 204', async () => {
+    let seenMethod: string | null = null;
+    let seenPath: string | null = null;
+    const { server, url } = await startUpstream(async (req, res) => {
+      if (req.url?.startsWith('/services/oauth2/token')) {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            access_token: 'at-del',
+            instance_url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
+            expires_in: 7200,
+          }),
+        );
+        return;
+      }
+      seenMethod = req.method ?? null;
+      seenPath = req.url ?? null;
+      // 204 No Content — what Salesforce returns on a successful SObject DELETE.
+      res.writeHead(204);
+      res.end();
+    });
+    try {
+      serverFixture.current = {
+        id: 'srv',
+        transport: 'salesforce',
+        auth_config: makeAuthEnvelope(url),
+      };
+      const result = await proxySalesforce(
+        makeTool('delete_task'),
+        { id: '00T000000000001' },
+        ctx,
+      );
+      expect(seenMethod).toBe('DELETE');
+      expect(seenPath).toBe('/services/data/v60.0/sobjects/Task/00T000000000001');
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.result).toEqual({ id: '00T000000000001', success: true });
+      }
+    } finally {
+      await stopUpstream(server);
+    }
+  });
+
+  it('rejects delete_task when id fails the regex before any upstream call', async () => {
+    let hitQuery = false;
+    const { server, url } = await startUpstream(async (req, res) => {
+      if (req.url?.startsWith('/services/oauth2/token')) {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            access_token: 'at-rej',
+            instance_url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
+            expires_in: 7200,
+          }),
+        );
+        return;
+      }
+      hitQuery = true;
+      res.writeHead(204);
+      res.end();
+    });
+    try {
+      serverFixture.current = {
+        id: 'srv',
+        transport: 'salesforce',
+        auth_config: makeAuthEnvelope(url),
+      };
+      const result = await proxySalesforce(
+        makeTool('delete_task'),
+        { id: 'not-a-valid-sf-id!' },
+        ctx,
+      );
+      expect(hitQuery).toBe(false);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBe('invalid_input');
+        expect(result.status).toBe(400);
+      }
+    } finally {
+      await stopUpstream(server);
+    }
+  });
 });

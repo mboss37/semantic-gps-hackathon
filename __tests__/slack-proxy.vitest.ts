@@ -381,4 +381,77 @@ describe('proxySlack', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toBe('wrong_transport');
   });
+
+  it('dispatches delete_message as POST to chat.delete with channel + ts body', async () => {
+    let seenBody: string | null = null;
+    const { server, url } = await startUpstream(async (req, res) => {
+      expect(req.url).toBe('/chat.delete');
+      seenBody = await readBody(req);
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          ok: true,
+          channel: 'C123',
+          ts: '1700000000.000100',
+        }),
+      );
+    });
+    installFetchRewriter(url);
+    try {
+      serverFixture.current = {
+        id: 'srv',
+        transport: 'slack',
+        auth_config: makeAuthEnvelope(),
+      };
+      const result = await proxySlack(
+        makeTool('delete_message'),
+        { channel: 'C123', ts: '1700000000.000100' },
+        ctx,
+      );
+      expect(JSON.parse(seenBody ?? '{}')).toEqual({
+        channel: 'C123',
+        ts: '1700000000.000100',
+      });
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.result).toEqual({
+          ok: true,
+          channel: 'C123',
+          ts: '1700000000.000100',
+        });
+      }
+    } finally {
+      await stopUpstream(server);
+    }
+  });
+
+  it('rejects delete_message with empty ts before any fetch', async () => {
+    let hit = false;
+    const { server, url } = await startUpstream((_req, res) => {
+      hit = true;
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+    });
+    installFetchRewriter(url);
+    try {
+      serverFixture.current = {
+        id: 'srv',
+        transport: 'slack',
+        auth_config: makeAuthEnvelope(),
+      };
+      const result = await proxySlack(
+        makeTool('delete_message'),
+        { channel: 'C123', ts: '' },
+        ctx,
+      );
+      expect(hit).toBe(false);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBe('invalid_input');
+        expect(result.status).toBe(400);
+      }
+    } finally {
+      await stopUpstream(server);
+    }
+  });
 });

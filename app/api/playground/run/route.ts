@@ -49,11 +49,17 @@ type StreamEvent =
       is_error?: boolean;
     }
   | { type: 'text'; content: string }
+  | { type: 'thinking'; content: string }
   | { type: 'policy_event'; detail: string }
   | { type: 'error'; message: string }
   | {
       type: 'done';
-      stats: { tool_calls: number; ms: number; policy_events?: number };
+      stats: {
+        tool_calls: number;
+        ms: number;
+        policy_events?: number;
+        thinking_chars?: number;
+      };
     };
 
 const argsPreview = (input: unknown): string => {
@@ -131,9 +137,19 @@ const runWithMcp = async (
   bearerToken: string,
   emit: (event: StreamEvent) => void,
 ): Promise<void> => {
+  // Extended thinking enabled on BOTH panes. Thinking is a model capability,
+  // not a gateway feature — asymmetric enablement would reintroduce the J.1
+  // tool-count variable bias (Sprint 8 memory). The UI renders thinking in
+  // both panes; governance still only appears on the gateway side.
+  //
+  // budget_tokens: 2048 gives Opus enough room to reason across 2-3 tool
+  // picks without blowing the request. max_tokens is bumped to 8192 so the
+  // budget + final text fit inside. mcp-client-2025-11-20 and extended
+  // thinking co-exist on beta.messages.
   const response = await anthropic.beta.messages.create({
     model: modelPlayground(),
-    max_tokens: 2048,
+    max_tokens: 8192,
+    thinking: { type: 'enabled', budget_tokens: 2048 },
     betas: ['mcp-client-2025-11-20'],
     mcp_servers: [
       {
@@ -155,6 +171,10 @@ const runWithMcp = async (
   for (const block of response.content) {
     if (block.type === 'text') {
       emit({ type: 'text', content: block.text });
+      continue;
+    }
+    if (block.type === 'thinking') {
+      emit({ type: 'thinking', content: block.thinking });
       continue;
     }
     if (block.type === 'mcp_tool_use') {
@@ -219,9 +239,11 @@ export const POST = async (request: Request): Promise<Response> => {
     async start(controller) {
       let toolCalls = 0;
       let policyEvents = 0;
+      let thinkingChars = 0;
       const emit = (event: StreamEvent): void => {
         if (event.type === 'tool_call') toolCalls += 1;
         if (event.type === 'policy_event') policyEvents += 1;
+        if (event.type === 'thinking') thinkingChars += event.content.length;
         controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
       };
 
@@ -250,6 +272,7 @@ export const POST = async (request: Request): Promise<Response> => {
             tool_calls: toolCalls,
             ms,
             policy_events: policyEvents,
+            thinking_chars: thinkingChars,
           },
         });
         controller.close();

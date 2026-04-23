@@ -30,6 +30,8 @@ type ToolResultEvent = {
 
 type TextEvent = { type: 'text'; content: string };
 
+type ThinkingEvent = { type: 'thinking'; content: string };
+
 type PolicyEvent = { type: 'policy_event'; detail: string };
 
 type ErrorEvent = { type: 'error'; message: string };
@@ -40,6 +42,7 @@ type DoneEvent = {
     tool_calls: number;
     ms: number;
     policy_events?: number;
+    thinking_chars?: number;
   };
 };
 
@@ -47,6 +50,7 @@ type StreamEvent =
   | ToolCallEvent
   | ToolResultEvent
   | TextEvent
+  | ThinkingEvent
   | PolicyEvent
   | ErrorEvent
   | DoneEvent;
@@ -57,6 +61,7 @@ type PaneState = {
   toolResults: Map<string, ToolResultEvent>;
   policyEvents: PolicyEvent[];
   text: string;
+  thinking: string;
   error: string | null;
   stats: DoneEvent['stats'] | null;
 };
@@ -67,6 +72,7 @@ const emptyPane = (): PaneState => ({
   toolResults: new Map(),
   policyEvents: [],
   text: '',
+  thinking: '',
   error: null,
   stats: null,
 });
@@ -151,6 +157,13 @@ const applyEvent = (prev: PaneState, event: StreamEvent): PaneState => {
   }
   if (event.type === 'text') {
     return { ...prev, text: prev.text + event.content };
+  }
+  if (event.type === 'thinking') {
+    // Non-streaming beta.messages.create returns thinking as one or more
+    // complete blocks. Concatenate with a blank line between blocks for
+    // readability in the collapsible reasoning panel.
+    const sep = prev.thinking ? '\n\n' : '';
+    return { ...prev, thinking: prev.thinking + sep + event.content };
   }
   if (event.type === 'error') {
     return { ...prev, error: event.message };
@@ -370,6 +383,21 @@ const PaneView = ({ pane, state }: { pane: Pane; state: PaneState }) => {
               </span>
             ))}
           </div>
+        ) : null}
+
+        {state.thinking ? (
+          <details className="group rounded-md border border-violet-500/30 bg-violet-500/5 px-2.5 py-1.5 text-xs">
+            <summary className="flex cursor-pointer items-center gap-1.5 font-medium text-violet-300 select-none">
+              <SparklesIcon className="size-3.5" />
+              Show reasoning
+              <span className="ml-auto text-[10px] font-normal text-violet-300/60">
+                {state.thinking.length.toLocaleString()} chars
+              </span>
+            </summary>
+            <pre className="mt-2 whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-violet-100/80">
+              {state.thinking}
+            </pre>
+          </details>
         ) : null}
 
         {state.text ? (

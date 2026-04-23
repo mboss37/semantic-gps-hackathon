@@ -129,6 +129,12 @@ About section + website URL + 1280×640 social preview OG image + verify LICENSE
 - `components/dashboard/policy-row.tsx` — `new Map(assignments)` rebuilt each render; useMemo when assignment count grows past ~20.
 - Document `export default` carve-out for Next.js `page.tsx` / `layout.tsx` / `route.ts` in CLAUDE.md to stop reviewer flags.
 
+### [P2] Split `playground-workbench.tsx`
+Sprint 12 pushed `components/dashboard/playground-workbench.tsx` to 431 lines (over the 400-line cap). Extract `PaneView` + the `applyEvent` reducer + the stream-parser into colocated files. Mechanical split; no behaviour change.
+
+### [P2] `AbortController` on PolicyTimelineChart fetch
+`components/dashboard/policy-timeline-chart.tsx` uses a `cancelled` boolean flag to skip post-unmount setState but doesn't abort the in-flight fetch. Canonical pattern: `const ctl = new AbortController()` + `signal: ctl.signal` + cleanup `ctl.abort()`.
+
 ### [P2] Sidebar nav badges
 Count badges on Servers (tools), Policies (active), Audit (events-last-hour). Needs shared stats fetcher. Overview already shows the counts — low priority.
 
