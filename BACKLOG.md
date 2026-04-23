@@ -44,11 +44,11 @@ CNA branding leaks into `app/layout.tsx` tab title + `app/page.tsx` marketing sh
 
 ## Sprint queue — daily pulls from here
 
-Originally planned as a 42-WP mega-sprint. Collapsed to daily-sprint cadence 2026-04-22 (CLAUDE.md sweet spot = 3-6 WPs/sprint). Shipped: Sprint 4 Day 1 (A.1, B.1, B.3, B.4, C.1, C.2), Sprint 5 Thu (A.2, B.2, C.3, C.5, D.1, G.5), Sprint 6 (A.4, D.2, F.1, G.2, G.4, G.6), Sprint 7 (A.6, F.2, E.1, J.3 + transport CHECK migration + CI hardening). **20 WPs remaining.** Dep convention: `← blocked by X` / `→ blocks Y`. Sizes: S <1h, M 1-3h, L >3h. Pull rule: morning picks WPs whose `← blocked by` edges all landed.
+Originally planned as a 42-WP mega-sprint. Collapsed to daily-sprint cadence 2026-04-22 (CLAUDE.md sweet spot = 3-6 WPs/sprint). Shipped: Sprint 4 Day 1 (A.1, B.1, B.3, B.4, C.1, C.2), Sprint 5 Thu (A.2, B.2, C.3, C.5, D.1, G.5), Sprint 6 (A.4, D.2, F.1, G.2, G.4, G.6), Sprint 7 (A.6, F.2, E.1, J.3 + transport CHECK migration + CI hardening). Sprint 8 in-flight (E.2, E.3, J.3-ext, F.3, I.2, J.1). **15 WPs remaining post-Sprint-8 pull.** Dep convention: `← blocked by X` / `→ blocks Y`. Sizes: S <1h, M 1-3h, L >3h. Pull rule: morning picks WPs whose `← blocked by` edges all landed.
 
 **Projected judge card (all P0 landing):** Impact 9 · Demo 9 · Opus 4.7 Use 8 · Depth 9 → ~87% weighted.
 
-**Critical path remaining:** `E.2 + E.3 → J.3-extended → J.1 → record`. F.3 + I.1 + I.2 parallel.
+**Critical path remaining:** Sprint 8 (E.2 + E.3 → J.3-ext → J.1) → Sat recording. G.1 + I.1 as stretch post-J.1.
 
 ### A. Platform — Auth + Org + Settings
 - [ ] **A.3** (S) Password reset flow (request + submit). ← A.2
@@ -58,11 +58,9 @@ Originally planned as a 42-WP mega-sprint. Collapsed to daily-sprint cadence 202
 - [ ] **C.4** (M) Multi-origin per server + health-driven origin swap. ← C.3, F.4 → F.2
 
 ### E. Real integrations
-- [ ] **E.2** (M) Slack hand-authored OpenAPI subset (`chat.postMessage`, `users.lookupByEmail`, `conversations.list`) + Bot Token. ← C.3, B.1 → J.1, J.3
-- [ ] **E.3** (M) GitHub — hand-rolled REST proxy (matching SF + Slack pattern) with PAT auth; curated tool set (search_issues, create_issue, add_comment, close_issue). Federation via official GH MCP server is V2. ← C.3, B.1 → J.1, J.3
+_(all shipped or pulled into Sprint 8)_
 
 ### F. Routes + stateful orchestration
-- [ ] **F.3** (M) Rollback execution — uses `compensated_by` edges, reverse-order compensation; emits `rollback_executed`. ← F.1, B.3 → I.2
 - [ ] **F.4** (S) Origin health probes (`/api/health/:server_id`, cached flag). ← B.1 → C.4, G.7
 
 ### G. TRel completion + policies + authoring UI
@@ -76,14 +74,12 @@ Originally planned as a 42-WP mega-sprint. Collapsed to daily-sprint cadence 202
 - [ ] **H.2** (S) Overview dashboard domain filter. ← B.1
 
 ### I. Opus 4.7 showcase + visual beats
-- [ ] **I.1** (M) **P0** — Extended-thinking blocks live-rendered in demo agent panel. SSE stream of thinking events → collapsible "Show reasoning" toggle. ← J.1
-- [ ] **I.2** (M) **P0** — Rollback cascade visualization (reverse-step lights up on route failure). ← F.3
+- [ ] **I.1** (M) **P0 stretch** — Extended-thinking blocks live-rendered in demo agent panel. SSE stream of thinking events → collapsible "Show reasoning" toggle. ← J.1
 - [ ] **I.3** (L) **P1 stretch** — Opus relationship inference on OpenAPI import (1M-context showcase). On import, feed full spec to Opus 4.7 with cached system prompt; user approves/rejects proposals in dashboard before persist; thinking blocks surface reasoning. ← C.1
 - [ ] **I.4** (M) **P1 stretch** — Shadow → enforce timeline (7-day would-have-blocked trail per policy). ← B.4, G.4
 - [ ] **I.5** (M) **P1 stretch, Thu decision** — Managed Agents wrap for demo agent ($5K side prize). Port demo-agent loop from `@anthropic-ai/sdk` manual loop → Managed Agents API; point at deployed `/api/mcp`; wire extended thinking into embedded agent UI; keep SDK version as fallback. **Apply only to the demo agent, never to the product gateway.** ← J.1
 
 ### J. Demo + verification
-- [ ] **J.1** (L) **Playground A/B hero** — `/dashboard/playground` with two panes: left = Opus 4.7 + raw MCPs; right = Opus 4.7 + `/api/mcp/domain/<slug>`. Same scenario button drives both. Mid-demo PII enforce toggle on right pane. Diff view: tool calls, latency, policy events, errors. ← D.1, D.2, E.*, F.1, G.1 → I.1, I.5, J.2, J.3
 - [ ] **J.2** (M) End-to-end verification against Vercel (opt-in Anthropic vitest extended to Playground Route). ← J.1
 
 ---

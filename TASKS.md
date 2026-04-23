@@ -55,7 +55,19 @@
   - Validations: 151 pass / 3 skip locally, 129 pass / 25 skip on CI, tsc 0 ✓, lint 0 ✓, `next build` clean ✓; 7 commits pushed to main; CI green for first time since Sprint 6. Deployed Vercel gateway end-to-end verified: bearer → manifest → dispatcher → SF OAuth → SOQL → real `Edge Communications` account row.
 
 ## Current:
-_Sprint 7 closed Wed night. Sprint 8 (Fri Apr 24) candidates from `BACKLOG.md` — demo-production day. Critical path: J.1 Playground A/B (L) hero pane + I.1 extended-thinking live render + F.3 rollback + I.2 cascade viz. Stretch: G.1 (validate_workflow + evaluate_goal). Recording day Sat — see `[P0 Sat AM]` in BACKLOG. Hosted is fully demo-ready (token, route, relationships, policies, real SF tools)._
+### Sprint 8 — Day 3: cross-MCP orchestration + Playground A/B hero (Fri 2026-04-24)
+
+- [ ] **E.2** (M) Slack proxy — 3 curated tools (`users_lookup_by_email`, `chat_post_message`, `conversations_list`) via Bot Token. Raw fetch (not jsforce-style SDK). Same `ProxyResult` shape as SF/OpenAPI; encrypted `auth_config` envelope. 8-ish mocked tests + opt-in `VERIFY_SLACK=1`.
+- [ ] **E.3** (M) GitHub proxy — 4 curated tools (`search_issues`, `create_issue`, `add_comment`, `close_issue`) via PAT (hand-rolled REST, NOT federated GH MCP server — faster, more controllable for demo). Same ProxyResult contract. 8-ish mocked tests + opt-in `VERIFY_GITHUB=1`.
+- [ ] **J.3-ext** (S) Expanded seed — **9 cross-MCP relationships** + compensation tools (`sf.delete_task`, `slack.delete_message`, `gh.close_issue`-as-rollback) + 2 routes (`sales_escalation` already seeded; add `cross_domain_escalation` touching all 3 MCPs). Loaded via Supabase MCP after E.2+E.3 land.
+- [ ] **F.3** (M) Rollback execution — `execute_route` follows `compensated_by` edges in REVERSE step order on failure OR user-triggered; emits `rollback_executed` events sharing route traceId; capture-bag threaded to compensation tool inputs. 3 tests: rollback-on-halt, user-initiated rollback, compensation-tool-failure-mid-rollback.
+- [ ] **I.2** (M) Rollback cascade viz — reverse-step lights up on dashboard (graph page and/or Playground diff pane) when F.3 fires. Reuses existing graph primitives; adds a highlight/animation state per step.
+- [ ] **J.1** (L) **Playground A/B hero** — `/dashboard/playground` page with two panes: left = Opus 4.7 + raw MCP URLs (unscoped/direct); right = Opus 4.7 + `/api/mcp/domain/<slug>`. Same scenario button drives both; mid-run PII enforce toggle on right pane; diff view (tool calls, latency, policy events, errors).
+
+**Streams:** E.2 + E.3 + F.3 parallel (independent lib surfaces); J.3-ext tail-chains E.2+E.3; I.2 tail-chains F.3; J.1 PM sequential (L, highest slip risk).
+**Cut line (if Fri PM runs long):** I.1 extended-thinking render + G.1 (validate_workflow/evaluate_goal real impls). Pull only if ahead of schedule.
+**Critical path:** E.2 + E.3 → J.3-ext → J.1 → Sat recording. If J.1 slips past midnight, record Sat AM from Thu state + retry Sat afternoon.
+**Pre-req from user:** Slack Bot Token (`xoxb-...` from api.slack.com/apps with users:read.email + chat:write + channels:read scopes) + GitHub PAT (`ghp_...` with repo scope). Encrypted locally, pasted into `servers.auth_config` via Supabase MCP (same pattern as SF E.1).
 
 ## Session Log
 - 2026-04-23 — Sprint 5 Day 2 shipped + wrapped: 6 WPs, 4 commits, three-tier scoped gateway live on Vercel, `REAL_PROXY_ENABLED` default-on, routes/route_steps schema ready for F.1, Supabase auth pages replace dev-login. Reviewer caught Next 16 `useSearchParams` Suspense blocker pre-build — codified `next build` into pre-commit gate. 7 hardening items queued in BACKLOG.
