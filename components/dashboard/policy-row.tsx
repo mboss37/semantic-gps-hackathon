@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { PolicyConfigForm } from '@/components/dashboard/policy-config-forms';
 
 type Mode = 'shadow' | 'enforce';
@@ -214,19 +215,20 @@ export const PolicyRow = ({
           </div>
           <div className="flex items-center gap-2">
             <Label className="text-xs text-muted-foreground">Mode</Label>
-            <Select
+            <ToggleGroup
+              type="single"
               value={mode}
-              onValueChange={(v) => v && onToggleMode(v as Mode)}
+              onValueChange={(v) => {
+                if (v === 'shadow' || v === 'enforce') onToggleMode(v);
+              }}
+              variant="outline"
+              size="sm"
               disabled={pending}
+              aria-label="Policy enforcement mode"
             >
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="shadow">shadow</SelectItem>
-                <SelectItem value="enforce">enforce</SelectItem>
-              </SelectContent>
-            </Select>
+              <ToggleGroupItem value="shadow">shadow</ToggleGroupItem>
+              <ToggleGroupItem value="enforce">enforce</ToggleGroupItem>
+            </ToggleGroup>
           </div>
         </div>
       </CardHeader>

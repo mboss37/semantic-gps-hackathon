@@ -365,4 +365,4 @@ export const invalidateManifest = (): void => {
 // HMR nonce — bump to force Next.js dev to reload this module after direct
 // DB seeds (which bypass mutation routes and thus invalidateManifest()).
 // Safe to leave in place.
-export const __HMR_NONCE__ = 6;
+export const __HMR_NONCE__ = 7;

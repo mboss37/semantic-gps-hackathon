@@ -91,7 +91,16 @@
   - E2E validated on local against real SF/Slack/GitHub: #1 PII leak (shadow→enforce redaction), #7 prompt-injection (injection_detected:ignore_prior block), #9 rollback cascade (compensated_count 1, 0 open GH issues post-run), #10 governance overlay (4 policies in one audit row).
   - Validations: 256 pass / 5 skip / 0 fail, tsc + lint + `next build` clean. 4 commits pushed to main. Hosted synced: `20260425130000_route_step_rollback_input_mapping` migration applied + `injection_guard_default` policy seeded for parity.
 
-## Current:
+## Current: Sprint 11 — Submission gates + vision signaling + demo-day ergonomics (Thu 2026-04-23 PM)
+
+Hackathon-submission hard gates plus a vision doc that signals the scalable architecture (split control/data plane, Rust data plane deploy-anywhere, Next.js control plane multi-region) to judges without having to build it. Plus recording-day ergonomics so Sunday doesn't burn on setup.
+
+- [ ] **11.1** (S) Replace CNA landing + email-verify ack. `app/page.tsx` → thin Semantic GPS landing with "Open Dashboard" CTA, handle `?verified=true` query param toast then redirect to `/dashboard`. `app/layout.tsx` metadata already done. (Subagent lane A.)
+- [ ] **11.2** (S) `README.md` rewrite. 1-para pitch + quickstart (`supabase start` → `.env.local` → `pnpm dev`) + env table + Vercel link + demo video placeholder + 4-bullet Vision teaser linking to VISION.md. (Main thread.)
+- [ ] **11.3** (S) `docs/SUBMISSION.md` — 100-200 word submission summary for CV platform. Closes with one sentence on the control/data-plane split + Rust vision. (Main thread.)
+- [ ] **11.4** (S) `VISION.md` in repo root — ~500-600 words. TL;DR, wedge recap, architecture vision (control plane Next.js multi-region / data plane Rust deploy-anywhere / Navigation Bundle sync), why this wins for agents, roadmap grouped by theme, non-goals, closing. Highly visible to judges via root-level GitHub doc listing. (Main thread.)
+- [ ] **11.5** (S) G.19 demo-data cleanup CLI — `scripts/cleanup-demo-data.mjs`. Idempotent; closes open GH issues on sandbox repo, deletes Slack bot messages in `#general` in last N hours, deletes recent SF Tasks on Edge Communications owned by demo user. Run before each recording take. (Subagent lane B.)
+- [ ] **11.6** (S) Recording-day enforce↔shadow toggle on `policy-row.tsx`. Replace Select with a 1-click Switch/Toggle that PATCHes `enforcement_mode` directly — tighter narrative for live demo flip. (Main thread, after 11.2-11.4.)
 
 ## Session Log
 - 2026-04-23 — Sprint 10 shipped + wrapped: 4 planned WPs (G.13/G.14/G.15/G.16 completing the 12-builtin policy taxonomy) + unplanned demo-readiness bundle (local bootstrap SQL, libphonenumber-js PII, canonical saga `rollback_input_mapping`, docs/DEMO.md recording playbook), 4 commits. 4 demo stories E2E validated against real SF/Slack/GitHub on local — PII hero promoted from beat to hero after Slack-auto-linkify visual effect surfaced during validation. 5 memories harvested. 256 pass / 5 skip / 0 fail.
