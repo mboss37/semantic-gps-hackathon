@@ -36,8 +36,15 @@ const RoutesPage = async () => {
         <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-900/50 px-6 py-10 text-center">
           <p className="text-sm text-zinc-400">No routes yet.</p>
           <p className="mt-1 text-sm text-zinc-500">
-            Seed demo data with{' '}
-            <span className="text-zinc-200">scripts/bootstrap-local-demo.sql</span>.
+            Routes chain tools with fallbacks and rollbacks. Authoring lives in SQL migrations
+            for this release — see{' '}
+            <Link
+              href="/dashboard/graph"
+              className="text-zinc-200 underline underline-offset-2 hover:text-white"
+            >
+              Workflow Graph
+            </Link>{' '}
+            to explore the tools you can wire together.
           </p>
         </div>
       ) : (

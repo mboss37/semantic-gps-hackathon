@@ -1,5 +1,8 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { LibraryIcon } from 'lucide-react';
 import { requireAuth, UnauthorizedError } from '@/lib/auth';
+import { Button } from '@/components/ui/button';
 import { PolicyCreateDialog } from '@/components/dashboard/policy-create-dialog';
 import { PolicyRow } from '@/components/dashboard/policy-row';
 
@@ -46,7 +49,11 @@ type ToolOption = {
   server_name: string;
 };
 
-const PoliciesPage = async () => {
+const PoliciesPage = async ({
+  searchParams,
+}: {
+  searchParams?: Promise<{ builtin?: string | string[] }>;
+}) => {
   let ctx;
   try {
     ctx = await requireAuth();
@@ -57,6 +64,15 @@ const PoliciesPage = async () => {
     throw e;
   }
   const { supabase, organization_id } = ctx;
+
+  // Sprint 17 WP-17.1: `/dashboard/policies/catalog` deep-links an "Apply to
+  // my org" CTA to `/dashboard/policies?builtin=<key>`. We forward that key
+  // into the create dialog so it auto-opens with the right builtin + default
+  // config preselected — one click from catalog card to configure screen.
+  const resolvedParams = (await searchParams) ?? {};
+  const rawBuiltin = resolvedParams.builtin;
+  const initialBuiltinKey =
+    typeof rawBuiltin === 'string' && rawBuiltin.length > 0 ? rawBuiltin : undefined;
 
   // Sprint 15 multi-tenancy: every table here is now org-scoped by its own
   // `organization_id` column. Tools piggyback via the servers join constraint.
@@ -109,7 +125,15 @@ const PoliciesPage = async () => {
             gateway invocation picks up the change.
           </p>
         </div>
-        <PolicyCreateDialog servers={servers} />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href="/dashboard/policies/catalog">
+              <LibraryIcon className="size-4" />
+              Browse catalog
+            </Link>
+          </Button>
+          <PolicyCreateDialog servers={servers} initialBuiltinKey={initialBuiltinKey} />
+        </div>
       </header>
 
       {policies.length === 0 ? (

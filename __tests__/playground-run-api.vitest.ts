@@ -19,16 +19,27 @@ vi.mock('@/lib/auth', async () => {
 });
 
 // Service-client stub so the token mint path never hits a real DB.
+// Sprint 17 WP-17.2: mintPlaygroundToken first SELECTs an existing kind=system
+// row and reuses it if present, else INSERTs a new one. The mock defaults to
+// "no existing row" (maybeSingle → null) so every test exercises the INSERT
+// path unless it explicitly queues a row via mintTokenMock.
 vi.mock('@/lib/supabase/service', () => ({
-  createServiceClient: () => ({
-    from: () => ({
-      insert: () => ({
-        select: () => ({
-          single: async () => mintTokenMock(),
+  createServiceClient: () => {
+    const selectChain = {
+      eq: () => selectChain,
+      maybeSingle: async () => ({ data: null, error: null }),
+    };
+    return {
+      from: () => ({
+        select: () => selectChain,
+        insert: () => ({
+          select: () => ({
+            single: async () => mintTokenMock(),
+          }),
         }),
       }),
-    }),
-  }),
+    };
+  },
 }));
 
 vi.mock('@anthropic-ai/sdk', () => {

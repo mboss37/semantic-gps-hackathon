@@ -1,12 +1,39 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useState } from 'react';
-import { PlayIcon, SparklesIcon, ShieldCheckIcon, ZapIcon } from 'lucide-react';
+import {
+  PlayIcon,
+  ServerIcon,
+  SparklesIcon,
+  ShieldCheckIcon,
+  ZapIcon,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+
+// Sprint 17 WP-17.3: pure decision function driving both the Execute button's
+// disabled state and the visible "Register a server first" CTA. Exported so
+// `__tests__/playground-no-mcp-guard.vitest.ts` can cover it without a
+// component-render stack (vitest runs in node, repo has no jsdom / RTL).
+//
+// - `canExecute` — all three must be true: org has ≥1 registered MCP server,
+//   no pane is mid-run, and the prompt has non-whitespace content.
+// - `showMissingServersNotice` — tracks server presence only; stays visible
+//   while busy so the user sees the "register a server" CTA regardless of
+//   where in the run lifecycle they clicked.
+export const computePlaygroundGate = (input: {
+  hasServers: boolean;
+  busy: boolean;
+  promptText: string;
+}): { canExecute: boolean; showMissingServersNotice: boolean } => ({
+  canExecute:
+    input.hasServers && !input.busy && input.promptText.trim().length > 0,
+  showMissingServersNotice: !input.hasServers,
+});
 
 // Sprint 8 WP-J.1: client workbench. A single prompt drives two runs in
 // parallel — raw (real SF/Slack/GH upstreams with no control plane around
@@ -199,7 +226,13 @@ const PANES: Pane[] = [
   },
 ];
 
-export const PlaygroundWorkbench = ({ tokenName }: { tokenName: string }) => {
+export const PlaygroundWorkbench = ({
+  tokenName,
+  hasServers = true,
+}: {
+  tokenName: string;
+  hasServers?: boolean;
+}) => {
   const [prompt, setPrompt] = useState<string>(SCENARIOS[0].prompt);
   const [raw, setRaw] = useState<PaneState>(emptyPane());
   const [gateway, setGateway] = useState<PaneState>(emptyPane());
@@ -246,9 +279,30 @@ export const PlaygroundWorkbench = ({ tokenName }: { tokenName: string }) => {
   }, [prompt, runPane]);
 
   const busy = raw.running || gateway.running;
+  const gate = computePlaygroundGate({ hasServers, busy, promptText: prompt });
 
   return (
     <div className="flex flex-col gap-4">
+      {gate.showMissingServersNotice ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ServerIcon className="size-4" />
+              Register an MCP server first
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col items-start gap-3">
+            <p className="text-sm text-muted-foreground">
+              The Playground routes calls through your org&apos;s registered MCP servers. You
+              don&apos;t have any yet, so the governed pane would return an empty manifest and
+              the model would respond text-only.
+            </p>
+            <Button asChild>
+              <Link href="/dashboard/servers">Register a server</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
       <Card>
         <CardHeader className="gap-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -288,7 +342,7 @@ export const PlaygroundWorkbench = ({ tokenName }: { tokenName: string }) => {
               <code className="rounded bg-muted px-1">/api/mcp</code> with policies,
               relationship hints, and rollback wired in.
             </p>
-            <Button onClick={runBoth} disabled={busy}>
+            <Button onClick={runBoth} disabled={!gate.canExecute}>
               <PlayIcon className="size-4" />
               {busy ? 'Running…' : 'Run on both'}
             </Button>

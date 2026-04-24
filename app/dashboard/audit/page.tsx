@@ -111,8 +111,17 @@ const AuditPage = () => {
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : events.length === 0 ? (
           <div className="rounded-lg border border-dashed px-6 py-10 text-center">
-            <p className="text-sm text-muted-foreground">
-              No events yet. Hit the gateway from MCP Inspector or the demo agent to populate.
+            <p className="text-sm text-muted-foreground">No events yet.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Every gateway call — allowed, blocked, errored — lands here. Try a preset in the{' '}
+              <a
+                href="/dashboard/playground"
+                className="text-foreground underline underline-offset-2"
+              >
+                Playground
+              </a>{' '}
+              or hit <code className="rounded bg-muted px-1 font-mono">/api/mcp</code> from any
+              MCP client.
             </p>
           </div>
         ) : (

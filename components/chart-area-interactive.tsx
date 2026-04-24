@@ -49,6 +49,16 @@ type Range = "7d" | "30d" | "90d";
 const isRange = (value: string): value is Range =>
   value === "7d" || value === "30d" || value === "90d";
 
+// Sprint 17 WP-17.4: exported for unit-test coverage of the empty-state
+// decision. The chart itself is rendered via Recharts in a jsdom-less repo,
+// so the test exercises this pure function instead of React output.
+export const hasNoGatewayTraffic = (data: readonly Bucket[] | null): boolean => {
+  if (data === null) return false;
+  let total = 0;
+  for (const b of data) total += b.ok + b.blocked + b.error;
+  return total === 0;
+};
+
 const chartConfig = {
   events: { label: "Events" },
   ok: { label: "OK", color: "#22c55e" },
@@ -83,6 +93,12 @@ export const ChartAreaInteractive = () => {
   const handleRangeChange = (value: string) => {
     if (isRange(value)) setUserRange(value);
   };
+
+  // Sprint 17 WP-17.4: when there are zero events (fresh signup, or a quiet
+  // org), render a Card-sized placeholder instead of a blank AreaChart with
+  // no axes/data. Keeps the range toggle interactive so the user can still
+  // explore once traffic arrives.
+  const hasNoTraffic = hasNoGatewayTraffic(data);
 
   return (
     <Card className="@container/card">
@@ -131,6 +147,24 @@ export const ChartAreaInteractive = () => {
         </CardAction>
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+        {hasNoTraffic ? (
+          <div
+            data-testid="chart-empty-state"
+            className="flex aspect-auto h-[250px] w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-muted/30 px-6 text-center"
+          >
+            <p className="text-sm text-muted-foreground">No gateway traffic yet.</p>
+            <p className="text-xs text-muted-foreground">
+              Run a preset in the{' '}
+              <a
+                href="/dashboard/playground"
+                className="font-medium text-foreground underline underline-offset-2"
+              >
+                Playground
+              </a>{' '}
+              or hit the gateway from an MCP client to populate this chart.
+            </p>
+          </div>
+        ) : (
         <ChartContainer
           config={chartConfig}
           className="aspect-auto h-[250px] w-full"
@@ -201,6 +235,7 @@ export const ChartAreaInteractive = () => {
             />
           </AreaChart>
         </ChartContainer>
+        )}
       </CardContent>
     </Card>
   );

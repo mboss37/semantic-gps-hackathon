@@ -30,10 +30,14 @@ export const GET = async (): Promise<Response> => {
     throw e;
   }
 
+  // Sprint 17 WP-17.2: hide `kind='system'` rows (e.g. Playground's reused
+  // internal bearer). User-consented tokens are strictly `kind='user'`; system
+  // tokens are infra-owned and never surfaced via the tokens UI.
   const { data, error } = await supabase
     .from('gateway_tokens')
     .select('id, name, last_used_at, created_at')
     .eq('organization_id', organization_id)
+    .eq('kind', 'user')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -71,12 +75,18 @@ export const POST = async (request: Request): Promise<Response> => {
   const plaintext = `sgps_${randomBytes(32).toString('hex')}`;
   const token_hash = hashToken(plaintext);
 
+  // Sprint 17 WP-17.2: user-facing route always mints `kind='user'`. System
+  // tokens are infra-owned and only the Playground's `mintPlaygroundToken`
+  // creates them — never through this user-consent surface. Explicit here
+  // even though the column default is 'user', so a future default flip can't
+  // silently escalate a user-minted token into a hidden system token.
   const { data, error } = await supabase
     .from('gateway_tokens')
     .insert({
       organization_id,
       token_hash,
       name: parsed.data.name,
+      kind: 'user',
     })
     .select('id, name, created_at')
     .single();

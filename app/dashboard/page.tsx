@@ -1,7 +1,10 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ChartAreaInteractive } from '@/components/chart-area-interactive';
 import { DataTable } from '@/components/data-table';
 import { SectionCards } from '@/components/section-cards';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { requireAuth, UnauthorizedError } from '@/lib/auth';
 import { auditEventSchema, type AuditEvent } from '@/lib/schemas/audit-event';
 
@@ -107,7 +110,31 @@ const DashboardPage = async () => {
         <div className="px-4 lg:px-6">
           <ChartAreaInteractive />
         </div>
-        <DataTable data={events} />
+        {events.length === 0 ? (
+          <div className="px-4 lg:px-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent events</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-start gap-3">
+                <p className="text-sm text-muted-foreground">
+                  No gateway events yet. Every MCP call that passes through Semantic GPS shows
+                  up here — policy decisions, latency, trace IDs, the lot.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild size="sm">
+                    <Link href="/dashboard/playground">Open Playground</Link>
+                  </Button>
+                  <Button asChild size="sm" variant="outline">
+                    <Link href="/dashboard/servers">Register an MCP server</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <DataTable data={events} />
+        )}
       </div>
     </div>
   );

@@ -42,10 +42,15 @@ const TokensPage = async () => {
     return <div className="p-6 text-sm text-muted-foreground">No organization membership.</div>;
   }
 
+  // Sprint 17 WP-17.2: system tokens (e.g. Playground's reused internal
+  // bearer) are infra-owned and never user-created. Hide them here so the
+  // user's consent surface is strictly the tokens they minted themselves via
+  // the Create dialog. Matches the `kind='user'` filter on GET /api/gateway-tokens.
   const { data: tokensData } = await supabase
     .from('gateway_tokens')
     .select('id, name, last_used_at, created_at')
     .eq('organization_id', organizationId)
+    .eq('kind', 'user')
     .order('created_at', { ascending: false });
 
   const tokens = (tokensData ?? []) as TokenRecord[];

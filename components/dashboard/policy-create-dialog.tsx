@@ -51,17 +51,43 @@ const BUILTIN_DEFAULTS: Record<string, Record<string, unknown>> = {
 
 type Mode = 'shadow' | 'enforce';
 
-export const PolicyCreateDialog = ({ servers }: { servers: Array<{ id: string; name: string }> }) => {
+type PolicyCreateDialogProps = {
+  servers: Array<{ id: string; name: string }>;
+  // Sprint 17 WP-17.1: catalog gallery deep-links via `?builtin=<key>`. The
+  // policies page forwards the key here; dialog auto-opens with the right
+  // builtin + default config preselected so the user lands directly in
+  // "configure this policy" without an extra click.
+  initialBuiltinKey?: string;
+};
+
+export const PolicyCreateDialog = ({
+  servers,
+  initialBuiltinKey,
+}: PolicyCreateDialogProps) => {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const startingBuiltin =
+    initialBuiltinKey && initialBuiltinKey in BUILTIN_DEFAULTS
+      ? initialBuiltinKey
+      : 'pii_redaction';
+  const [open, setOpen] = useState(Boolean(initialBuiltinKey));
   const [pending, setPending] = useState(false);
   const [name, setName] = useState('');
-  const [builtinKey, setBuiltinKey] = useState('pii_redaction');
+  const [builtinKey, setBuiltinKey] = useState(startingBuiltin);
   const [config, setConfig] = useState<Record<string, unknown>>(
-    BUILTIN_DEFAULTS.pii_redaction ?? {},
+    BUILTIN_DEFAULTS[startingBuiltin] ?? {},
   );
   const [mode, setMode] = useState<Mode>('shadow');
   const [attachServerId, setAttachServerId] = useState<string | undefined>(undefined);
+
+  // Clean the `?builtin=` deep-link param off the URL on close so a refresh
+  // doesn't silently re-open the dialog, and a manual close doesn't leave a
+  // stale param behind for the next navigation.
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next && initialBuiltinKey) {
+      router.replace('/dashboard/policies');
+    }
+  };
 
   const onSubmit = async () => {
     setPending(true);
@@ -88,7 +114,7 @@ export const PolicyCreateDialog = ({ servers }: { servers: Array<{ id: string; n
         });
       }
       toast.success('Policy created');
-      setOpen(false);
+      handleOpenChange(false);
       setName('');
       setAttachServerId(undefined);
       router.refresh();
@@ -100,7 +126,7 @@ export const PolicyCreateDialog = ({ servers }: { servers: Array<{ id: string; n
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button>
           <PlusIcon className="size-4" />

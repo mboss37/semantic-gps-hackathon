@@ -42,7 +42,7 @@ const ORG_B = '00000000-0000-0000-0000-0000000000b2';
 const makeStubSupabase = (rows: TokenRow[]) => {
   const snapshot = () => rows;
 
-  const selectQuery = (organizationId: string, cols: string) => {
+  const selectQuery = (_organizationId: string, cols: string) => {
     const projected = (r: TokenRow): Record<string, unknown> => {
       const out: Record<string, unknown> = {};
       for (const col of cols.split(',').map((s) => s.trim())) {
@@ -50,17 +50,32 @@ const makeStubSupabase = (rows: TokenRow[]) => {
       }
       return out;
     };
-    return {
-      eq: (_col: string, value: string) => ({
-        order: (_ordCol: string, _opts: { ascending: boolean }) =>
-          Promise.resolve({
-            data: snapshot()
-              .filter((r) => r.organization_id === value)
-              .map(projected),
-            error: null,
-          }),
-      }),
+    // Sprint 17 WP-17.2: the GET handler now chains .eq('organization_id',..)
+    // .eq('kind','user'), so the mock must accept multiple .eq() calls before
+    // .order() terminates. `kind` is never populated on test rows, so a filter
+    // on 'user' value returns every row (rows default to undefined → undefined
+    // !== 'user' would drop them, so treat undefined as 'user').
+    const filters: Array<{ col: string; value: unknown }> = [];
+    const chain = {
+      eq: (col: string, value: unknown) => {
+        filters.push({ col, value });
+        return chain;
+      },
+      order: (_ordCol: string, _opts: { ascending: boolean }) =>
+        Promise.resolve({
+          data: snapshot()
+            .filter((r) =>
+              filters.every((f) => {
+                const v = (r as unknown as Record<string, unknown>)[f.col];
+                if (f.col === 'kind') return (v ?? 'user') === f.value;
+                return v === f.value;
+              }),
+            )
+            .map(projected),
+          error: null,
+        }),
     };
+    return chain;
   };
 
   const insertQuery = (payload: Omit<TokenRow, 'id' | 'last_used_at' | 'created_at'>) => {
