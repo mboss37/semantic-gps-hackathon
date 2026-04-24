@@ -54,6 +54,8 @@ pnpm dev
 
 ## Environment variables
 
+### Required (local + Vercel)
+
 | Var | Purpose |
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL (local `http://127.0.0.1:54321` or hosted) |
@@ -64,8 +66,42 @@ pnpm dev
 | `EVALUATE_GOAL_MODEL` | TRel `evaluate_goal` ranker (`claude-opus-4-7`) |
 | `NEXT_PUBLIC_APP_URL` | Absolute app URL — set to your Cloudflare tunnel URL when testing the Playground agent against local |
 | `CREDENTIALS_ENCRYPTION_KEY` | AES-256-GCM key for `servers.auth_config` ciphertext. Generate with `openssl rand -base64 32` |
+| `SF_LOGIN_URL` | Salesforce org base URL for the co-deployed SF MCP route |
+| `SF_CLIENT_ID` | SF Connected App client id (Client Credentials flow) |
+| `SF_CLIENT_SECRET` | SF Connected App client secret |
+| `SLACK_BOT_TOKEN` | Slack bot token (`xoxb-…`) — scopes: `chat:write`, `users:read.email`, `channels:read` |
+| `GITHUB_PAT` | GitHub classic PAT with `repo` scope (owner/repo come from each tool call, not env) |
 
-All env helpers throw loudly on missing values — no silent production fallbacks.
+### Local-only
+
+| Var | Purpose |
+|---|---|
+| `SSRF_ALLOW_LOCALHOST=1` | **Set in `.env.local`, leave unset on Vercel.** The gateway's `proxyHttp` roundtrips through `safeFetch` for every upstream including the co-deployed vendor routes. With `origin_url=http://localhost:3000/...` in dev, the SSRF guard would block the hop without this flag. Prod uses the live HTTPS domain so the guard stays tight. |
+
+### Optional runtime flags
+
+| Var | Purpose |
+|---|---|
+| `NEXT_PUBLIC_ENABLE_DEMO_SIMULATORS=1` | Renders the simulator row on the dashboard graph page |
+| `REAL_PROXY_ENABLED=0` | Forces the dispatcher's mock canned-data path (default is real upstreams) |
+| `MANIFEST_INTROSPECTION_ENABLED=1` | Opens `/api/internal/manifest/invalidate` on prod (dev auto-opens via `NODE_ENV`) |
+| `SEMANTIC_GPS_GATEWAY_URL` | Explicit gateway URL for the Playground runner; falls back to `NEXT_PUBLIC_APP_URL` |
+
+### Integration-test flags (vitest only — NOT for Vercel)
+
+The app never reads these at runtime; only vitest suites under `__tests__/` reference them. Set them in your shell when running the gated tests locally. All default to skipped so CI stays fast.
+
+| Var | Purpose |
+|---|---|
+| `VERIFY_ANTHROPIC=1` | Hits real Anthropic API (needs `ANTHROPIC_API_KEY`) |
+| `VERIFY_REAL_PROXY=1` | Runs proxy tests against real upstreams |
+| `VERIFY_INTEGRATIONS=1` | Umbrella flag for all live-upstream tests |
+| `VERIFY_SALESFORCE=1` | Salesforce live tests (requires `SF_*`) |
+| `VERIFY_SLACK=1` | Slack live tests (requires `SLACK_BOT_TOKEN`) |
+| `VERIFY_GITHUB=1` | GitHub live tests (requires `GITHUB_PAT`) |
+| `VERIFY_GATEWAY_URL` | Base URL for E2E gateway tests (e.g. tunnel URL) |
+
+All runtime env helpers throw loudly on missing values — no silent production fallbacks.
 
 ---
 
