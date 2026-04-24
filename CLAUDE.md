@@ -162,6 +162,36 @@ Pick the right subagent type:
 
 Good triggers: "implement feature A while researching feature B", "build the UI while I wire the API", "check three different parts of the codebase at once". Bad trigger: sequential dependencies (A must finish before B reads its output).
 
+### Worktree isolation is MANDATORY for any write-capable subagent
+Sprint 17 shipped one class of bug we never accept again: a sibling subagent's `git stash` + `git checkout -- <paths>` wiped another subagent's already-shipped files, because both were editing the same working tree in parallel. Fix is platform-level, not social.
+
+Rules:
+1. **Any subagent that may write files runs in a dedicated git worktree.** `.claude/agents/general-purpose.md` sets `isolation: worktree` in frontmatter so every spawn of `general-purpose` (the default write-capable subagent) inherits this automatically. When spawning ad-hoc or a non-default type that can write, pass `isolation: "worktree"` explicitly.
+2. **Read-only subagents don't need a worktree** — `Explore`, `Plan`, `claude-code-guide`, research agents. They pay nothing for a shared tree because they make no diff.
+3. **`code-reviewer` must NOT run in a worktree.** It reads the main session's staged diff (`git diff --cached`). A worktree would be empty of your staged changes and the review would pass on no content.
+4. **Inside any worktree subagent: `git stash`, `git checkout -- <paths>`, `git restore <paths>`, `git reset --hard`, `git commit`, `git push` are all banned.** Every recovery path is "fix forward" inside the worktree.
+5. **Commits happen in the main session after worktree merge-back.** Subagents report what they changed; main session stages + runs code-reviewer + writes the marker + commits.
+
+If you catch yourself about to launch a `general-purpose` agent without worktree isolation (or an ad-hoc Agent call that writes files without `isolation: "worktree"`), stop and fix the config first. Don't cross fingers.
+
+### Merge contract — worktree subagents do NOT auto-merge
+Per [Anthropic's Common Workflows docs](https://code.claude.com/docs/en/common-workflows#run-parallel-claude-code-sessions-with-git-worktrees), every worktree subagent creates a branch at `.claude/worktrees/<name>` off `origin/HEAD`. On completion:
+- No changes → worktree + branch auto-deleted.
+- Changes present → worktree + branch persist, **waiting for main session to merge**.
+
+Main session flow after parallel subagents return:
+1. `git worktree list` — see surviving worktrees.
+2. For each, inspect the branch: `git log main..worktree-<name>`, `git diff main worktree-<name>`.
+3. Merge in dependency order: `git merge worktree-<name>` per subagent. Fix conflicts inline — conflicts are information, not failures; they point to task-boundary leakage.
+4. After all merges land cleanly and tests pass: `git worktree remove .claude/worktrees/<name>` + `git branch -D worktree-<name>`.
+5. `git worktree prune` as a final sweep.
+6. Stale worktrees older than 7 days auto-cleanup via `cleanupPeriodDays: 7` in `.claude/settings.json`.
+
+Implication for WP design: **each parallel WP must own a disjoint set of files** — overlapping files guarantees merge conflicts and (worse) silent clobber on resolution. Main session owns boundary-drawing before spawning.
+
+### Worktree env-var copy
+Worktrees are fresh checkouts — gitignored files (`.env.local`, etc.) do NOT copy over by default. `.worktreeinclude` at the repo root lists the exact gitignored files that should be copied into every subagent worktree so `pnpm supabase`, `pnpm dev`, and integration tests work inside the isolated checkout. If a subagent fails because a secret is missing, extend `.worktreeinclude` — don't commit the secret.
+
 ## Stop-and-Swarm
 Three failed iterations on the same problem = stop iterating alone.
 On the fourth attempt, spin up at least 3 parallel agents via the Agent tool, each investigating from a different angle:

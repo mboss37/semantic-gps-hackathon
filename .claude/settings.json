@@ -150,5 +150,6 @@
     ]
   },
   "disableBypassPermissionsMode": "disable",
-  "autoMemoryEnabled": false
+  "autoMemoryEnabled": false,
+  "cleanupPeriodDays": 7
 }
