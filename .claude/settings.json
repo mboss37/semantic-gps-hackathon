@@ -58,6 +58,15 @@
             "command": "bash .claude/hooks/sprint-size-check.sh TASKS.md 2>/dev/null; exit 0"
           }
         ]
+      },
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx claude-launchpad memory context --json 2>/dev/null; exit 0"
+          }
+        ]
       }
     ],
     "PreToolUse": [
