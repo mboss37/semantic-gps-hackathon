@@ -1,7 +1,7 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeftIcon } from 'lucide-react';
-import { createClient } from '@/lib/supabase/server';
+import { requireAuth, UnauthorizedError } from '@/lib/auth';
 import { PolicyTimelineChart } from '@/components/dashboard/policy-timeline-chart';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,12 +24,22 @@ type Params = Promise<{ id: string }>;
 
 const PolicyDetailPage = async ({ params }: { params: Params }) => {
   const { id } = await params;
-  const supabase = await createClient();
+  let ctx;
+  try {
+    ctx = await requireAuth();
+  } catch (e) {
+    if (e instanceof UnauthorizedError) {
+      redirect(`/login?next=/dashboard/policies/${id}`);
+    }
+    throw e;
+  }
 
-  const { data, error } = await supabase
+  // Cross-org id guesses 404 instead of leaking the target policy's shape.
+  const { data, error } = await ctx.supabase
     .from('policies')
     .select('id, name, builtin_key, enforcement_mode, created_at')
     .eq('id', id)
+    .eq('organization_id', ctx.organization_id)
     .maybeSingle();
   if (error || !data) notFound();
   const policy = data as PolicyRecord;

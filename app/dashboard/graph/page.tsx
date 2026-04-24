@@ -27,6 +27,7 @@ import {
   type RollbackEventLike,
 } from '@/lib/graph/rollback-cascade';
 import { rollbackEventSchema, type RollbackEvent } from '@/lib/schemas/rollback-event';
+import { fetchGraphData } from './actions';
 
 type TrelNode = {
   id: string;
@@ -149,25 +150,11 @@ const GraphPage = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/mcp', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'discover_relationships',
-          params: {},
-        }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
-      const sseMatch = text.match(/data:\s*(\{[\s\S]*\})/);
-      const payload = JSON.parse(sseMatch ? sseMatch[1] : text) as {
-        result?: TrelResponse;
-        error?: { message: string };
-      };
-      if (payload.error) throw new Error(payload.error.message);
-      setData(payload.result ?? { nodes: [], edges: [] });
+      // Session-authed server action. Replaces the unauth'd
+      // `fetch('/api/mcp')` that polluted audit with `status: unauthorized`
+      // rows on every graph page load (Sprint 15 smoke-test finding).
+      const result = await fetchGraphData();
+      setData(result);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Graph load failed');
     } finally {

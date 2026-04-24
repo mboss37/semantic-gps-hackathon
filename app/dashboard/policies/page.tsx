@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import { requireAuth, UnauthorizedError } from '@/lib/auth';
 import { PolicyCreateDialog } from '@/components/dashboard/policy-create-dialog';
 import { PolicyRow } from '@/components/dashboard/policy-row';
 
@@ -46,21 +47,37 @@ type ToolOption = {
 };
 
 const PoliciesPage = async () => {
-  const supabase = await createClient();
-  // Tools are org-scoped by joining through `servers` (which has
-  // organization_id). RLS is off in the MVP, but the user-scoped Supabase
-  // client still gets everything — we filter client-side by the servers we
-  // already pulled. Keeps this page parallel with the rest of the dashboard.
+  let ctx;
+  try {
+    ctx = await requireAuth();
+  } catch (e) {
+    if (e instanceof UnauthorizedError) {
+      redirect('/login?next=/dashboard/policies');
+    }
+    throw e;
+  }
+  const { supabase, organization_id } = ctx;
+
+  // Sprint 15 multi-tenancy: every table here is now org-scoped by its own
+  // `organization_id` column. Tools piggyback via the servers join constraint.
   const [policiesRes, assignmentsRes, serversRes, toolsRes] = await Promise.all([
     supabase
       .from('policies')
       .select('id, name, builtin_key, config, enforcement_mode, created_at')
+      .eq('organization_id', organization_id)
       .order('created_at', { ascending: false }),
-    supabase.from('policy_assignments').select('id, policy_id, server_id, tool_id'),
-    supabase.from('servers').select('id, name'),
+    supabase
+      .from('policy_assignments')
+      .select('id, policy_id, server_id, tool_id')
+      .eq('organization_id', organization_id),
+    supabase
+      .from('servers')
+      .select('id, name')
+      .eq('organization_id', organization_id),
     supabase
       .from('tools')
-      .select('id, name, server_id, servers!inner(name)')
+      .select('id, name, server_id, servers!inner(name, organization_id)')
+      .eq('servers.organization_id', organization_id)
       .order('name'),
   ]);
 

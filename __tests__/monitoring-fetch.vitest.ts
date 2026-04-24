@@ -9,14 +9,18 @@ type QueryResult = { data: unknown; error: null };
 
 type Row = Record<string, unknown>;
 
-// Minimal Supabase stub matching `.from(table).select(cols).gte(col, val)`.
-// Always ignores the selected columns (tests supply full rows) and applies
-// the `.gte` filter against ISO strings.
+// Minimal Supabase stub matching `.from(t).select(c).eq('organization_id',
+// orgId).gte(col, val)`. Ignores selected columns (tests supply full rows);
+// applies the `.eq` + `.gte` filters.
 const makeClient = (rows: Row[]) => {
   const buildChain = () => {
     let filtered: Row[] = [...rows];
     const chain = {
       select: () => chain,
+      eq: (col: string, val: unknown) => {
+        filtered = filtered.filter((r) => r[col] === undefined || r[col] === val);
+        return chain;
+      },
       gte: (col: string, val: unknown) => {
         filtered = filtered.filter((r) => (r[col] as string) >= (val as string));
         return chain;
@@ -32,6 +36,8 @@ const makeClient = (rows: Row[]) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
 };
+
+const ORG = 'org-test';
 
 const iso = (daysAgo: number): string => {
   const d = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
@@ -58,7 +64,7 @@ describe('fetchCallVolume', () => {
       { created_at: iso(1), status: 'origin_error', policy_decisions: [] },
       { created_at: iso(1), status: 'internal_error', policy_decisions: [] },
     ]);
-    const result = await fetchCallVolume(client, 7);
+    const result = await fetchCallVolume(client, ORG, 7);
     expect(result).toHaveLength(7);
     const today = result[result.length - 1];
     const yesterday = result[result.length - 2];
@@ -68,7 +74,7 @@ describe('fetchCallVolume', () => {
 
   it('returns 7 zero-filled buckets when table empty', async () => {
     const client = makeClient([]);
-    const result = await fetchCallVolume(client, 7);
+    const result = await fetchCallVolume(client, ORG, 7);
     expect(result).toHaveLength(7);
     expect(result.every((b) => b.ok === 0 && b.blocked === 0 && b.error === 0)).toBe(true);
   });
@@ -101,7 +107,7 @@ describe('fetchPolicyBlocks', () => {
         policy_decisions: [{ policy_name: 'allowlist', decision: 'block', mode: 'enforce' }],
       },
     ]);
-    const result = await fetchPolicyBlocks(client, 7);
+    const result = await fetchPolicyBlocks(client, ORG, 7);
     const today = result[result.length - 1];
     const yesterday = result[result.length - 2];
     expect(today.byPolicy).toEqual({ business_hours: 2 });
@@ -110,7 +116,7 @@ describe('fetchPolicyBlocks', () => {
 
   it('returns zero-filled buckets when no blocks exist', async () => {
     const client = makeClient([]);
-    const result = await fetchPolicyBlocks(client, 7);
+    const result = await fetchPolicyBlocks(client, ORG, 7);
     expect(result).toHaveLength(7);
     expect(result.every((b) => Object.keys(b.byPolicy).length === 0)).toBe(true);
   });
@@ -144,7 +150,7 @@ describe('fetchPiiByPattern', () => {
         ],
       },
     ]);
-    const result = await fetchPiiByPattern(client, 7);
+    const result = await fetchPiiByPattern(client, ORG, 7);
     expect(result[0]).toEqual({ pattern: 'email', count: 3 });
     expect(result[1]).toEqual({ pattern: 'phone', count: 1 });
     expect(result.find((r) => r.pattern === 'something_else')).toBeUndefined();
@@ -152,7 +158,7 @@ describe('fetchPiiByPattern', () => {
 
   it('returns empty array when no PII detections exist', async () => {
     const client = makeClient([]);
-    const result = await fetchPiiByPattern(client, 7);
+    const result = await fetchPiiByPattern(client, ORG, 7);
     expect(result).toEqual([]);
   });
 });

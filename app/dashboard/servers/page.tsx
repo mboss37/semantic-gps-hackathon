@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import { requireAuth, UnauthorizedError } from '@/lib/auth';
 import { ImportDialog } from '@/components/dashboard/import-dialog';
 import { ServerCard, type ToolSummary } from '@/components/dashboard/server-card';
 
@@ -19,14 +20,38 @@ type ToolRow = {
 };
 
 const ServersPage = async () => {
-  const supabase = await createClient();
-  const [serversRes, toolsRes] = await Promise.all([
-    supabase
-      .from('servers')
-      .select('id, name, origin_url, transport, created_at')
-      .order('created_at', { ascending: false }),
-    supabase.from('tools').select('server_id, name, description').order('name'),
-  ]);
+  let ctx;
+  try {
+    ctx = await requireAuth();
+  } catch (e) {
+    if (e instanceof UnauthorizedError) {
+      redirect('/login?next=/dashboard/servers');
+    }
+    throw e;
+  }
+
+  // Sprint 15 smoke-test finding: this page previously fetched ALL servers +
+  // ALL tools across every org — a multi-tenant leak that was invisible in
+  // single-user MVP but surfaced the moment a second account existed. Both
+  // queries now filter by the caller's organization_id. Tools inherit scope
+  // via servers.organization_id (no org column on tools); we IN-filter tools
+  // on the server_ids the first query returned.
+  const { supabase, organization_id } = ctx;
+  const serversRes = await supabase
+    .from('servers')
+    .select('id, name, origin_url, transport, created_at')
+    .eq('organization_id', organization_id)
+    .order('created_at', { ascending: false });
+
+  const serverIds = ((serversRes.data ?? []) as ServerRow[]).map((s) => s.id);
+  const toolsRes =
+    serverIds.length === 0
+      ? { data: [] as ToolRow[], error: null }
+      : await supabase
+          .from('tools')
+          .select('server_id, name, description')
+          .in('server_id', serverIds)
+          .order('name');
 
   const servers = (serversRes.data ?? []) as ServerRow[];
   const toolsByServer = new Map<string, ToolSummary[]>();

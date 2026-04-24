@@ -28,8 +28,9 @@ const rangeToDays = (range: z.infer<typeof RangeSchema>): number => {
 
 export const GET = async (request: Request): Promise<Response> => {
   let supabase;
+  let organization_id: string;
   try {
-    ({ supabase } = await requireAuth());
+    ({ supabase, organization_id } = await requireAuth());
   } catch (e) {
     if (e instanceof UnauthorizedError) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
@@ -49,7 +50,7 @@ export const GET = async (request: Request): Promise<Response> => {
   }
 
   try {
-    const series = await fetchCallVolume(supabase, rangeToDays(parsed.data.range));
+    const series = await fetchCallVolume(supabase, organization_id, rangeToDays(parsed.data.range));
     return NextResponse.json({ range: parsed.data.range, series });
   } catch (e) {
     console.error('[gateway-traffic] fetch failed', e);

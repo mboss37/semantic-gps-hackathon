@@ -150,16 +150,25 @@ const fetchOrgManifest = async (
   supabase: ReturnType<typeof createServiceClient>,
   organizationId: string,
 ): Promise<Manifest> => {
-  const [servers, policies, assignments, routes, routeSteps] = await Promise.all([
+  // Parallel fan-out of every directly-org-scoped table. `route_steps` is
+  // org-scoped indirectly via `route_id` — sequenced after routes so the
+  // IN-filter has a real id list.
+  const [servers, policies, assignments, routes] = await Promise.all([
     supabase.from('servers').select('*').eq('organization_id', organizationId),
-    supabase.from('policies').select('*'),
-    supabase.from('policy_assignments').select('*'),
+    supabase.from('policies').select('*').eq('organization_id', organizationId),
+    supabase.from('policy_assignments').select('*').eq('organization_id', organizationId),
     supabase.from('routes').select('*').eq('organization_id', organizationId),
-    supabase.from('route_steps').select('*'),
   ]);
 
   const serverRows = (servers.data ?? []) as ServerRow[];
   const serverIds = serverRows.map((s) => s.id);
+  const routeRows = (routes.data ?? []) as RouteRow[];
+  const routeIds = routeRows.map((r) => r.id);
+
+  const routeSteps =
+    routeIds.length === 0
+      ? { data: [] as RouteStepRow[], error: null }
+      : await supabase.from('route_steps').select('*').in('route_id', routeIds);
 
   const toolsQ =
     serverIds.length === 0
@@ -197,7 +206,7 @@ const fetchOrgManifest = async (
     relationships: (relsQ.data ?? []) as RelationshipRow[],
     policies: (policies.data ?? []) as PolicyRow[],
     assignments: (assignments.data ?? []) as PolicyAssignmentRow[],
-    routes: (routes.data ?? []) as RouteRow[],
+    routes: routeRows,
     route_steps: (routeSteps.data ?? []) as RouteStepRow[],
   };
 };
@@ -230,8 +239,8 @@ const fetchDomainManifest = async (
       ? Promise.resolve({ data: [] as ToolRow[], error: null })
       : supabase.from('tools').select('*').in('server_id', serverIds),
     supabase.from('routes').select('*').eq('organization_id', organizationId).eq('domain_id', domain.id),
-    supabase.from('policies').select('*'),
-    supabase.from('policy_assignments').select('*'),
+    supabase.from('policies').select('*').eq('organization_id', organizationId),
+    supabase.from('policy_assignments').select('*').eq('organization_id', organizationId),
   ]);
 
   const toolRows = (toolsQ.data ?? []) as ToolRow[];
@@ -306,8 +315,8 @@ const fetchServerManifest = async (
           .select('*')
           .in('from_tool_id', toolIds)
           .in('to_tool_id', toolIds),
-    supabase.from('policies').select('*'),
-    supabase.from('policy_assignments').select('*'),
+    supabase.from('policies').select('*').eq('organization_id', organizationId),
+    supabase.from('policy_assignments').select('*').eq('organization_id', organizationId),
   ]);
 
   const errs = [relsQ.error, policiesQ.error, assignmentsQ.error].filter(Boolean);

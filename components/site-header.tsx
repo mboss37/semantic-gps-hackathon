@@ -6,7 +6,7 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
 const TITLES: Record<string, string> = {
-  "/dashboard": "Overview",
+  "/dashboard": "Dashboard",
   "/dashboard/servers": "Servers",
   "/dashboard/graph": "Workflow Graph",
   "/dashboard/policies": "Policies",

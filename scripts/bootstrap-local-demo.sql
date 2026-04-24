@@ -37,8 +37,15 @@ BEGIN;
 -- Cleanup (safe order — reverse of FK dependency)
 -- ---------------------------------------------------------------------------
 
+-- Scope every delete to the demo org so re-running this bootstrap doesn't
+-- clobber policies/routes/servers a developer might have set up for a
+-- different test signup.
 DELETE FROM public.policies
- WHERE name IN (
+ WHERE organization_id = (
+   SELECT m.organization_id FROM public.memberships m
+    WHERE m.user_id = '11111111-1111-1111-1111-111111111111'
+ )
+   AND name IN (
    'business_hours_window',
    'write_freeze_killswitch',
    'redact_contact_pii',
@@ -48,11 +55,19 @@ DELETE FROM public.policies
 -- cascades to policy_assignments + policy_versions
 
 DELETE FROM public.routes
- WHERE name IN ('sales_escalation', 'cross_domain_escalation');
+ WHERE organization_id = (
+   SELECT m.organization_id FROM public.memberships m
+    WHERE m.user_id = '11111111-1111-1111-1111-111111111111'
+ )
+   AND name IN ('sales_escalation', 'cross_domain_escalation');
 -- cascades to route_steps
 
 DELETE FROM public.servers
- WHERE name IN ('Demo Salesforce', 'Demo Slack', 'Demo GitHub');
+ WHERE organization_id = (
+   SELECT m.organization_id FROM public.memberships m
+    WHERE m.user_id = '11111111-1111-1111-1111-111111111111'
+ )
+   AND name IN ('Demo Salesforce', 'Demo Slack', 'Demo GitHub');
 -- cascades to tools → relationships, policy_assignments
 
 -- ---------------------------------------------------------------------------
@@ -401,54 +416,61 @@ SELECT r.id, 5, t.id,
 -- Policies (Sprint 9 J.5 canonical set)
 -- ---------------------------------------------------------------------------
 
-INSERT INTO public.policies (name, builtin_key, config, enforcement_mode) VALUES
-  (
-    'business_hours_window',
-    'business_hours',
-    jsonb_build_object(
-      'timezone', 'Europe/Vienna',
-      'days', jsonb_build_array('mon','tue','wed','thu','fri'),
-      'start_hour', 9,
-      'end_hour', 17
-    ),
-    'enforce'
+-- Policies are now org-scoped (Sprint 15 multitenant_policies migration).
+-- Every demo policy references the demo user's org so the gateway's
+-- scope-filtered manifest resolver returns them to the demo org and nobody
+-- else.
+INSERT INTO public.policies (organization_id, name, builtin_key, config, enforcement_mode)
+SELECT m.organization_id, 'business_hours_window', 'business_hours',
+  jsonb_build_object(
+    'timezone', 'Europe/Vienna',
+    'days', jsonb_build_array('mon','tue','wed','thu','fri'),
+    'start_hour', 9,
+    'end_hour', 17
   ),
-  (
-    'write_freeze_killswitch',
-    'write_freeze',
-    jsonb_build_object('enabled', false),
-    'enforce'
-  ),
-  (
-    'redact_contact_pii',
-    'pii_redaction',
-    '{}'::jsonb,
-    'shadow'
-  ),
-  (
-    -- Story #7 demo policy. Empty config uses DEFAULT_INJECTION_PATTERNS
-    -- (ignore_prior / role_override / im_start / sql_drop / sql_comment_inject).
-    'injection_guard_default',
-    'injection_guard',
-    '{}'::jsonb,
-    'enforce'
-  );
+  'enforce'
+ FROM public.memberships m
+WHERE m.user_id = '11111111-1111-1111-1111-111111111111'
+UNION ALL
+SELECT m.organization_id, 'write_freeze_killswitch', 'write_freeze',
+  jsonb_build_object('enabled', false),
+  'enforce'
+ FROM public.memberships m
+WHERE m.user_id = '11111111-1111-1111-1111-111111111111'
+UNION ALL
+SELECT m.organization_id, 'redact_contact_pii', 'pii_redaction',
+  '{}'::jsonb,
+  'shadow'
+ FROM public.memberships m
+WHERE m.user_id = '11111111-1111-1111-1111-111111111111'
+UNION ALL
+-- Story #7 demo policy. Empty config uses DEFAULT_INJECTION_PATTERNS
+-- (ignore_prior / role_override / im_start / sql_drop / sql_comment_inject).
+SELECT m.organization_id, 'injection_guard_default', 'injection_guard',
+  '{}'::jsonb,
+  'enforce'
+ FROM public.memberships m
+WHERE m.user_id = '11111111-1111-1111-1111-111111111111';
 
--- Global assignments
-INSERT INTO public.policy_assignments (policy_id, server_id, tool_id)
-SELECT id, NULL::uuid, NULL::uuid FROM public.policies WHERE name = 'business_hours_window'
-UNION ALL
-SELECT id, NULL::uuid, NULL::uuid FROM public.policies WHERE name = 'write_freeze_killswitch'
-UNION ALL
-SELECT id, NULL::uuid, NULL::uuid FROM public.policies WHERE name = 'injection_guard_default';
+-- Org-wide assignments (NULL server_id + NULL tool_id means "every tool in
+-- the org"). organization_id carries the real scope now.
+INSERT INTO public.policy_assignments (organization_id, policy_id, server_id, tool_id)
+SELECT p.organization_id, p.id, NULL::uuid, NULL::uuid
+  FROM public.policies p
+ WHERE p.name IN ('business_hours_window', 'write_freeze_killswitch', 'injection_guard_default')
+   AND p.organization_id = (
+     SELECT m.organization_id FROM public.memberships m
+      WHERE m.user_id = '11111111-1111-1111-1111-111111111111'
+   );
 
 -- PII tool-scoped on find_account + find_contact
-INSERT INTO public.policy_assignments (policy_id, server_id, tool_id)
-SELECT p.id, NULL::uuid, t.id
+INSERT INTO public.policy_assignments (organization_id, policy_id, server_id, tool_id)
+SELECT p.organization_id, p.id, NULL::uuid, t.id
   FROM public.policies p, public.tools t JOIN public.servers s ON s.id = t.server_id
  WHERE p.name = 'redact_contact_pii'
    AND s.name = 'Demo Salesforce'
-   AND t.name IN ('find_account', 'find_contact');
+   AND t.name IN ('find_account', 'find_contact')
+   AND p.organization_id = s.organization_id;
 
 COMMIT;
 

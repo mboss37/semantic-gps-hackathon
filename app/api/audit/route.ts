@@ -13,8 +13,9 @@ const QuerySchema = z.object({
 
 export const GET = async (request: Request): Promise<Response> => {
   let supabase;
+  let organization_id: string;
   try {
-    ({ supabase } = await requireAuth());
+    ({ supabase, organization_id } = await requireAuth());
   } catch (e) {
     if (e instanceof UnauthorizedError) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
@@ -41,6 +42,7 @@ export const GET = async (request: Request): Promise<Response> => {
       'id, trace_id, server_id, tool_name, method, status, policy_decisions, latency_ms, created_at',
       { count: 'exact' },
     )
+    .eq('organization_id', organization_id)
     .order('created_at', { ascending: false })
     .range(parsed.data.offset, parsed.data.offset + parsed.data.limit - 1);
 

@@ -31,10 +31,10 @@ const TARGET_POLICY_ID = '11111111-1111-4111-8111-111111111111';
 const OTHER_POLICY_ID = '22222222-2222-4222-8222-222222222222';
 const UNKNOWN_POLICY_ID = '33333333-3333-4333-8333-333333333333';
 
-// A Supabase stub that returns `policyRow` for policies.eq('id', id) lookups
-// and `eventRows` for the mcp_events.gte('created_at', since) query. The
-// stub only supports the exact chain shapes the route handler uses — any
-// deviation is a real bug and should blow up loudly.
+// A Supabase stub matching the route's chain shape. Sprint 15 multitenant
+// refactor chains TWO `.eq()` calls on both tables (`id` + `organization_id`
+// for policies, `organization_id` before `gte` for events). Stub mirrors
+// that shape precisely — any deviation is a real bug and should blow up.
 const makeStubSupabase = (policyRow: PolicyRow | null, eventRows: EventRow[]) => {
   return {
     from: (table: string) => {
@@ -42,11 +42,13 @@ const makeStubSupabase = (policyRow: PolicyRow | null, eventRows: EventRow[]) =>
         return {
           select: (_cols: string) => ({
             eq: (_col: string, value: string) => ({
-              maybeSingle: () =>
-                Promise.resolve({
-                  data: policyRow && policyRow.id === value ? policyRow : null,
-                  error: null,
-                }),
+              eq: (_col2: string, _value2: string) => ({
+                maybeSingle: () =>
+                  Promise.resolve({
+                    data: policyRow && policyRow.id === value ? policyRow : null,
+                    error: null,
+                  }),
+              }),
             }),
           }),
         };
@@ -54,8 +56,10 @@ const makeStubSupabase = (policyRow: PolicyRow | null, eventRows: EventRow[]) =>
       if (table === 'mcp_events') {
         return {
           select: (_cols: string) => ({
-            gte: (_col: string, _since: string) =>
-              Promise.resolve({ data: eventRows, error: null }),
+            eq: (_col: string, _value: string) => ({
+              gte: (_gteCol: string, _since: string) =>
+                Promise.resolve({ data: eventRows, error: null }),
+            }),
           }),
         };
       }

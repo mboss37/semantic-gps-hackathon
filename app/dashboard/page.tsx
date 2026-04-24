@@ -1,8 +1,9 @@
+import { redirect } from 'next/navigation';
 import { ChartAreaInteractive } from '@/components/chart-area-interactive';
 import { DataTable } from '@/components/data-table';
 import { SectionCards } from '@/components/section-cards';
+import { requireAuth, UnauthorizedError } from '@/lib/auth';
 import { auditEventSchema, type AuditEvent } from '@/lib/schemas/audit-event';
-import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,8 +18,31 @@ const timeWindow = () => {
 };
 
 const DashboardPage = async () => {
-  const supabase = await createClient();
+  let ctx;
+  try {
+    ctx = await requireAuth();
+  } catch (e) {
+    if (e instanceof UnauthorizedError) {
+      redirect('/login?next=/dashboard');
+    }
+    throw e;
+  }
+
+  // Sprint 15 smoke-test finding: every card + recent-events query here used
+  // to fetch cross-org. Now all 6 queries filter by the caller's org. The
+  // old `.eq('is_active', true)` on policies was also dead (no such column);
+  // "Active Policies" now counts every policy assigned in the org — that's
+  // the operational definition the card title implies.
+  const { supabase, organization_id } = ctx;
   const { dayAgo, twoDaysAgo } = timeWindow();
+
+  // Pull the org's server_ids once so every downstream query that needs to
+  // filter by server can reuse the same IN-list without re-hitting servers.
+  const { data: orgServers } = await supabase
+    .from('servers')
+    .select('id')
+    .eq('organization_id', organization_id);
+  const serverIds = (orgServers ?? []).map((s) => s.id);
 
   const [
     serversRes,
@@ -28,19 +52,29 @@ const DashboardPage = async () => {
     eventsPrev24hRes,
     recentRes,
   ] = await Promise.all([
-    supabase.from('servers').select('id', { count: 'exact', head: true }),
-    supabase.from('tools').select('id', { count: 'exact', head: true }),
+    supabase
+      .from('servers')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', organization_id),
+    serverIds.length === 0
+      ? Promise.resolve({ count: 0, error: null })
+      : supabase
+          .from('tools')
+          .select('id', { count: 'exact', head: true })
+          .in('server_id', serverIds),
     supabase
       .from('policies')
       .select('id', { count: 'exact', head: true })
-      .eq('is_active', true),
+      .eq('organization_id', organization_id),
     supabase
       .from('mcp_events')
       .select('id', { count: 'exact', head: true })
+      .eq('organization_id', organization_id)
       .gte('created_at', dayAgo),
     supabase
       .from('mcp_events')
       .select('id', { count: 'exact', head: true })
+      .eq('organization_id', organization_id)
       .gte('created_at', twoDaysAgo)
       .lt('created_at', dayAgo),
     supabase
@@ -48,6 +82,7 @@ const DashboardPage = async () => {
       .select(
         'id, trace_id, server_id, tool_name, method, status, latency_ms, created_at, policy_decisions',
       )
+      .eq('organization_id', organization_id)
       .order('created_at', { ascending: false })
       .limit(50),
   ]);

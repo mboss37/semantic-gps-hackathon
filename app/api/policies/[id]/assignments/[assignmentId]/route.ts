@@ -19,8 +19,9 @@ export const DELETE = async (
   ctx: { params: Promise<{ id: string; assignmentId: string }> },
 ): Promise<Response> => {
   let supabase;
+  let organization_id: string;
   try {
-    ({ supabase } = await requireAuth());
+    ({ supabase, organization_id } = await requireAuth());
   } catch (e) {
     if (e instanceof UnauthorizedError) return unauthorized();
     throw e;
@@ -35,7 +36,8 @@ export const DELETE = async (
     .from('policy_assignments')
     .delete({ count: 'exact' })
     .eq('id', parsed.data.assignmentId)
-    .eq('policy_id', parsed.data.id);
+    .eq('policy_id', parsed.data.id)
+    .eq('organization_id', organization_id);
 
   if (error) {
     return NextResponse.json({ error: 'delete failed', details: error.message }, { status: 500 });

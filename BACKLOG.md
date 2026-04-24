@@ -13,7 +13,25 @@ Shipping window: **Fri Apr 24 + Sat Apr 25 (full coding days, CET)**. Sun Apr 26
 
 ### Friday Apr 24 (CET) — Full coding day: enterprise shape
 
-_(all pulled into Sprint 15)_
+#### [P0 Fri] L.1 — Enable Postgres RLS on every tenant table (defense-in-depth multi-tenancy)
+
+Today's multitenant sweep added `organization_id` columns + app-layer `.eq('organization_id', ...)` filters everywhere. That's Level 1 of the isolation spectrum. Level 2 — the industry standard for Supabase-based SaaS, what Supabase itself pushes as first-class — is RLS on top. Without it, every future query in every future PR has to remember the filter or leaks. We just spent an hour hunting exactly those bugs. RLS makes the DB itself refuse cross-org rows, so app-layer bugs become benign zero-row queries instead of leaks.
+
+Scope:
+- Migration `20260424160000_enable_rls_tenant_tables.sql` — `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` on 11 tables: `organizations`, `memberships`, `domains`, `servers`, `tools`, `relationships`, `policies`, `policy_assignments`, `routes`, `route_steps`, `mcp_events`, `gateway_tokens`. Per-table policy `CREATE POLICY org_isolation ... USING (organization_id = (auth.jwt() ->> 'organization_id')::uuid) WITH CHECK (...)`.
+- Supabase custom-access-token hook (or `handle_new_user` trigger refactor) — expose `organization_id` as a JWT claim so `auth.jwt()` resolves it server-side. Requires a Postgres function + Supabase auth config.
+- Service-role bypass audit — the MCP gateway uses `lib/supabase/service.ts` which bypasses RLS by design (scoped internally via bearer-token resolution). Every `service.ts` caller must be explicitly auditable. Everything else uses `lib/supabase/server.ts` (user-session client) which honors RLS.
+- Test fixture updates — tests that exercise user-session clients need a real JWT with the claim; integration tests that use service-role stay as-is.
+- Keep the `.eq('organization_id', ...)` filters in user-scoped paths as belt-and-braces + self-documentation (Supabase team recommends both; redundancy over subtle bugs).
+
+Acceptance criteria:
+- A user logged into org A cannot read/write any row from org B even if they guess a UUID (proven via `docker exec psql` direct query vs authed HTTP query)
+- `pnpm test` green including any new RLS-aware fixture
+- Hosted Supabase mirrored with identical RLS policies
+- CLAUDE.md "Off-Limits" list updated: "Never disable RLS on a tenant table"
+- `docs/ARCHITECTURE.md` § Security Baseline documents the RLS isolation level and the service-role bypass boundary
+
+Blocker for: public Saturday launch. Without RLS, one forgotten `.eq` in a future PR leaks the next customer's data. Not acceptable for the enterprise-ready positioning.
 
 ### Saturday Apr 25 (CET) — Full coding day: narrative + polish + landing
 
@@ -150,6 +168,12 @@ Concrete rough edges surfaced by reviewers. Not demo-blocking; worth a pass if b
 - **`scripts/bootstrap-local-demo.sql` hardcodes localhost** — `origin_url='http://localhost:3000/...'` requires manual sed-replace before hosted sync. Failure is LOUD on hosted (SSRF guard rejects), but templating via `psql -v base_url=...` or a wrapper shell script removes the footgun.
 - **`proxy.ts` DB query per dashboard request** — `memberships.profile_completed` lookup added in A.7 runs on every authed dashboard/onboarding hit. Fine at demo scale (B-tree on unique index). V2 RLS work should fold the flag into the JWT custom claim so the edge check is zero-RTT.
 - **`app/onboarding/actions.ts:47-55` let-ctx style** — two-step `let ctx; try { ctx = await requireAuth() } catch` makes `ctx` possibly-undefined to TS flow analysis. Works because `UnauthorizedError` branch returns; stylistic nit — IIFE or dedicated helper would tidy.
+
+**From Sprint 15 multi-tenancy sweep (post-review):**
+- **`gateway-handler.ts` auth-fail payload captures `request.url`** — query-string secrets without a `Bearer`/JWT/`sk-*` prefix pass through `redactPayload` untouched. Low-likelihood leak vector. Fix: strip the search portion of the URL entirely before logging, or extend `redactPayload` with a `SECRET_QUERY_PARAM_RE` that masks values for keys like `token|access_token|api_key|password`.
+- **`bootstrap-local-demo.sql` silent no-op when demo membership missing** — DELETE subquery `= (SELECT ... WHERE user_id = '11111111-...')` returns NULL if seed hasn't run, and `= NULL` predicates return UNKNOWN → zero rows deleted with no error. Safe but invisible. Fix via the same wrapper-script templating as the localhost issue: fail-loud if demo org not found.
+- **`app/api/policies/[id]/assignments/route.ts` POST handler at 88 lines** — over the 50-line convention after the added policy-org verification. Extract `verifyAssignmentTarget(supabase, orgId, {server_id?, tool_id?})` to `lib/policies/assignments.ts`.
+- **shadcn-vendored components use double-quote + unsemicolon style** — `nav-user.tsx`, `app-sidebar.tsx`, `nav-main.tsx`, `site-header.tsx`. Project convention is single-quote + semis (see `.claude/rules/conventions.md`). Cosmetic sweep for a quiet sprint.
 
 ---
 

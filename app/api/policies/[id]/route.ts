@@ -26,8 +26,9 @@ type RouteCtx = { params: Promise<{ id: string }> };
 
 export const PATCH = async (request: Request, ctx: RouteCtx): Promise<Response> => {
   let supabase;
+  let organization_id: string;
   try {
-    ({ supabase } = await requireAuth());
+    ({ supabase, organization_id } = await requireAuth());
   } catch (e) {
     if (e instanceof UnauthorizedError) return unauthorized();
     throw e;
@@ -47,10 +48,13 @@ export const PATCH = async (request: Request, ctx: RouteCtx): Promise<Response> 
     );
   }
 
+  // Org-scope on the .eq chain so cross-org id guesses 404 cleanly instead of
+  // leaking or mutating another tenant's row.
   const { data, error } = await supabase
     .from('policies')
     .update(parsedBody.data)
     .eq('id', parsedParams.data.id)
+    .eq('organization_id', organization_id)
     .select('*')
     .maybeSingle();
 
@@ -67,8 +71,9 @@ export const PATCH = async (request: Request, ctx: RouteCtx): Promise<Response> 
 
 export const DELETE = async (_request: Request, ctx: RouteCtx): Promise<Response> => {
   let supabase;
+  let organization_id: string;
   try {
-    ({ supabase } = await requireAuth());
+    ({ supabase, organization_id } = await requireAuth());
   } catch (e) {
     if (e instanceof UnauthorizedError) return unauthorized();
     throw e;
@@ -79,7 +84,11 @@ export const DELETE = async (_request: Request, ctx: RouteCtx): Promise<Response
     return NextResponse.json({ error: 'invalid id' }, { status: 400 });
   }
 
-  const { error } = await supabase.from('policies').delete().eq('id', parsedParams.data.id);
+  const { error } = await supabase
+    .from('policies')
+    .delete()
+    .eq('id', parsedParams.data.id)
+    .eq('organization_id', organization_id);
   if (error) {
     return NextResponse.json({ error: 'delete failed', details: error.message }, { status: 500 });
   }

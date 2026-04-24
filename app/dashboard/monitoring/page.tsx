@@ -14,8 +14,9 @@ const DAYS = 7;
 
 const MonitoringPage = async () => {
   let supabase;
+  let organization_id: string;
   try {
-    ({ supabase } = await requireAuth());
+    ({ supabase, organization_id } = await requireAuth());
   } catch (e) {
     if (e instanceof UnauthorizedError) {
       return (
@@ -28,9 +29,9 @@ const MonitoringPage = async () => {
   }
 
   const [volume, blocks, pii] = await Promise.all([
-    fetchCallVolume(supabase, DAYS),
-    fetchPolicyBlocks(supabase, DAYS),
-    fetchPiiByPattern(supabase, DAYS),
+    fetchCallVolume(supabase, organization_id, DAYS),
+    fetchPolicyBlocks(supabase, organization_id, DAYS),
+    fetchPiiByPattern(supabase, organization_id, DAYS),
   ]);
 
   return (

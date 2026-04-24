@@ -11,10 +11,22 @@ const shouldRun =
 
 describe.skipIf(!shouldRun)('policy_versions snapshot trigger', () => {
   let supabase: SupabaseClient;
+  let organizationId: string;
   const createdPolicyIds: string[] = [];
 
-  beforeAll(() => {
+  beforeAll(async () => {
     supabase = createServiceClient();
+    // Sprint 15: policies are now org-scoped. Pull the demo user's org so
+    // every insert lands with a valid organization_id.
+    const { data, error } = await supabase
+      .from('memberships')
+      .select('organization_id')
+      .eq('user_id', '11111111-1111-1111-1111-111111111111')
+      .maybeSingle();
+    if (error || !data) {
+      throw new Error(`demo org lookup failed: ${error?.message ?? 'no membership'}`);
+    }
+    organizationId = data.organization_id as string;
   });
 
   afterAll(async () => {
@@ -30,7 +42,13 @@ describe.skipIf(!shouldRun)('policy_versions snapshot trigger', () => {
   ): Promise<string> => {
     const { data, error } = await supabase
       .from('policies')
-      .insert({ name, builtin_key: 'allowlist', config, enforcement_mode })
+      .insert({
+        organization_id: organizationId,
+        name,
+        builtin_key: 'allowlist',
+        config,
+        enforcement_mode,
+      })
       .select('id')
       .single();
     if (error) throw new Error(error.message);

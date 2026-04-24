@@ -83,9 +83,30 @@ export const buildGatewayHandler = (
     const headers = collectHeaders(request);
     const clientIp = extractClientIp(headers);
 
+    // Sprint 15 diagnostic hook — capture request provenance on auth failures
+    // so audit rows answer "who called /api/mcp unauthenticated?" in one
+    // query. Pure metadata; payload_redacted passes through redactPayload
+    // anyway so tokens in headers (there shouldn't be any here — auth failed)
+    // stay scrubbed.
+    const authPayload = {
+      reason: 'missing_authorization',
+      method: request.method,
+      url: request.url,
+      user_agent: headers['user-agent'] ?? null,
+      referer: headers['referer'] ?? null,
+      origin_header: headers['origin'] ?? null,
+      host: headers['host'] ?? null,
+      client_ip: clientIp ?? null,
+    };
+
     const token = parseBearer(headers['authorization']);
     if (!token) {
-      logMCPEvent({ trace_id: traceId, method: 'auth', status: 'unauthorized' });
+      logMCPEvent({
+        trace_id: traceId,
+        method: 'auth',
+        status: 'unauthorized',
+        payload: authPayload,
+      });
       return errorResponse({
         status: 401,
         code: -32001,
@@ -134,7 +155,12 @@ export const buildGatewayHandler = (
     }
 
     if (!tokenResult.ok) {
-      logMCPEvent({ trace_id: traceId, method: 'auth', status: 'unauthorized' });
+      logMCPEvent({
+        trace_id: traceId,
+        method: 'auth',
+        status: 'unauthorized',
+        payload: { ...authPayload, reason: 'invalid_token' },
+      });
       return errorResponse({
         status: 401,
         code: -32001,

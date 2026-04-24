@@ -6,10 +6,10 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // Focused feed for the graph cascade visualization (Sprint 8 WP-I.2).
-// Scoped to the caller's org via a server join — `mcp_events` has no
-// `organization_id` column, so we filter through `servers.organization_id`.
-// Events without a `server_id` (rare: pre-resolution failures) are excluded
-// for safety. No fallback to cross-org data.
+// Sprint 15: `mcp_events.organization_id` now exists, so we filter directly
+// instead of joining through servers. This also includes auth-level events
+// (pre-scope failures) for the caller's org — the old server-join approach
+// silently dropped them.
 
 const QuerySchema = z.object({
   status: z.enum(['rollback_executed']).default('rollback_executed'),
@@ -42,25 +42,11 @@ export const GET = async (request: Request): Promise<Response> => {
     );
   }
 
-  // Resolve org's server ids first — cheaper than a server-side join that
-  // forces the REST layer into inner-join mode with jsonb filters.
-  const { data: orgServers, error: serversErr } = await supabase
-    .from('servers')
-    .select('id')
-    .eq('organization_id', organization_id);
-  if (serversErr) {
-    return NextResponse.json({ error: 'query failed' }, { status: 500 });
-  }
-  const serverIds = (orgServers ?? []).map((s) => s.id as string);
-  if (serverIds.length === 0) {
-    return NextResponse.json({ events: [] });
-  }
-
   let query = supabase
     .from('mcp_events')
     .select('id, trace_id, server_id, tool_name, created_at, payload_redacted')
+    .eq('organization_id', organization_id)
     .eq('status', parsed.data.status)
-    .in('server_id', serverIds)
     .order('created_at', { ascending: false })
     .limit(parsed.data.limit);
 

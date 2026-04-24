@@ -27,6 +27,17 @@ const DashboardLayout = async ({ children }: { children: React.ReactNode }) => {
     redirect('/onboarding');
   }
 
+  // Name comes from onboarding metadata (first_name + last_name); fall back to
+  // the email local-part when metadata is missing so the sidebar never renders
+  // blank. The sidebar is a client component — we can't call requireAuth from
+  // inside it, so thread the minimal identity here.
+  const metadata = (ctx.user.user_metadata ?? {}) as Record<string, unknown>;
+  const firstName = typeof metadata.first_name === 'string' ? metadata.first_name : '';
+  const lastName = typeof metadata.last_name === 'string' ? metadata.last_name : '';
+  const fullName = `${firstName} ${lastName}`.trim();
+  const email = ctx.user.email ?? '';
+  const displayName = fullName || email.split('@')[0] || 'Member';
+
   return (
     <SidebarProvider
       style={
@@ -36,7 +47,7 @@ const DashboardLayout = async ({ children }: { children: React.ReactNode }) => {
         } as React.CSSProperties
       }
     >
-      <AppSidebar variant="inset" />
+      <AppSidebar variant="inset" user={{ name: displayName, email }} />
       <SidebarInset>
         <SiteHeader />
         <div className="flex flex-1 flex-col">{children}</div>

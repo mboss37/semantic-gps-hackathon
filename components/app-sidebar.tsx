@@ -6,18 +6,15 @@ import {
   GaugeIcon,
   GitMergeIcon,
   GlobeIcon,
-  HelpCircleIcon,
   KeyRoundIcon,
   LayoutDashboardIcon,
   NetworkIcon,
   RouteIcon,
-  SettingsIcon,
   ShieldCheckIcon,
   SparklesIcon,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
 import {
   Sidebar,
@@ -29,14 +26,14 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
+type SessionUser = {
+  name: string
+  email: string
+}
+
 const data = {
-  user: {
-    name: "Demo User",
-    email: "demo@semantic-gps.dev",
-    avatar: "",
-  },
   navMain: [
-    { title: "Overview", url: "/dashboard", icon: LayoutDashboardIcon },
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboardIcon },
     { title: "Servers", url: "/dashboard/servers", icon: GlobeIcon },
     { title: "Workflow Graph", url: "/dashboard/graph", icon: NetworkIcon },
     { title: "Routes", url: "/dashboard/routes", icon: RouteIcon },
@@ -47,13 +44,13 @@ const data = {
     { title: "Monitoring", url: "/dashboard/monitoring", icon: GaugeIcon },
     { title: "Audit", url: "/dashboard/audit", icon: ActivityIcon },
   ],
-  navSecondary: [
-    { title: "Settings", url: "#", icon: SettingsIcon },
-    { title: "Help", url: "#", icon: HelpCircleIcon },
-  ],
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
+  user: SessionUser
+}
+
+export function AppSidebar({ user, ...props }: AppSidebarProps) {
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -73,10 +70,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>
   )

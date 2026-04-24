@@ -92,6 +92,7 @@ describe.skipIf(!shouldRun)('policy_assignments tool-scope invariants', () => {
     const { data: policy, error: pErr } = await supabase
       .from('policies')
       .insert({
+        organization_id: orgA,
         name: `wp-g9-policy-${ts}`,
         builtin_key: 'pii_redaction',
         config: {},
@@ -122,7 +123,7 @@ describe.skipIf(!shouldRun)('policy_assignments tool-scope invariants', () => {
   it('POST happy path — tool_id for in-org tool inserts with server_id null', async () => {
     const { data, error } = await supabase
       .from('policy_assignments')
-      .insert({ policy_id: policyA, server_id: null, tool_id: toolA1 })
+      .insert({ organization_id: orgA, policy_id: policyA, server_id: null, tool_id: toolA1 })
       .select('id, policy_id, server_id, tool_id')
       .single();
 
@@ -164,7 +165,7 @@ describe.skipIf(!shouldRun)('policy_assignments tool-scope invariants', () => {
   it('DELETE removes the assignment and subsequent queries return null', async () => {
     const insert = await supabase
       .from('policy_assignments')
-      .insert({ policy_id: policyA, server_id: null, tool_id: toolA1 })
+      .insert({ organization_id: orgA, policy_id: policyA, server_id: null, tool_id: toolA1 })
       .select('id')
       .single();
     if (insert.error || !insert.data) throw new Error('seed insert failed');

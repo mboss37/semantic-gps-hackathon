@@ -59,6 +59,7 @@ const emptyDayKeys = (days: number, nowMs: number): string[] => {
 
 const fetchRows = async (
   supabase: SupabaseClient,
+  organizationId: string,
   days: number,
   columns: string,
 ): Promise<EventRow[]> => {
@@ -66,6 +67,7 @@ const fetchRows = async (
   const { data, error } = await supabase
     .from('mcp_events')
     .select(columns)
+    .eq('organization_id', organizationId)
     .gte('created_at', since);
   if (error) throw new Error(`mcp_events_fetch_failed: ${error.message}`);
   return (data ?? []) as unknown as EventRow[];
@@ -76,9 +78,10 @@ const decisionsOf = (row: EventRow): PolicyDecisionEntry[] =>
 
 export const fetchCallVolume = async (
   supabase: SupabaseClient,
+  organizationId: string,
   days: number,
 ): Promise<CallVolumeBucket[]> => {
-  const rows = await fetchRows(supabase, days, 'created_at, status');
+  const rows = await fetchRows(supabase, organizationId, days, 'created_at, status');
   const buckets = new Map<string, CallVolumeBucket>();
   for (const key of emptyDayKeys(days, Date.now())) {
     buckets.set(key, { date: key, ok: 0, blocked: 0, error: 0 });
@@ -95,9 +98,10 @@ export const fetchCallVolume = async (
 
 export const fetchPolicyBlocks = async (
   supabase: SupabaseClient,
+  organizationId: string,
   days: number,
 ): Promise<PolicyBlockBucket[]> => {
-  const rows = await fetchRows(supabase, days, 'created_at, status, policy_decisions');
+  const rows = await fetchRows(supabase, organizationId, days, 'created_at, status, policy_decisions');
   const buckets = new Map<string, PolicyBlockBucket>();
   for (const key of emptyDayKeys(days, Date.now())) {
     buckets.set(key, { date: key, byPolicy: {} });
@@ -116,9 +120,10 @@ export const fetchPolicyBlocks = async (
 
 export const fetchPiiByPattern = async (
   supabase: SupabaseClient,
+  organizationId: string,
   days: number,
 ): Promise<PiiPatternCount[]> => {
-  const rows = await fetchRows(supabase, days, 'created_at, status, policy_decisions');
+  const rows = await fetchRows(supabase, organizationId, days, 'created_at, status, policy_decisions');
   const counts = new Map<string, number>();
   for (const row of rows) {
     for (const decision of decisionsOf(row)) {

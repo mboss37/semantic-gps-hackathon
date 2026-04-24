@@ -34,16 +34,24 @@ const unauthorized = (): Response =>
 
 export const GET = async (): Promise<Response> => {
   let supabase;
+  let organization_id: string;
   try {
-    ({ supabase } = await requireAuth());
+    ({ supabase, organization_id } = await requireAuth());
   } catch (e) {
     if (e instanceof UnauthorizedError) return unauthorized();
     throw e;
   }
 
   const [policiesRes, assignmentsRes] = await Promise.all([
-    supabase.from('policies').select('*').order('created_at', { ascending: false }),
-    supabase.from('policy_assignments').select('*'),
+    supabase
+      .from('policies')
+      .select('*')
+      .eq('organization_id', organization_id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('policy_assignments')
+      .select('*')
+      .eq('organization_id', organization_id),
   ]);
   if (policiesRes.error || assignmentsRes.error) {
     return NextResponse.json(
@@ -69,8 +77,9 @@ export const GET = async (): Promise<Response> => {
 
 export const POST = async (request: Request): Promise<Response> => {
   let supabase;
+  let organization_id: string;
   try {
-    ({ supabase } = await requireAuth());
+    ({ supabase, organization_id } = await requireAuth());
   } catch (e) {
     if (e instanceof UnauthorizedError) return unauthorized();
     throw e;
@@ -88,6 +97,7 @@ export const POST = async (request: Request): Promise<Response> => {
   const { data, error } = await supabase
     .from('policies')
     .insert({
+      organization_id,
       name: parsed.data.name,
       builtin_key: parsed.data.builtin_key,
       config: parsed.data.config ?? {},

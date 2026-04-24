@@ -83,8 +83,9 @@ export const GET = async (
   ctx: { params: Promise<{ id: string }> },
 ): Promise<Response> => {
   let supabase;
+  let organization_id: string;
   try {
-    ({ supabase } = await requireAuth());
+    ({ supabase, organization_id } = await requireAuth());
   } catch (e) {
     if (e instanceof UnauthorizedError) return unauthorized();
     throw e;
@@ -110,6 +111,7 @@ export const GET = async (
     .from('policies')
     .select('id, name')
     .eq('id', policyId)
+    .eq('organization_id', organization_id)
     .maybeSingle();
   if (policyErr) {
     console.error('[policy-timeline] policy lookup failed', policyErr);
@@ -124,6 +126,7 @@ export const GET = async (
   const { data: eventRows, error: eventsErr } = await supabase
     .from('mcp_events')
     .select('created_at, policy_decisions')
+    .eq('organization_id', organization_id)
     .gte('created_at', since);
   if (eventsErr) {
     console.error('[policy-timeline] events lookup failed', eventsErr);

@@ -22,8 +22,10 @@ const makeStubSupabase = (rows: EventRow[]) => ({
     if (table !== 'mcp_events') throw new Error(`unexpected table: ${table}`);
     return {
       select: (_cols: string) => ({
-        gte: (_col: string, _since: string) =>
-          Promise.resolve({ data: rows, error: null }),
+        eq: (_col: string, _val: string) => ({
+          gte: (_gteCol: string, _since: string) =>
+            Promise.resolve({ data: rows, error: null }),
+        }),
       }),
     };
   },

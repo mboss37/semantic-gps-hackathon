@@ -106,9 +106,27 @@ export const POST = async (
     }
   }
 
+  // Verify the policy itself belongs to the caller's org — prevents assigning
+  // to a cross-org policy UUID guess.
+  const { data: policyRow, error: policyErr } = await supabase
+    .from('policies')
+    .select('id, organization_id')
+    .eq('id', parsedParams.data.id)
+    .maybeSingle();
+  if (policyErr) {
+    return NextResponse.json(
+      { error: 'load failed', details: policyErr.message },
+      { status: 500 },
+    );
+  }
+  if (!policyRow || policyRow.organization_id !== organization_id) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
+
   const { data, error } = await supabase
     .from('policy_assignments')
     .insert({
+      organization_id,
       policy_id: parsedParams.data.id,
       server_id: server_id ?? null,
       tool_id: tool_id ?? null,
