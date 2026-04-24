@@ -18,7 +18,7 @@ export const mintPlaygroundToken = async (
     .maybeSingle();
   if (selectError) return null;
   if (existing && typeof existing.token_plaintext === 'string') {
-    return { plaintext: existing.token_plaintext, id: existing.id as string };
+    return { plaintext: existing.token_plaintext, id: String(existing.id) };
   }
 
   const plaintext = `sgps_${randomBytes(32).toString('hex')}`;
@@ -35,5 +35,5 @@ export const mintPlaygroundToken = async (
     .select('id')
     .single();
   if (error || !data) return null;
-  return { plaintext, id: data.id as string };
+  return { plaintext, id: String(data.id) };
 };

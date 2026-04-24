@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { decodeJwtClaims } from '@/lib/auth';
 
 // Next.js 16 uses proxy.ts, NOT middleware.ts. Exports `proxy`, not `middleware`.
 // Keeps the Supabase session cookie fresh and redirects unauthed dashboard hits.
@@ -54,17 +55,9 @@ export const proxy = async (request: NextRequest) => {
     const isOnboarding = pathname.startsWith('/onboarding');
     if (isDashboard || isOnboarding) {
       const { data: { session } } = await supabase.auth.getSession();
-      const claims = (session?.access_token
-        ? (() => {
-            try {
-              const payload = session.access_token.split('.')[1];
-              if (!payload) return null;
-              return JSON.parse(Buffer.from(payload, 'base64url').toString()) as Record<string, unknown>;
-            } catch {
-              return null;
-            }
-          })()
-        : null);
+      const claims = session?.access_token
+        ? decodeJwtClaims(session.access_token)
+        : null;
       const completed = claims?.profile_completed === true;
       if (isDashboard && !completed) {
         const url = request.nextUrl.clone();

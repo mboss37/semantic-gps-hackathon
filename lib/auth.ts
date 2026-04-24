@@ -17,7 +17,7 @@ export class UnauthorizedError extends Error {
  * Returns null if the token is missing or malformed — callers fall back
  * to the membership DB query when this returns null.
  */
-const decodeJwtClaims = (accessToken: string): Record<string, unknown> | null => {
+export const decodeJwtClaims = (accessToken: string): Record<string, unknown> | null => {
   try {
     const payload = accessToken.split('.')[1];
     if (!payload) return null;
@@ -34,9 +34,9 @@ export const requireAuth = async () => {
     throw new UnauthorizedError();
   }
 
-  // Sprint 19: read org + profile_completed from JWT claims first.
-  // Falls back to the membership DB query when claims are unavailable
-  // (e.g. first login before token refresh picks up the hook).
+  // getSession() is convention-banned (spoofable), but getUser() above already
+  // server-validated the user. We only need the raw JWT to decode custom claims
+  // stamped by custom_access_token_hook — no auth decision relies on getSession().
   const { data: { session } } = await supabase.auth.getSession();
   const claims = session?.access_token
     ? decodeJwtClaims(session.access_token)
@@ -70,8 +70,8 @@ export const requireAuth = async () => {
   return {
     user: data.user,
     supabase,
-    organization_id: membership.organization_id as string,
-    role: membership.role as 'admin' | 'member',
-    profile_completed: membership.profile_completed as boolean,
+    organization_id: String(membership.organization_id),
+    role: membership.role === 'member' ? 'member' : 'admin',
+    profile_completed: membership.profile_completed === true,
   };
 };

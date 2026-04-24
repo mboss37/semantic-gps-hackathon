@@ -6,8 +6,8 @@ import type {
   ExecuteRouteRollbackSummary,
   ExecuteRouteStep,
 } from '@/lib/mcp/trel-schemas';
-import type { CapturedStep, ExecuteRouteCtx } from '@/lib/mcp/execute-route';
-import { resolveInputMapping, findCatalogEntry } from '@/lib/mcp/execute-route';
+import type { CapturedStep, ExecuteRouteCtx } from '@/lib/mcp/route-utils';
+import { resolveInputMapping, findCatalogEntry } from '@/lib/mcp/route-utils';
 
 // Pick the first outgoing compensated_by edge, deterministic by edge id. Same
 // shape as pickFallbackEdge — unreachable to_tool_id returns undefined so a
