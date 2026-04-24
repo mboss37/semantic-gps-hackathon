@@ -97,6 +97,30 @@ Video + submission only. No code changes.
 
 Squeeze in between P0 items Fri/Sat if bandwidth allows. None of these are demo-critical.
 
+### Saturday soft-launch readiness — verify by EOD Friday
+
+Mihael wants to share the live URL Sat AM for real users to sign up, onboard, register their own MCPs. Pre-launch smoke checklist — all of these need to pass on the hosted Vercel deploy before the link goes out.
+
+- **Empty-state dashboard audit (M).** We've only ever tested with the demo seed populated (3 servers / 14 tools / 12 relationships / 4 policies). Sign up a fresh test account on hosted Vercel in a private window and click every dashboard nav item. Known risk areas:
+  - Overview chart with zero `mcp_events` rows
+  - Monitoring widgets with zero data
+  - **Playground** page with no gateway token + no registered server (most likely to blow up)
+  - Workflow Graph with zero nodes
+  - Routes list / Audit feed / Policy list / Relationships list — all should show honest empty states, not error cards
+- **Gateway token auto-mint on signup (S).** `handle_new_user` trigger today creates org + admin membership + `salesops` domain but NOT a `gateway_tokens` row. Fresh signup → Playground → fails because no bearer. Options: (a) extend trigger to mint a default token, (b) add a "Mint your first token" step to the onboarding wizard, (c) auto-create on first `/dashboard/tokens` visit. Pick one.
+- **Email verification flow (S).** Check hosted Supabase auth settings — is "Confirm email" on? If yes, users can't log in until they click the email link, and the free-tier SMTP often looks like spam / rate-limits. Decide: (a) disable email confirmation for Saturday (cost: trivial spoof risk), (b) configure Resend SMTP, (c) leave on and hope for the best. Document the decision.
+- **Signup rate limit / abuse (S).** Public URL on Twitter or similar = DDoS / spam vector. Supabase has some built-in protection but nothing aggressive. Accept for the Saturday cohort (curated audience) — formal rate-limit is V2. Just note the risk.
+- **Vercel env vars for vendor MCPs.** Add `SF_LOGIN_URL`, `SF_CLIENT_ID`, `SF_CLIENT_SECRET`, `SLACK_BOT_TOKEN`, `GITHUB_PAT` to the Vercel project (all environments) + redeploy. Without these the demo org's 3 pre-seeded servers answer `credentials_missing`. **Blocker for demo-day recording; not a blocker for user signups** (new orgs register their own servers with their own creds).
+- **Empty-state smoke commands** — run against the hosted Vercel URL:
+  - Sign up → confirm (if required) → onboarding → dashboard lands cleanly
+  - Click each sidebar item → no crashes
+  - Register a test MCP server via the register UI
+  - Mint a gateway token via `/dashboard/tokens`
+  - Curl `/api/mcp` with the token → `tools/list` returns
+  - If all pass → share link. If any fail → patch, redeploy, retry.
+
+
+
 - **I.5** Managed Agents wrap for demo agent — $5K side prize lever (M). Port agent loop from `@anthropic-ai/sdk` manual to Managed Agents API; point at deployed `/api/mcp`; keep SDK fallback. Apply ONLY to demo agent, never to product gateway.
 - **I.6** Playground "Refine with Opus" button (L, chains after I.5). Ingest scenario prompt + both panes' traces + policy events + manifest; return structured suggestions as cards ("flip policy X to enforce", "add produces_input_for edge Y→Z").
 - **I.3** Opus relationship inference on OpenAPI import (L). Feed full spec to Opus 4.7 with cached system prompt; user approves/rejects proposals before persist; thinking blocks surface reasoning. 1M-context showcase.
