@@ -42,6 +42,23 @@ where u.email = 'demo@semantic-gps.dev'
     select 1 from auth.identities i where i.user_id = u.id and i.provider = 'email'
   );
 
+-- K.1 interaction: the `handle_new_user` trigger fires AFTER migrations so
+-- the auto-created demo membership picks up `profile_completed=false` from
+-- the column default. K.1's migration backfill already ran against an empty
+-- table and can't retroactively flip this row. Explicit UPDATE keeps demo
+-- logins routed straight to /dashboard instead of the A.7 onboarding wizard.
+-- Also gives the auto-seeded org a friendlier name for the demo-day UX.
+update public.memberships
+   set profile_completed = true
+ where user_id = '11111111-1111-1111-1111-111111111111';
+
+update public.organizations o
+   set name = 'Semantic GPS Demo',
+       created_by = '11111111-1111-1111-1111-111111111111'
+  from public.memberships m
+ where m.user_id = '11111111-1111-1111-1111-111111111111'
+   and o.id = m.organization_id;
+
 -- Demo gateway token (plaintext intentionally exposed for demo; V2 adds UI
 -- to mint + rotate). Clients authenticate with:
 --   Authorization: Bearer sgps_demo_token_abcdef0123456789abcdef0123456789abcd
