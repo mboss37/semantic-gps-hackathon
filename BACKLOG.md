@@ -158,6 +158,14 @@ Concrete rough edges surfaced by reviewers. Not demo-blocking; worth a pass if b
 - **`/login?error=...` query params aren't rendered** — auth callback handler redirects to `/login?error=missing_code` / `/login?error=exchange_failed` on failure, but `components/(auth)/login/login-form.tsx` doesn't consume the param. Users see stale URL with no feedback. Fix: `useSearchParams()` → `toast.error(errorMap[searchParams.get('error')])`.
 - **`custom_access_token_hook` LIMIT 1 arbitrary choice for multi-org users** — V2 multi-tenancy adds multiple memberships per user. Today's `ORDER BY created_at ASC LIMIT 1` picks the oldest. V2 needs an explicit "active org" selection (store in `auth.users.raw_user_meta_data.active_org_id`, or add `memberships.is_active boolean`). Inline `TODO(V2)` comment already in the hook body.
 
+**From Sprint 17 code review (all approved, 6 nice-to-fix):**
+- **`app/api/gateway-tokens/[id]/route.ts` DELETE missing `kind` filter** — user who guesses a system-token UUID could revoke it. UUIDs aren't probeable + `mintPlaygroundToken` self-heals on next run, so practical risk is zero. Defense-in-depth add: `.neq('kind', 'system')` on the DELETE predicate.
+- **`mintPlaygroundToken` reuse branch has zero runtime coverage** — `__tests__/playground-run-api.vitest.ts` mock forces every test down the INSERT path (`maybeSingle → null`). Pin the fast path by stubbing `maybeSingle → { token_plaintext, id }` in one extra test.
+- **`components/dashboard/playground-workbench.tsx` at 485 lines** — over the 400-line guideline after Sprint 17's 17.3 wiring. Pre-existing extraction debt (`PaneView` + `SCENARIOS` + event reducer are obvious split candidates); carved out in Post-hackathon section too.
+- **Dual sidebar entry for "Policies" + "Policy Catalog"** — two top-level nav items for related concepts can confuse first-time users. Mulesoft-pattern flows usually reach the catalog via an empty-state CTA + header button on the list page (both already present). Consider demoting the catalog sidebar entry to a sub-item or removing it entirely. UX call.
+- **`chart-area-interactive.tsx:167-238` else-branch indent off by 2** — prettier passes but reads noisy. Cosmetic.
+- **`mintPlaygroundToken` at 37 lines, near 50-line cap** — fine for now; if error-path branching gets added later, extract to `lib/mcp/playground-token.ts`.
+
 ---
 
 ## Post-hackathon — V2 + forward-looking vision
