@@ -78,9 +78,9 @@ const baseTables = (): MockTables => ({
       id: SERVER_A,
       organization_id: ORG_A,
       name: 'Salesforce',
-      origin_url: 'https://example.salesforce.com',
-      transport: 'salesforce',
-      auth_config: { ciphertext: 'fake-ciphertext' },
+      origin_url: 'http://localhost:3000/api/mcps/salesforce',
+      transport: 'http-streamable',
+      auth_config: { type: 'bearer', token: 'fake' },
       created_at: nowIso,
     },
     {

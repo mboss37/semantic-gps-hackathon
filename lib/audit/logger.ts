@@ -18,6 +18,12 @@ export type McpEventStatus =
 
 export type McpEvent = {
   trace_id: string;
+  // Sprint 15 K.1: scope identity for every event. Nullable because the
+  // gateway logs auth-level events before a scope resolves (missing bearer,
+  // invalid token, upstream db error) — those rows genuinely have no org.
+  // Every post-auth writer MUST thread the authenticated org id from the
+  // resolved scope; V2 (RLS) narrows this to NOT NULL.
+  organization_id?: string | null;
   server_id?: string | null;
   tool_name?: string | null;
   method: string;
@@ -64,6 +70,7 @@ export const logMCPEvent = (event: McpEvent): void => {
 
   const row = {
     trace_id: event.trace_id,
+    organization_id: event.organization_id ?? null,
     server_id: event.server_id ?? null,
     tool_name: event.tool_name ?? null,
     method: event.method,

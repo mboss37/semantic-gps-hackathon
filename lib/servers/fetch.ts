@@ -25,7 +25,7 @@ export type ServerDetailRow = {
   id: string;
   name: string;
   origin_url: string | null;
-  transport: 'openapi' | 'http-streamable' | 'salesforce' | 'slack' | 'github';
+  transport: 'openapi' | 'http-streamable';
   has_auth: boolean;
   created_at: string;
 };

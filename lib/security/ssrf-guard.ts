@@ -79,10 +79,14 @@ export const validateUrl = async (input: string): Promise<URL> => {
     throw new SsrfBlockedError('bad_scheme', `scheme ${url.protocol} not allowed`);
   }
 
-  // Test-only escape hatch — lets proxy tests spin `http.createServer` on
-  // an ephemeral localhost port without tripping the loopback guard.
-  // Never set this in production; there is no code path outside tests that
-  // sets it, and SSRF is a hard requirement for the gateway route.
+  // Dev + test escape hatch. Two legitimate uses:
+  //   1. Vitest proxy tests spin `http.createServer` on ephemeral localhost.
+  //   2. Sprint 15 C.6 — in-process vendor MCPs at `app/api/mcps/<vendor>/`
+  //      register with `origin_url=http://localhost:3000/...` on dev. The
+  //      gateway's `proxyHttp` call roundtrips through HTTP to maintain the
+  //      same-contract-as-external property, so it needs localhost here.
+  // Never set this in production. On Vercel, `origin_url` is the live HTTPS
+  // domain, so the guard fires on anything non-public and the flag stays off.
   const allowLocalhost = process.env.SSRF_ALLOW_LOCALHOST === '1';
 
   const host = url.hostname.toLowerCase();

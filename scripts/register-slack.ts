@@ -1,24 +1,24 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { encrypt } from '@/lib/crypto/encrypt';
-import type { SlackAuthConfig } from '@/lib/mcp/proxy-slack';
 
-// Importable helper — NOT a CLI runner. Invoked from J.3 (and the dev
-// console during demo setup) to register the hero Slack server + its 3
-// curated tools. Credentials are encrypted via the same AES-GCM envelope used
-// by `/api/servers` so the manifest cache decode path is identical.
+// Importable helper — NOT a CLI runner. Invoked from J.3 and demo-setup flows
+// to register the Slack vendor MCP. After Sprint 15 WP-C.6 the Slack proxy
+// lives as a Next.js route under `app/api/mcps/slack/route.ts`; this helper
+// registers it into the gateway via the standard http-streamable transport
+// path. Credentials live in env vars on the same deployment, so `auth_config`
+// stays null.
 
 type Args = {
   organization_id: string;
-  credentials: SlackAuthConfig;
   // Optional domain binding so the server shows up under the right scoped
-  // gateway (e.g. SalesOps). J.3 resolves the domain_id before calling.
+  // gateway. J.3 resolves the domain_id before calling.
   domain_id?: string | null;
-  // Optional name override — defaults to "Demo Slack" so the dashboard
-  // row is recognizable at a glance.
+  // Absolute URL of the vendor MCP route. Defaults to the co-deployed route.
+  // Override for tests or a future standalone extraction.
+  origin_url?: string;
+  // Display name — defaults to "Demo Slack".
   name?: string;
-  // Optional default channel for `chat_post_message` — not stored on the
-  // server row (tool args are per-call), but accepted for symmetry with
-  // the Salesforce registrar and to unblock demo-seed helpers.
+  // Optional default channel — accepted for symmetry with the legacy register
+  // signature (used by demo-seed helpers). Not persisted on the server row.
   defaultChannel?: string;
 };
 
@@ -71,23 +71,40 @@ const TOOL_SEEDS: ToolSeed[] = [
       required: [],
     },
   },
+  {
+    name: 'delete_message',
+    description: 'Delete a previously-posted Slack message. Compensator for chat_post_message on saga rollback.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        channel: { type: 'string', minLength: 1, description: 'Channel id the original message was posted in' },
+        ts: { type: 'string', minLength: 1, description: 'Message ts returned by chat_post_message' },
+      },
+      required: ['channel', 'ts'],
+    },
+  },
 ];
+
+const DEFAULT_ORIGIN_URL = 'http://localhost:3000/api/mcps/slack';
 
 export const registerSlackServer = async (
   supabase: SupabaseClient,
-  { organization_id, credentials, domain_id = null, name = 'Demo Slack' }: Args,
+  {
+    organization_id,
+    domain_id = null,
+    origin_url = DEFAULT_ORIGIN_URL,
+    name = 'Demo Slack',
+  }: Args,
 ): Promise<string> => {
-  const auth_config = { ciphertext: encrypt(JSON.stringify(credentials)) };
-
   const { data: server, error: serverErr } = await supabase
     .from('servers')
     .insert({
       organization_id,
       domain_id,
       name,
-      origin_url: 'https://slack.com/api',
-      transport: 'slack',
-      auth_config,
+      origin_url,
+      transport: 'http-streamable',
+      auth_config: null,
     })
     .select('id')
     .single();

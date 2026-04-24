@@ -14,9 +14,13 @@ export const requireAuth = async () => {
   if (error || !data.user) {
     throw new UnauthorizedError();
   }
+  // Sprint 15 A.7: profile_completed gates onboarding. Callers decide how to
+  // react — dashboard pages redirect to /onboarding via proxy.ts + layout.tsx;
+  // the /onboarding page itself checks this flag to bounce already-onboarded
+  // users back to /dashboard.
   const { data: membership, error: memErr } = await supabase
     .from('memberships')
-    .select('organization_id, role')
+    .select('organization_id, role, profile_completed')
     .eq('user_id', data.user.id)
     .maybeSingle();
   if (memErr || !membership) {
@@ -26,6 +30,7 @@ export const requireAuth = async () => {
     user: data.user,
     supabase,
     organization_id: membership.organization_id as string,
-    role: membership.role as 'admin',
+    role: membership.role as 'admin' | 'member',
+    profile_completed: membership.profile_completed as boolean,
   };
 };

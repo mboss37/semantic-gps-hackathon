@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   Manifest,
   PolicyRow,
@@ -9,6 +9,21 @@ import type {
 } from '@/lib/manifest/cache';
 import { executeRoute, type PolicyContextBuilder } from '@/lib/mcp/execute-route';
 import type { PreCallContext } from '@/lib/policies/enforce';
+
+// Silence the fire-and-forget Supabase insert in `logMCPEvent`. Local dev
+// otherwise lets the real client fire against Docker Supabase, which race-flakes
+// vitest workers at teardown when multiple files log concurrently (the
+// `.then(console.error)` chain resolves after the worker closes rpc). Sibling
+// execute-route-{fallback,rollback}.vitest.ts use the same pattern.
+vi.mock('@/lib/audit/logger', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/audit/logger')>(
+    '@/lib/audit/logger',
+  );
+  return {
+    ...actual,
+    logMCPEvent: () => {},
+  };
+});
 
 // Unit tests for F.1 executeRoute. Hand-rolled Manifest fixtures keep this
 // deterministic — real proxies are disabled so mockExecuteTool canned data
@@ -149,7 +164,7 @@ describe('executeRoute', () => {
       { route_id: ROUTE_ID, inputs: { query: 'jane' } },
       manifest,
       policyCtxBuilder,
-      { traceId: 'trace-ok' },
+      { traceId: 'trace-ok', organizationId: null },
     );
 
     expect(result.ok).toBe(true);
@@ -182,7 +197,7 @@ describe('executeRoute', () => {
       { route_id: ROUTE_ID, inputs: { query: 'jane' } },
       manifest,
       policyCtxBuilder,
-      { traceId: 'trace-halt' },
+      { traceId: 'trace-halt', organizationId: null },
     );
 
     expect(result.ok).toBe(false);
@@ -213,7 +228,7 @@ describe('executeRoute', () => {
       { route_id: ROUTE_ID, inputs: { query: 'jane' } },
       manifest,
       policyCtxBuilder,
-      { traceId: 'trace-block' },
+      { traceId: 'trace-block', organizationId: null },
     );
 
     expect(result.ok).toBe(false);
@@ -230,7 +245,7 @@ describe('executeRoute', () => {
       { route_id: uuid(99), inputs: {} },
       manifest,
       policyCtxBuilder,
-      { traceId: 'trace-missing' },
+      { traceId: 'trace-missing', organizationId: null },
     );
     expect(result.ok).toBe(false);
     expect(result.steps).toHaveLength(0);

@@ -13,28 +13,7 @@ Shipping window: **Fri Apr 24 + Sat Apr 25 (full coding days, CET)**. Sun Apr 26
 
 ### Friday Apr 24 (CET) — Full coding day: enterprise shape
 
-Biggest shipping day. Retires the demo-level scaffolding so judges browsing the source see an enterprise-shaped codebase. Order by architectural risk — scariest refactor first while fresh.
-
-#### [P0 Fri] C.6 — Extract SF/Slack/GitHub to standalone MCP servers (L)
-Move `lib/mcp/proxy-salesforce.ts` + `proxy-slack.ts` + `proxy-github.ts` out of the gateway. New top-level `mcps/` folder (monorepo), each a standalone Node/Bun app exposing MCP HTTP-Streamable and internally translating to the respective REST API. Demo org registers their URLs via the normal `POST /api/servers` flow — identical to how any tenant would register a third-party MCP. Gateway loses three files and treats every upstream identically.
-- Structure: `mcps/salesforce-mcp/`, `mcps/slack-mcp/`, `mcps/github-mcp/` — each with its own `package.json` + Vercel/Fly deploy pipeline
-- Each owns its OAuth / credential path (server-side env vars for demo; per-org creds in V2)
-- Bootstrap script re-registers the three against local + hosted demo orgs
-- Removes `lib/mcp/proxy-*.ts` entirely; `lib/mcp/tool-dispatcher.ts` dispatches only `openapi` + `http-streamable` — no vendor branches
-
-#### [P0 Fri] A.7 — First-signup onboarding wizard (M)
-Replaces the `<handle>'s Workspace` auto-org hack. Post-signup flow: `/onboarding` route gated by a `profile_completed boolean` flag (new column on `memberships` or new `profiles` table). Collects first_name + last_name + company + org_name. Refactors the `on_auth_user_created` trigger — user-named org replaces auto-generated name. Redirects to `/dashboard` on completion.
-
-#### [P0 Fri] K.1 — Enterprise data-model audit + fixes (M)
-Concrete gaps surfaced during Sprint 13 review:
-- `mcp_events` missing `organization_id` column — every monitoring/audit query joins through `servers.id` today. Add column, backfill via existing `server_id → servers.organization_id` lookup, update all writers.
-- `organizations` has no billing metadata — add `plan`, `trial_ends_at`, `billing_email`, `created_by` nullable columns. Signal enterprise readiness.
-- `memberships.role` CHECK locked to `'admin'` — widen to `admin | member` (no further roles for MVP).
-- `domains` concept is underused (one auto-seeded "SalesOps" per signup) — promote to "environments" (prod/staging) semantics OR drop the table entirely. Decide + execute.
-- `gateway_tokens.organization_id` ON DELETE CASCADE footgun — delete org → tokens vanish without audit. Evaluate soft-delete alternative.
-- Policy-fork vs policy-reference model review — today assignments are the fork point; document the invariant or refactor.
-
-Deliverable: one migration with the clean schema changes + updated writers + a one-paragraph note in `docs/ARCHITECTURE.md` on the final multi-tenant shape.
+_(all pulled into Sprint 15)_
 
 ### Saturday Apr 25 (CET) — Full coding day: narrative + polish + landing
 
@@ -132,13 +111,21 @@ Squeeze in between P0 items Fri/Sat if bandwidth allows. None of these are demo-
 - **`maintenance_windows`** builtin policy — additive to time/state taxonomy (13th builtin).
 - **`destructive_tool_tagging`** builtin policy — additive to kill-switches taxonomy (14th builtin).
 
-### Identified issues (from Sprint 14 code review)
+### Identified issues (from Sprint 14 + 15 code reviews)
 Concrete rough edges surfaced by reviewers. Not demo-blocking; worth a pass if bandwidth allows before freeze, otherwise V2.
 
-- **Auth-config decode duplication across 5 proxy/auth files** — `lib/mcp/proxy-openapi.ts`, `lib/mcp/proxy-http.ts`, `lib/mcp/salesforce-auth.ts`, `lib/mcp/github-auth.ts`, `lib/mcp/slack-auth.ts` each carry their own copy of `EncryptedAuthSchema` + `AuthConfigSchema` + `decodeAuthConfig`. Consolidate to the new `lib/servers/auth.ts` helper shipped Sprint 14.3. 5-file refactor, needs full proxy retest. 30-60 min.
+**From Sprint 14:**
+- **Auth-config decode duplication in 2 proxy files** — `lib/mcp/proxy-openapi.ts` + `lib/mcp/proxy-http.ts` each carry their own copy of `EncryptedAuthSchema` + `AuthConfigSchema` + `decodeAuthConfig`. Consolidate to the `lib/servers/auth.ts` helper shipped Sprint 14.3. (Original 5-file scope shrunk to 2 after C.6 deleted salesforce/slack/github-auth.ts in Sprint 15.) 15-30 min.
 - **Rediscover `tools` upsert vs Promise.all fan-out** — `app/api/servers/[id]/rediscover/route.ts::applyDiff` issues N individual `UPDATE` statements instead of one upsert keyed on `(server_id, name)`. Demo-scale (≤20 tools/server) makes it cosmetic; first step is verifying / adding the UNIQUE constraint, may require a migration.
 - **`console.error` leaking Supabase error bodies** — `app/api/gateway-traffic/route.ts:55` and ~10 similar sites across route handlers log raw error objects (can include connection strings / stack traces on infra failures). Swap to a structured logger or strip to typed codes before logging. Codebase-wide sweep.
 - **Rediscover button lacks dry-run preview** — `components/dashboard/server-rediscover-button.tsx` commits the diff without showing users what would change first. Needs a GET endpoint returning `{toAdd, toUpdate, stale}` without writing; users confirm, then POST commits. New WP, not a spot fix.
+
+**From Sprint 15:**
+- **`lib/mcp/execute-route.ts` over 400-line cap (794 lines)** — grew 13 lines in K.1's `organization_id` threading. Extract `executeRollback` (~155 lines) to `lib/mcp/execute-rollback.ts`; file drops under the cap and rollback tests colocate.
+- **Onboarding action `created_by` clobber on retry** — `app/onboarding/actions.ts:64-65` sets `created_by` on every submission. Idempotent-retry-safe today because `already_completed` short-circuits, but a partial-failure retry could overwrite the original creator audit trail. Switch to `.is('created_by', null)` or upsert-style guard in the UPDATE.
+- **`scripts/bootstrap-local-demo.sql` hardcodes localhost** — `origin_url='http://localhost:3000/...'` requires manual sed-replace before hosted sync. Failure is LOUD on hosted (SSRF guard rejects), but templating via `psql -v base_url=...` or a wrapper shell script removes the footgun.
+- **`proxy.ts` DB query per dashboard request** — `memberships.profile_completed` lookup added in A.7 runs on every authed dashboard/onboarding hit. Fine at demo scale (B-tree on unique index). V2 RLS work should fold the flag into the JWT custom claim so the edge check is zero-RTT.
+- **`app/onboarding/actions.ts:47-55` let-ctx style** — two-step `let ctx; try { ctx = await requireAuth() } catch` makes `ctx` possibly-undefined to TS flow analysis. Works because `UnauthorizedError` branch returns; stylistic nit — IIFE or dedicated helper would tidy.
 
 ---
 

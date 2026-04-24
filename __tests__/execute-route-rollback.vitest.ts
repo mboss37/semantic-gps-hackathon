@@ -210,7 +210,7 @@ describe('executeRoute rollback', () => {
       { route_id: ROUTE_ID, inputs: { name: 'Acme' } },
       buildManifest(),
       policyCtxBuilder,
-      { traceId: 'trace-happy' },
+      { traceId: 'trace-happy', organizationId: null },
     );
 
     expect(result.ok).toBe(true);
@@ -234,7 +234,7 @@ describe('executeRoute rollback', () => {
       { route_id: ROUTE_ID, inputs: { name: 'Acme' } },
       buildManifest(),
       policyCtxBuilder,
-      { traceId: 'trace-rollback' },
+      { traceId: 'trace-rollback', organizationId: null },
     );
 
     expect(result.ok).toBe(false);
@@ -300,7 +300,7 @@ describe('executeRoute rollback', () => {
       { route_id: ROUTE_ID, inputs: { name: 'Acme' } },
       manifest,
       policyCtxBuilder,
-      { traceId: 'trace-partial' },
+      { traceId: 'trace-partial', organizationId: null },
     );
 
     expect(result.ok).toBe(false);
@@ -332,7 +332,7 @@ describe('executeRoute rollback', () => {
       { route_id: ROUTE_ID, inputs: { name: 'Acme' } },
       buildManifest({ route_steps: twoStepRoute }),
       policyCtxBuilder,
-      { traceId: 'trace-comp-fail' },
+      { traceId: 'trace-comp-fail', organizationId: null },
     );
 
     expect(result.ok).toBe(false);
@@ -376,7 +376,7 @@ describe('executeRoute rollback', () => {
       { route_id: ROUTE_ID, inputs: { name: 'Acme' } },
       manifest,
       policyCtxBuilder,
-      { traceId: 'trace-block-rollback' },
+      { traceId: 'trace-block-rollback', organizationId: null },
     );
 
     expect(result.ok).toBe(false);
@@ -398,7 +398,7 @@ describe('executeRoute rollback', () => {
       { route_id: ROUTE_ID, inputs: { name: 'Acme' } },
       buildManifest(),
       policyCtxBuilder,
-      { traceId: 'trace-no-rollback' },
+      { traceId: 'trace-no-rollback', organizationId: null },
       { autoRollbackOnHalt: false },
     );
 

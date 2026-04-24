@@ -1,35 +1,20 @@
 import { z } from 'zod';
-import type { ToolRow } from '@/lib/manifest/cache';
 import { safeFetch, SsrfBlockedError } from '@/lib/security/ssrf-guard';
-import {
-  decodeGithubAuthConfig,
-  loadServer,
-  TIMEOUT_MS,
-  UpstreamError,
-  type GithubAuthConfig,
-} from '@/lib/mcp/github-auth';
+import { VendorError } from '@/lib/mcp/vendors/errors';
 
-// Re-export auth surface so external callers (tool-dispatcher, tests,
-// register-github) keep a single import path.
-export { type GithubAuthConfig } from '@/lib/mcp/github-auth';
+// GitHub MCP vendor seam. Owns PAT-authed REST dispatch for the 4 curated GH
+// tools. `GITHUB_PAT` comes from the env var — classic + fine-grained PATs
+// don't auto-refresh so there is no token cache. Colocated with the gateway
+// today; extraction to a standalone deploy is a zero-gateway-change refactor.
 
-// GitHub proxy — hand-authored mapping from 4 curated MCP tools onto the
-// REST v3 API. PAT auth (Bearer) only; no token cache because PATs don't
-// auto-refresh. Same ProxyResult contract as proxy-openapi / proxy-http /
-// proxy-salesforce / proxy-slack so the dispatcher switch routes without
-// special casing.
-
+const TIMEOUT_MS = 10_000;
 const GITHUB_API_BASE = 'https://api.github.com';
 const GITHUB_API_VERSION = '2022-11-28';
 const USER_AGENT = 'semantic-gps-gateway';
 
-export type ProxyOk = { ok: true; result: unknown; latencyMs: number };
-export type ProxyErr = { ok: false; error: string; status?: number };
-export type ProxyResult = ProxyOk | ProxyErr;
-
-export type ProxyContext = {
-  serverId: string;
-  traceId: string;
+const loadPat = (): string | null => {
+  const pat = process.env.GITHUB_PAT ?? '';
+  return pat || null;
 };
 
 type CallInit = {
@@ -38,16 +23,13 @@ type CallInit = {
   body?: Record<string, unknown>;
 };
 
-// Generic GitHub REST call. User-Agent is non-optional — missing it returns
-// 403 from api.github.com. Response bodies are JSON; we parse then surface
-// via `body.message` on non-2xx so callers get actionable detail.
-const ghCall = async (
-  auth: GithubAuthConfig,
-  call: CallInit,
-): Promise<{ body: unknown }> => {
+// GitHub REST call. User-Agent is non-optional — missing it returns 403.
+// 401/403 surface as upstream_auth_failed; 404 as origin_error("not found");
+// other non-2xx as origin_error with body.message detail when present.
+const ghCall = async (pat: string, call: CallInit): Promise<{ body: unknown }> => {
   const url = `${GITHUB_API_BASE}${call.path}`;
   const headers: Record<string, string> = {
-    authorization: `Bearer ${auth.pat}`,
+    authorization: `Bearer ${pat}`,
     accept: 'application/vnd.github+json',
     'x-github-api-version': GITHUB_API_VERSION,
     'user-agent': USER_AGENT,
@@ -67,7 +49,7 @@ const ghCall = async (
     res = await safeFetch(url, init);
   } catch (e) {
     if (e instanceof SsrfBlockedError) throw e;
-    throw new UpstreamError(502, 'network_error');
+    throw new VendorError(502, 'network_error');
   }
 
   const text = await res.text();
@@ -86,26 +68,21 @@ const ghCall = async (
       }
     }
     if (res.status === 401 || res.status === 403) {
-      throw new UpstreamError(res.status, 'upstream_auth_failed', detail);
+      throw new VendorError(res.status, 'upstream_auth_failed', detail);
     }
-    if (res.status === 404) {
-      throw new UpstreamError(404, 'origin_error', 'not found');
-    }
-    throw new UpstreamError(res.status, 'origin_error', detail ?? (text ? text.slice(0, 200) : undefined));
+    if (res.status === 404) throw new VendorError(404, 'origin_error', 'not found');
+    throw new VendorError(res.status, 'origin_error', detail ?? (text ? text.slice(0, 200) : undefined));
   }
 
   if (!text) return { body: null };
   try {
     return { body: JSON.parse(text) };
   } catch {
-    throw new UpstreamError(502, 'parse_error');
+    throw new VendorError(502, 'parse_error');
   }
 };
 
-// Per-tool input schemas. Enforced locally so we never hit GitHub with
-// malformed input. Errors here become `invalid_input` before any fetch.
-// Owner regex: GitHub username/org rules (alnum + hyphens, no leading hyphen,
-// max 39 chars). Repo regex: alnum + dot/dash/underscore, max 100 chars.
+// Per-tool input schemas.
 const OwnerRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,38}$/;
 const RepoRegex = /^[a-zA-Z0-9._-]{1,100}$/;
 
@@ -113,7 +90,6 @@ const SearchIssuesArgs = z.object({
   query: z.string().min(1).max(500),
   limit: z.number().int().min(1).max(100).optional(),
 });
-
 const CreateIssueArgs = z.object({
   owner: z.string().regex(OwnerRegex),
   repo: z.string().regex(RepoRegex),
@@ -121,22 +97,18 @@ const CreateIssueArgs = z.object({
   body: z.string().max(65536).optional(),
   labels: z.array(z.string().min(1).max(100)).max(20).optional(),
 });
-
 const AddCommentArgs = z.object({
   owner: z.string().regex(OwnerRegex),
   repo: z.string().regex(RepoRegex),
   issue_number: z.number().int().positive(),
   body: z.string().min(1).max(65536),
 });
-
 const CloseIssueArgs = z.object({
   owner: z.string().regex(OwnerRegex),
   repo: z.string().regex(RepoRegex),
   issue_number: z.number().int().positive(),
 });
 
-// Response projections. GitHub payloads are verbose; we trim them down to the
-// demo-relevant fields so agent context stays tight.
 type IssueProjection = {
   number: number | null;
   title: string | null;
@@ -161,17 +133,76 @@ const projectSearchItem = (raw: unknown): IssueProjection => {
   };
 };
 
-const dispatchTool = async (
-  auth: GithubAuthConfig,
+export const GITHUB_TOOLS = [
+  {
+    name: 'search_issues',
+    description: 'Search GitHub issues and PRs by query string.',
+    inputSchema: {
+      type: 'object',
+      required: ['query'],
+      properties: {
+        limit: { type: 'integer', minimum: 1, maximum: 100 },
+        query: { type: 'string', minLength: 1, maxLength: 500 },
+      },
+    },
+  },
+  {
+    name: 'create_issue',
+    description: 'Create a new GitHub issue on a repo.',
+    inputSchema: {
+      type: 'object',
+      required: ['owner', 'repo', 'title'],
+      properties: {
+        body: { type: 'string', maxLength: 65536 },
+        repo: { type: 'string' },
+        owner: { type: 'string' },
+        title: { type: 'string', minLength: 1, maxLength: 256 },
+        labels: { type: 'array', items: { type: 'string' } },
+      },
+    },
+  },
+  {
+    name: 'add_comment',
+    description: 'Add a comment to an existing GitHub issue.',
+    inputSchema: {
+      type: 'object',
+      required: ['owner', 'repo', 'issue_number', 'body'],
+      properties: {
+        body: { type: 'string', minLength: 1, maxLength: 65536 },
+        repo: { type: 'string' },
+        owner: { type: 'string' },
+        issue_number: { type: 'integer', minimum: 1 },
+      },
+    },
+  },
+  {
+    name: 'close_issue',
+    description: 'Close an existing GitHub issue.',
+    inputSchema: {
+      type: 'object',
+      required: ['owner', 'repo', 'issue_number'],
+      properties: {
+        repo: { type: 'string' },
+        owner: { type: 'string' },
+        issue_number: { type: 'integer', minimum: 1 },
+      },
+    },
+  },
+] as const;
+
+export const dispatchGithubTool = async (
   toolName: string,
   args: Record<string, unknown>,
 ): Promise<unknown> => {
+  const pat = loadPat();
+  if (!pat) throw new VendorError(500, 'credentials_missing');
+
   if (toolName === 'search_issues') {
     const parsed = SearchIssuesArgs.safeParse(args);
-    if (!parsed.success) throw new UpstreamError(400, 'invalid_input');
+    if (!parsed.success) throw new VendorError(400, 'invalid_input');
     const perPage = parsed.data.limit ?? 10;
     const qs = `?q=${encodeURIComponent(parsed.data.query)}&per_page=${perPage}`;
-    const { body } = await ghCall(auth, { method: 'GET', path: `/search/issues${qs}` });
+    const { body } = await ghCall(pat, { method: 'GET', path: `/search/issues${qs}` });
     const root = (body ?? {}) as Record<string, unknown>;
     const total = typeof root.total_count === 'number' ? root.total_count : 0;
     const itemsRaw = Array.isArray(root.items) ? root.items : [];
@@ -180,11 +211,11 @@ const dispatchTool = async (
 
   if (toolName === 'create_issue') {
     const parsed = CreateIssueArgs.safeParse(args);
-    if (!parsed.success) throw new UpstreamError(400, 'invalid_input');
+    if (!parsed.success) throw new VendorError(400, 'invalid_input');
     const payload: Record<string, unknown> = { title: parsed.data.title };
     if (parsed.data.body !== undefined) payload.body = parsed.data.body;
     if (parsed.data.labels !== undefined) payload.labels = parsed.data.labels;
-    const { body } = await ghCall(auth, {
+    const { body } = await ghCall(pat, {
       method: 'POST',
       path: `/repos/${parsed.data.owner}/${parsed.data.repo}/issues`,
       body: payload,
@@ -199,8 +230,8 @@ const dispatchTool = async (
 
   if (toolName === 'add_comment') {
     const parsed = AddCommentArgs.safeParse(args);
-    if (!parsed.success) throw new UpstreamError(400, 'invalid_input');
-    const { body } = await ghCall(auth, {
+    if (!parsed.success) throw new VendorError(400, 'invalid_input');
+    const { body } = await ghCall(pat, {
       method: 'POST',
       path: `/repos/${parsed.data.owner}/${parsed.data.repo}/issues/${parsed.data.issue_number}/comments`,
       body: { body: parsed.data.body },
@@ -214,8 +245,8 @@ const dispatchTool = async (
 
   if (toolName === 'close_issue') {
     const parsed = CloseIssueArgs.safeParse(args);
-    if (!parsed.success) throw new UpstreamError(400, 'invalid_input');
-    const { body } = await ghCall(auth, {
+    if (!parsed.success) throw new VendorError(400, 'invalid_input');
+    const { body } = await ghCall(pat, {
       method: 'PATCH',
       path: `/repos/${parsed.data.owner}/${parsed.data.repo}/issues/${parsed.data.issue_number}`,
       body: { state: 'closed' },
@@ -228,40 +259,5 @@ const dispatchTool = async (
     };
   }
 
-  throw new UpstreamError(400, 'unknown_tool');
-};
-
-// Public entry point for `tool-dispatcher.ts`. Same `ProxyResult` contract as
-// the OpenAPI + HTTP-streamable + Salesforce + Slack proxies so the dispatcher
-// transport switch stays uniform.
-export const proxyGithub = async (
-  tool: ToolRow,
-  args: Record<string, unknown>,
-  ctx: ProxyContext,
-): Promise<ProxyResult> => {
-  const started = performance.now();
-
-  const server = await loadServer(ctx.serverId);
-  if (!server) return { ok: false, error: 'server_not_found' };
-  if (server.transport !== 'github') return { ok: false, error: 'wrong_transport' };
-
-  let auth: GithubAuthConfig | null;
-  try {
-    auth = decodeGithubAuthConfig(server.auth_config);
-  } catch {
-    return { ok: false, error: 'auth_decode_failed' };
-  }
-  if (!auth) return { ok: false, error: 'auth_decode_failed' };
-
-  try {
-    const result = await dispatchTool(auth, tool.name, args);
-    const latencyMs = Math.round(performance.now() - started);
-    return { ok: true, result, latencyMs };
-  } catch (e) {
-    if (e instanceof SsrfBlockedError) return { ok: false, error: 'ssrf_blocked' };
-    if (e instanceof UpstreamError) {
-      return { ok: false, error: e.reason, status: e.status };
-    }
-    return { ok: false, error: 'network_error' };
-  }
+  throw new VendorError(400, 'unknown_tool');
 };

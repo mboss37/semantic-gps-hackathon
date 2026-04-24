@@ -14,10 +14,22 @@
 -- Preconditions:
 --   - `pnpm supabase start` (local stack up)
 --   - `seed.sql` has run (demo user + org + gateway token present)
---   - `.env.local` has the SAME `CREDENTIALS_ENCRYPTION_KEY` as Vercel —
---     auth_config ciphertexts below were encrypted on hosted with that key.
---     If keys differ, tool calls will fail at decrypt time; re-encrypt
---     locally via `scripts/seed-j3-encrypt.mjs` + `seed-j3-ext-encrypt.mjs`.
+--   - `.env.local` has `SF_LOGIN_URL` / `SF_CLIENT_ID` / `SF_CLIENT_SECRET` /
+--     `SLACK_BOT_TOKEN` / `GITHUB_PAT` — the vendor MCP routes at
+--     `app/api/mcps/<vendor>/route.ts` read credentials from env at request
+--     time. Sprint 15 WP-C.6 removed the encrypted `auth_config` path; the
+--     gateway registration now stores `auth_config=null` and the vendor
+--     route holds the creds for the whole deployment.
+--   - `.env.local` has `SSRF_ALLOW_LOCALHOST=1` for dev. The gateway's
+--     `proxyHttp` roundtrips `origin_url` through `safeFetch`; localhost
+--     hosts are blocked by default. This flag is a dev-only escape hatch;
+--     on Vercel the seed gets rewritten with the live HTTPS domain and the
+--     flag stays unset. See `lib/security/ssrf-guard.ts`.
+--
+-- Hosted deploy: before applying this seed to hosted Supabase, sed-replace
+--   every `http://localhost:3000/` with the Vercel domain
+--   (e.g. `https://semantic-gps-hackathon.vercel.app/`). SSRF guard accepts
+--   public HTTPS; no flag flip needed in prod.
 
 BEGIN;
 
@@ -44,16 +56,18 @@ DELETE FROM public.servers
 -- cascades to tools → relationships, policy_assignments
 
 -- ---------------------------------------------------------------------------
--- Servers — encrypted auth_config blobs copied verbatim from hosted.
--- Assumes CREDENTIALS_ENCRYPTION_KEY parity between local and Vercel.
+-- Servers — pointed at the co-deployed vendor MCP routes. `auth_config` is
+-- NULL because the vendor routes read credentials from env vars on the same
+-- Next.js deployment (Sprint 15 WP-C.6). For a future standalone extraction,
+-- re-introduce encrypted `auth_config` via the standard bearer path.
 -- ---------------------------------------------------------------------------
 
 INSERT INTO public.servers (organization_id, name, transport, origin_url, auth_config)
 SELECT m.organization_id,
        'Demo Salesforce',
-       'salesforce',
-       'https://orgfarm-d96b9c002f-dev-ed.develop.my.salesforce.com',
-       '{"ciphertext":"cxScOOWYijDMZyHJJ4T3w8J9Jy70Epftiusn2oYwfPZYb9sZI47XT+MIst6mk8WtTxWeYrsvpX/3a1f7MzNu7gvmPEtX0L4deIuL3q/m7ea3MbgHlfohuNLha7NDCrLiAPe/HcGEISiNI88yNWRwUb5/1KCmtV6ZwMgE4e9MvUcVJGaJJJQEm1OJeyS6BssSYQKTdZsrmmeIQJ1aryuAbKD5fBWvnfcPhfRrO/taOsHh2ylGh8B80Cim1LnMtE+Kfe8jp/OTyrUgsX6+Lh4kLbLu6oUXCvgbL9V6QB0yt9aIh8Mq7GGOaLGkBU6FI/V8Q6i3NxPYE/jmGono0tC3EifEVanK9ZXrDhKjRvxny1oVa2khVeNdCSLXcKXv/ADz3FZ+kJ9Ii1gVmVn+cHEAgAETpU9sfgv/JaFri7kkmoTO"}'::jsonb
+       'http-streamable',
+       'http://localhost:3000/api/mcps/salesforce',
+       NULL
   FROM public.memberships m
   JOIN auth.users u ON u.id = m.user_id
  WHERE u.email = 'demo@semantic-gps.dev'
@@ -62,9 +76,9 @@ SELECT m.organization_id,
 INSERT INTO public.servers (organization_id, name, transport, origin_url, auth_config)
 SELECT m.organization_id,
        'Demo Slack',
-       'slack',
-       'https://slack.com/api',
-       '{"ciphertext":"pw9P3ThlMrS4G25gSkmUH/nrNFhHavcpQHdBLZsLTAJ1pMFuEpEbk94MxCUrOnHlQzZJw5Zz5sVmXPHe8rIcPG5rIVXLAKGGs89PQsRmgr8QBNuJQLQQBlhV7B2js1DtllPuLraaPoj3O9qZ11Zz6sOUghKWqPhiq+Y="}'::jsonb
+       'http-streamable',
+       'http://localhost:3000/api/mcps/slack',
+       NULL
   FROM public.memberships m
   JOIN auth.users u ON u.id = m.user_id
  WHERE u.email = 'demo@semantic-gps.dev'
@@ -73,9 +87,9 @@ SELECT m.organization_id,
 INSERT INTO public.servers (organization_id, name, transport, origin_url, auth_config)
 SELECT m.organization_id,
        'Demo GitHub',
-       'github',
-       'https://api.github.com',
-       '{"ciphertext":"HbYOQbHhJoaUrLhP3PD+v5KM70f58ovfrjCMogkxAvm5RUpdniHp7QTBQUFMWv7+U9Cb5Z+UVdwSicuIxY+RPEJ8z+N0056Apw+pDztv6/9MqQ4OYVDFVFTUjQ=="}'::jsonb
+       'http-streamable',
+       'http://localhost:3000/api/mcps/github',
+       NULL
   FROM public.memberships m
   JOIN auth.users u ON u.id = m.user_id
  WHERE u.email = 'demo@semantic-gps.dev'

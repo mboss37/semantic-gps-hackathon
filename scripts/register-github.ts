@@ -1,20 +1,21 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { encrypt } from '@/lib/crypto/encrypt';
-import type { GithubAuthConfig } from '@/lib/mcp/proxy-github';
 
-// Importable helper — NOT a CLI runner. Invoked from J.3 (and the dev
-// console during demo setup) to register the hero GitHub server + its 4
-// curated tools. Credentials are encrypted via the same AES-GCM envelope used
-// by `/api/servers` so the manifest cache decode path is identical.
+// Importable helper — NOT a CLI runner. Invoked from J.3 and demo-setup flows
+// to register the GitHub vendor MCP. After Sprint 15 WP-C.6 the GitHub proxy
+// lives as a Next.js route under `app/api/mcps/github/route.ts`; this helper
+// registers it into the gateway via the standard http-streamable transport
+// path. Credentials live in env vars on the same deployment, so `auth_config`
+// stays null.
 
 type Args = {
   organization_id: string;
-  credentials: GithubAuthConfig;
   // Optional domain binding so the server shows up under the right scoped
-  // gateway (e.g. EngOps). J.3 resolves the domain_id before calling.
+  // gateway. J.3 resolves the domain_id before calling.
   domain_id?: string | null;
-  // Optional name override — defaults to "Demo GitHub" so the dashboard
-  // row is recognizable at a glance.
+  // Absolute URL of the vendor MCP route. Defaults to the co-deployed route.
+  // Override for tests or a future standalone extraction.
+  origin_url?: string;
+  // Display name — defaults to "Demo GitHub".
   name?: string;
 };
 
@@ -118,21 +119,26 @@ const TOOL_SEEDS: ToolSeed[] = [
   },
 ];
 
+const DEFAULT_ORIGIN_URL = 'http://localhost:3000/api/mcps/github';
+
 export const registerGithubServer = async (
   supabase: SupabaseClient,
-  { organization_id, credentials, domain_id = null, name = 'Demo GitHub' }: Args,
+  {
+    organization_id,
+    domain_id = null,
+    origin_url = DEFAULT_ORIGIN_URL,
+    name = 'Demo GitHub',
+  }: Args,
 ): Promise<string> => {
-  const auth_config = { ciphertext: encrypt(JSON.stringify(credentials)) };
-
   const { data: server, error: serverErr } = await supabase
     .from('servers')
     .insert({
       organization_id,
       domain_id,
       name,
-      origin_url: 'https://api.github.com',
-      transport: 'github',
-      auth_config,
+      origin_url,
+      transport: 'http-streamable',
+      auth_config: null,
     })
     .select('id')
     .single();

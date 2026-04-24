@@ -137,22 +137,39 @@ semantic-gps/
 
 ## Database Schema (MVP)
 
-Multi-tenant-ready, RLS off for now. `organizations` + `memberships` hold tenancy; every domain table FKs back to an org. Single-admin role for MVP, V2 expands the enum.
+Multi-tenant-ready, RLS off for now. `organizations` + `memberships` hold tenancy; every domain table FKs back to an org. Sprint 15 K.1 widened `memberships.role` to `admin | member` and added four nullable billing columns to `organizations` (`plan`, `trial_ends_at`, `billing_email`, `created_by`) so the schema reads as enterprise-shaped without the UI existing yet. V2 plan picker + trial-countdown + settings UI hang off those columns.
+
+`mcp_events.organization_id` (Sprint 15 K.1) stamps scope identity on every audit row. Nullable because the gateway logs auth-level failures before a scope resolves (missing bearer, invalid token, db_error) — those rows genuinely have no org. Post-scope writers thread `scope.organization_id` through `ExecuteRouteCtx` + `logMCPEvent`; V2 narrows this to `NOT NULL` once RLS enables.
+
+**Policy model invariant:** `policy_assignments.policy_id` is an FK reference to `policies.id` — not a fork. One policy row, N assignments (server-scoped, tool-scoped, or global). Edits to a policy cascade to every assignment atomically. If you need divergent behaviour, clone the policy row explicitly; never mutate `policy_assignments.policy_id` mid-flight.
+
+**`domains` positioning:** the mid-tier between organization and server (`/api/mcp/domain/[slug]` scoped gateway). One `salesops` domain auto-seeds per signup for the hero demo; V2 promotes the concept to prod/staging environments. Not dropped — the scoped-gateway relies on it.
+
+**`gateway_tokens` cascade footgun (K.1 documented, not fixed):** `organization_id ON DELETE CASCADE` means deleting an org silently vaporises every token with no audit trail. Fine for MVP where orgs never get deleted; V2 needs a tombstone/soft-delete pattern across every org-owned table (tokens, servers, tools, policies, routes, events) before a half-fix on one table is safe.
 
 ```sql
--- Organizations: one per signup (admin's workspace)
+-- Organizations: one per signup. Billing metadata nullable — signals enterprise
+-- shape without a V2 plan-picker UI. created_by nullable so pre-K.1 auto-seeded
+-- orgs (no onboarding capture) still satisfy the constraint.
 CREATE TABLE organizations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
+  plan TEXT,
+  trial_ends_at TIMESTAMPTZ,
+  billing_email TEXT,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Memberships: user ↔ org with role. MVP locks role to 'admin'.
+-- Memberships: user ↔ org with role + A.7 onboarding gate.
+-- K.1 widened role enum to admin|member; profile_completed drives the
+-- /onboarding redirect for fresh signups.
 CREATE TABLE memberships (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  role TEXT NOT NULL DEFAULT 'admin' CHECK (role IN ('admin')),
+  role TEXT NOT NULL DEFAULT 'admin' CHECK (role IN ('admin', 'member')),
+  profile_completed BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE (organization_id, user_id)
 );
@@ -276,10 +293,14 @@ CREATE TABLE route_steps (
   UNIQUE (route_id, step_order)
 );
 
--- Audit log: every gateway interaction
+-- Audit log: every gateway interaction. organization_id (K.1) stamps scope
+-- identity threaded from the resolved gateway token through ExecuteRouteCtx.
+-- Nullable: auth-level failures (missing bearer / invalid token / db_error)
+-- log BEFORE a scope resolves, so those rows genuinely have no org.
 CREATE TABLE mcp_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   trace_id UUID NOT NULL,        -- Correlate hops in a workflow
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   server_id UUID REFERENCES servers(id) ON DELETE SET NULL,
   tool_name TEXT,
   method TEXT NOT NULL,          -- MCP method: tools/call, tools/list, discover_relationships, etc.
@@ -292,6 +313,7 @@ CREATE TABLE mcp_events (
 
 CREATE INDEX idx_mcp_events_trace ON mcp_events(trace_id);
 CREATE INDEX idx_mcp_events_created ON mcp_events(created_at DESC);
+CREATE INDEX idx_mcp_events_organization ON mcp_events(organization_id, created_at DESC);
 CREATE INDEX idx_tools_server ON tools(server_id);
 CREATE INDEX idx_relationships_from ON relationships(from_tool_id);
 CREATE INDEX idx_relationships_to ON relationships(to_tool_id);
@@ -365,6 +387,10 @@ Implemented as additional JSON-RPC methods on the same MCP endpoint. They share 
 - `discover_relationships({ server_id? })` → `{ nodes: tools[], edges: relationships[] }`
 - `find_workflow_path({ goal, starting_tool? })` → ordered tool ids
 - `validate_workflow({ plan: tool_ids[] })` → `{ valid, violations[] }`
+
+### Vendor MCPs — co-deployed routes
+
+The Salesforce, Slack, and GitHub MCPs ship as standalone Next.js routes under `app/api/mcps/<vendor>/route.ts`. Each route speaks JSON-RPC over HTTP-Streamable via a minimal adapter (`lib/mcp/vendors/json-rpc.ts`) and delegates to a vendor-specific dispatcher (`lib/mcp/vendors/<vendor>.ts`) that handles REST translation + auth. Credentials live in env vars on the same deployment (`SF_*`, `SLACK_BOT_TOKEN`, `GITHUB_PAT`); `auth_config` on the gateway's `servers` row is null for these registrations. The gateway registers them via the normal `POST /api/servers` flow with absolute URLs (e.g. `http://localhost:3000/api/mcps/salesforce`) and dispatches through `proxyHttp` exactly like any third-party MCP — the dispatcher has zero knowledge they run in-process. V2 can extract each route to its own Vercel deploy by changing the `origin_url` in the server row and re-introducing an encrypted per-tenant `auth_config`; no gateway-side code changes are required.
 
 ---
 
@@ -529,6 +555,8 @@ Things that will silently bite if not explicitly called out:
 20. **Gateway governs the CALL, downstream governs the DATA.** Policies that duplicate Salesforce Approval Processes / SAP Workflow / ServiceNow CAB / agent-framework cost budgets add zero and pull focus. If agent frameworks or downstream systems have better visibility into the thing, it's not the control plane's policy. Principle cemented Sprint 9 after nearly shipping `budget_cap`; see CLAUDE.md § Key Decisions.
 21. **Next.js 16 treats `_`-prefixed folders as private and excludes them from routing.** An ops endpoint at `app/api/_internal/manifest/invalidate/route.ts` 404s silently at every environment — the underscore makes the whole folder a build-time private folder (no route emitted). Use `app/api/internal/...` + runtime env gate (`NODE_ENV === 'production' && !MANIFEST_INTROSPECTION_ENABLED`) inside the handler instead. `tsc` + `lint` + `test` all pass the broken setup; only `pnpm exec next build`'s route table reveals the missing route. Caught Sprint 12 WP-G.18.
 22. **Background-subagent `completed` notifications can fire on premature exit.** Sprint 13 Subagent B (Monitoring page, 7 spec'd files) reported DONE with only 2 files written; its final transcript line was "### Step 2: Create `lib/monitoring/fetch.ts`" — it bailed mid-work but was marked complete anyway. Verify before trusting: `git status --porcelain` shows expected untracked files, `pnpm test` pass count matches the expected delta from the prompt (always specify "baseline → expected"), `pnpm exec next build` route table shows new routes. If any mismatch, re-dispatch with explicit finish prompt or complete in main thread. Never proceed to combined code-review on unverified subagent output.
+23. **Co-deployed MCP routes need `SSRF_ALLOW_LOCALHOST=1` in dev.** Sprint 15 C.6 moved SF/Slack/GitHub proxies to in-process routes at `app/api/mcps/<vendor>/route.ts`. The gateway's `proxyHttp` roundtrips `origin_url` through `safeFetch` to keep the "same contract as external" property. In dev, `origin_url` is `http://localhost:3000/...` which the SSRF guard blocks by default. Set `SSRF_ALLOW_LOCALHOST=1` in `.env.local` to allow it. Flag stays UNSET in production — Vercel `origin_url` is the live HTTPS domain, the guard accepts it, no exception needed. Document the flag's dual use (vitest + dev-mode co-deployed MCPs) in `lib/security/ssrf-guard.ts::validateUrl`.
+24. **Parallel Edit `replace_all` + overlapping indent levels produce duplicate-key bugs.** Sprint 15 K.1 ran two `replace_all` passes on `lib/mcp/stateless-server.ts` to insert `organization_id: scope.organization_id,` after every `trace_id: traceId,`. The 6-space pattern is a literal substring of the 8-space line, so the second pass matched inside the lines the first pass already modified — producing a duplicate `organization_id` property and tripping TypeScript TS1117. Two fixes: (a) anchor indent by including the newline prefix in the match (`\n      trace_id:` not `      trace_id:`), or (b) run the more-indented pattern FIRST, then the less-indented pattern only matches its native sites. Caught the hard way — 3 follow-up edits to collapse the duplicates.
 
 ---
 

@@ -29,13 +29,42 @@ export const proxy = async (request: NextRequest) => {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const requiresAuth = pathname.startsWith('/dashboard');
+  const requiresAuth = pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding');
 
   if (requiresAuth && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     url.searchParams.set('next', pathname);
     return NextResponse.redirect(url);
+  }
+
+  // Sprint 15 A.7: profile_completed gate. Authed users with an incomplete
+  // profile route through /onboarding (except when already there, to avoid
+  // the redirect loop). Authed users with profile_completed=true who hit
+  // /onboarding get bounced back to /dashboard. Single extra DB lookup per
+  // dashboard request — B-tree lookup on memberships.user_id (unique index),
+  // cheap at demo scale.
+  if (user) {
+    const isDashboard = pathname.startsWith('/dashboard');
+    const isOnboarding = pathname.startsWith('/onboarding');
+    if (isDashboard || isOnboarding) {
+      const { data: membership } = await supabase
+        .from('memberships')
+        .select('profile_completed')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      const completed = membership?.profile_completed === true;
+      if (isDashboard && !completed) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/onboarding';
+        return NextResponse.redirect(url);
+      }
+      if (isOnboarding && completed) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/dashboard';
+        return NextResponse.redirect(url);
+      }
+    }
   }
 
   return supabaseResponse;

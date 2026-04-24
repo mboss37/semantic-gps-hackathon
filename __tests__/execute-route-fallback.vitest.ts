@@ -181,7 +181,7 @@ describe('executeRoute fallback_to', () => {
       { route_id: ROUTE_ID, inputs: { query: 'acme' } },
       manifest(),
       policyCtxBuilder,
-      { traceId: 'trace-primary-ok' },
+      { traceId: 'trace-primary-ok', organizationId: null },
     );
 
     expect(result.ok).toBe(true);
@@ -209,7 +209,7 @@ describe('executeRoute fallback_to', () => {
       { route_id: ROUTE_ID, inputs: { query: 'acme' } },
       manifest(),
       policyCtxBuilder,
-      { traceId: 'trace-fallback-ok' },
+      { traceId: 'trace-fallback-ok', organizationId: null },
     );
 
     expect(result.ok).toBe(true);
@@ -241,7 +241,7 @@ describe('executeRoute fallback_to', () => {
       { route_id: ROUTE_ID, inputs: { query: 'acme' } },
       manifest(),
       policyCtxBuilder,
-      { traceId: 'trace-fallback-fail' },
+      { traceId: 'trace-fallback-fail', organizationId: null },
     );
 
     expect(result.ok).toBe(false);
@@ -286,7 +286,7 @@ describe('executeRoute fallback_to', () => {
       { route_id: ROUTE_ID, inputs: { query: 'acme' } },
       recurseManifest,
       policyCtxBuilder,
-      { traceId: 'trace-no-recurse' },
+      { traceId: 'trace-no-recurse', organizationId: null },
     );
 
     expect(result.ok).toBe(false);

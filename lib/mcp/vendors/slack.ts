@@ -1,39 +1,18 @@
 import { z } from 'zod';
-import type { ToolRow } from '@/lib/manifest/cache';
 import { safeFetch, SsrfBlockedError } from '@/lib/security/ssrf-guard';
-import {
-  decodeSlackAuthConfig,
-  loadServer,
-  TIMEOUT_MS,
-  UpstreamError,
-  type SlackAuthConfig,
-} from '@/lib/mcp/slack-auth';
+import { VendorError } from '@/lib/mcp/vendors/errors';
 
-// Re-export auth surface so external callers (tool-dispatcher, tests,
-// register-slack) keep a single import path.
-export { type SlackAuthConfig } from '@/lib/mcp/slack-auth';
+// Slack MCP vendor seam. Owns Bot Token REST dispatch for the 4 curated Slack
+// tools. `SLACK_BOT_TOKEN` comes from the env var — tokens don't auto-refresh
+// so no cache or mint flow. Colocated with the gateway today; extraction to a
+// standalone deploy is a zero-gateway-change refactor.
 
-// Slack proxy — hand-authored mapping from 3 curated MCP tools onto Slack Web
-// API methods. Bot Token only (Sprint 8 scope); no token cache because
-// `xoxb-...` tokens don't expire. Same ProxyResult contract as proxy-openapi /
-// proxy-http / proxy-salesforce so the dispatcher switch routes without
-// special casing.
-
+const TIMEOUT_MS = 10_000;
 const SLACK_API_BASE = 'https://slack.com/api';
 
-export type ProxyOk = { ok: true; result: unknown; latencyMs: number };
-export type ProxyErr = { ok: false; error: string; status?: number };
-export type ProxyResult = ProxyOk | ProxyErr;
-
-export type ProxyContext = {
-  serverId: string;
-  traceId: string;
-};
-
-// Slack API idiom: every response includes `{ok: boolean, ...}`. HTTP 200 with
-// `{ok: false, error: "..."}` is an application-level error (bad channel,
-// missing scope, etc.). Propagate as origin_error with the Slack error code
-// as detail so callers can distinguish `channel_not_found` from generic 4xx.
+// Slack: every response is `{ok: boolean, ...}`. HTTP 200 with `{ok:false}` is
+// an app-level error — surface with `error` as detail so callers can tell
+// `channel_not_found` from generic 4xx.
 const SlackEnvelopeSchema = z.object({
   ok: z.boolean(),
   error: z.string().optional(),
@@ -41,12 +20,13 @@ const SlackEnvelopeSchema = z.object({
 
 type SlackCallResult = { body: Record<string, unknown> };
 
-// Generic Slack Web API call. All three tools use POST + JSON body — Slack
-// accepts this uniformly when `Authorization: Bearer` is set, so the dispatch
-// layer stays flat. Slack requires the `charset=utf-8` content-type suffix
-// when POSTing JSON.
+const loadBotToken = (): string | null => {
+  const token = process.env.SLACK_BOT_TOKEN ?? '';
+  return token || null;
+};
+
 const slackCall = async (
-  auth: SlackAuthConfig,
+  botToken: string,
   method: string,
   body: Record<string, unknown>,
 ): Promise<SlackCallResult> => {
@@ -54,7 +34,7 @@ const slackCall = async (
   const init: RequestInit & { timeoutMs?: number } = {
     method: 'POST',
     headers: {
-      authorization: `Bearer ${auth.bot_token}`,
+      authorization: `Bearer ${botToken}`,
       'content-type': 'application/json; charset=utf-8',
       accept: 'application/json',
     },
@@ -67,34 +47,31 @@ const slackCall = async (
     res = await safeFetch(url, init);
   } catch (e) {
     if (e instanceof SsrfBlockedError) throw e;
-    throw new UpstreamError(502, 'network_error');
+    throw new VendorError(502, 'network_error');
   }
 
   const text = await res.text();
-  if (!res.ok) {
-    throw new UpstreamError(res.status, 'origin_error');
-  }
+  if (!res.ok) throw new VendorError(res.status, 'origin_error');
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new UpstreamError(502, 'parse_error');
+    throw new VendorError(502, 'parse_error');
   }
 
   const envelope = SlackEnvelopeSchema.safeParse(parsed);
   if (!envelope.success || typeof parsed !== 'object' || parsed === null) {
-    throw new UpstreamError(502, 'parse_error', 'slack response shape');
+    throw new VendorError(502, 'parse_error', 'slack response shape');
   }
   if (!envelope.data.ok) {
-    throw new UpstreamError(400, 'origin_error', envelope.data.error ?? 'unknown_slack_error');
+    throw new VendorError(400, 'origin_error', envelope.data.error ?? 'unknown_slack_error');
   }
 
   return { body: parsed as Record<string, unknown> };
 };
 
-// Per-tool input schemas. Enforced locally so we never hit Slack with
-// malformed input. Errors here become `invalid_input` before any fetch.
+// Per-tool input schemas.
 const UsersLookupArgs = z.object({ email: z.string().email().max(200) });
 const ChatPostMessageArgs = z.object({
   channel: z.string().min(1).max(200),
@@ -104,16 +81,12 @@ const ConversationsListArgs = z.object({
   types: z.string().max(200).optional(),
   limit: z.number().int().positive().max(1000).optional(),
 });
-// Compensator for chat_post_message (WP-12.2 / G.17). Slack message timestamps
-// are floating-point strings like "1699999999.123456"; we only validate length
-// + non-empty here and let Slack reject malformed ts upstream.
 const DeleteMessageArgs = z.object({
   channel: z.string().min(1).max(200),
   ts: z.string().min(1).max(64),
 });
 
-// Project verbose Slack user objects down to the 5 fields callers actually
-// need. Keeps tool output predictable for downstream policy + UI code.
+// Project verbose Slack user objects down to the 5 fields callers need.
 type SlackUserProjection = {
   id: string | null;
   name: string | null;
@@ -163,22 +136,72 @@ const projectChannels = (body: Record<string, unknown>): { channels: SlackChanne
   return { channels };
 };
 
-const dispatchTool = async (
-  auth: SlackAuthConfig,
+export const SLACK_TOOLS = [
+  {
+    name: 'users_lookup_by_email',
+    description: 'Find a Slack user by email address.',
+    inputSchema: {
+      type: 'object',
+      required: ['email'],
+      properties: { email: { type: 'string', format: 'email' } },
+    },
+  },
+  {
+    name: 'chat_post_message',
+    description: 'Post a message to a Slack channel or DM.',
+    inputSchema: {
+      type: 'object',
+      required: ['channel', 'text'],
+      properties: {
+        text: { type: 'string', minLength: 1 },
+        channel: { type: 'string', minLength: 1 },
+      },
+    },
+  },
+  {
+    name: 'conversations_list',
+    description: 'List Slack channels the bot has access to.',
+    inputSchema: {
+      type: 'object',
+      required: [],
+      properties: {
+        limit: { type: 'integer', minimum: 1, maximum: 1000 },
+        types: { type: 'string' },
+      },
+    },
+  },
+  {
+    name: 'delete_message',
+    description: 'Delete a previously-posted Slack message. Compensator for chat_post_message on saga rollback.',
+    inputSchema: {
+      type: 'object',
+      required: ['channel', 'ts'],
+      properties: {
+        channel: { type: 'string', minLength: 1 },
+        ts: { type: 'string', minLength: 1 },
+      },
+    },
+  },
+] as const;
+
+export const dispatchSlackTool = async (
   toolName: string,
   args: Record<string, unknown>,
 ): Promise<unknown> => {
+  const botToken = loadBotToken();
+  if (!botToken) throw new VendorError(500, 'credentials_missing');
+
   if (toolName === 'users_lookup_by_email') {
     const parsed = UsersLookupArgs.safeParse(args);
-    if (!parsed.success) throw new UpstreamError(400, 'invalid_input');
-    const { body } = await slackCall(auth, 'users.lookupByEmail', { email: parsed.data.email });
+    if (!parsed.success) throw new VendorError(400, 'invalid_input');
+    const { body } = await slackCall(botToken, 'users.lookupByEmail', { email: parsed.data.email });
     return projectUser(body);
   }
 
   if (toolName === 'chat_post_message') {
     const parsed = ChatPostMessageArgs.safeParse(args);
-    if (!parsed.success) throw new UpstreamError(400, 'invalid_input');
-    const { body } = await slackCall(auth, 'chat.postMessage', {
+    if (!parsed.success) throw new VendorError(400, 'invalid_input');
+    const { body } = await slackCall(botToken, 'chat.postMessage', {
       channel: parsed.data.channel,
       text: parsed.data.text,
     });
@@ -192,8 +215,8 @@ const dispatchTool = async (
 
   if (toolName === 'conversations_list') {
     const parsed = ConversationsListArgs.safeParse(args);
-    if (!parsed.success) throw new UpstreamError(400, 'invalid_input');
-    const { body } = await slackCall(auth, 'conversations.list', {
+    if (!parsed.success) throw new VendorError(400, 'invalid_input');
+    const { body } = await slackCall(botToken, 'conversations.list', {
       types: parsed.data.types ?? 'public_channel',
       limit: parsed.data.limit ?? 100,
     });
@@ -202,8 +225,8 @@ const dispatchTool = async (
 
   if (toolName === 'delete_message') {
     const parsed = DeleteMessageArgs.safeParse(args);
-    if (!parsed.success) throw new UpstreamError(400, 'invalid_input');
-    const { body } = await slackCall(auth, 'chat.delete', {
+    if (!parsed.success) throw new VendorError(400, 'invalid_input');
+    const { body } = await slackCall(botToken, 'chat.delete', {
       channel: parsed.data.channel,
       ts: parsed.data.ts,
     });
@@ -214,40 +237,5 @@ const dispatchTool = async (
     };
   }
 
-  throw new UpstreamError(400, 'unknown_tool');
-};
-
-// Public entry point for `tool-dispatcher.ts`. Same `ProxyResult` contract as
-// the OpenAPI + HTTP-streamable + Salesforce proxies so the dispatcher
-// transport switch stays uniform.
-export const proxySlack = async (
-  tool: ToolRow,
-  args: Record<string, unknown>,
-  ctx: ProxyContext,
-): Promise<ProxyResult> => {
-  const started = performance.now();
-
-  const server = await loadServer(ctx.serverId);
-  if (!server) return { ok: false, error: 'server_not_found' };
-  if (server.transport !== 'slack') return { ok: false, error: 'wrong_transport' };
-
-  let auth: SlackAuthConfig | null;
-  try {
-    auth = decodeSlackAuthConfig(server.auth_config);
-  } catch {
-    return { ok: false, error: 'auth_decode_failed' };
-  }
-  if (!auth) return { ok: false, error: 'auth_decode_failed' };
-
-  try {
-    const result = await dispatchTool(auth, tool.name, args);
-    const latencyMs = Math.round(performance.now() - started);
-    return { ok: true, result, latencyMs };
-  } catch (e) {
-    if (e instanceof SsrfBlockedError) return { ok: false, error: 'ssrf_blocked' };
-    if (e instanceof UpstreamError) {
-      return { ok: false, error: e.reason, status: e.status };
-    }
-    return { ok: false, error: 'network_error' };
-  }
+  throw new VendorError(400, 'unknown_tool');
 };

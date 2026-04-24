@@ -28,6 +28,10 @@ export type PolicyContextBuilder = (
 
 export type ExecuteRouteCtx = {
   traceId: string;
+  // Sprint 15 K.1: authenticated org threaded from the gateway scope so every
+  // step/rollback/fallback audit row lands with scope identity. Nullable to
+  // mirror the logger contract — callers that have an org MUST pass it.
+  organizationId: string | null;
 };
 
 // input_mapping DSL prefixes. Only values matching these prefixes at the head
@@ -182,13 +186,14 @@ const emitInputMappingError = (
   tool: ToolRow,
   started: number,
   error: unknown,
-  traceId: string,
+  ctx: ExecuteRouteCtx,
 ): ExecuteRouteStep => {
   const message = error instanceof Error ? error.message : String(error);
   const latencyMs = Math.round(performance.now() - started);
   const errText = `input_mapping: ${message}`;
   logMCPEvent({
-    trace_id: traceId,
+    trace_id: ctx.traceId,
+    organization_id: ctx.organizationId,
     server_id: tool.server_id,
     tool_name: tool.name,
     method: 'execute_route.step',
@@ -211,12 +216,13 @@ const emitBlockedStep = (
   args: Record<string, unknown>,
   started: number,
   pre: ReturnType<typeof runPreCallPolicies>,
-  traceId: string,
+  ctx: ExecuteRouteCtx,
 ): ExecuteRouteStep => {
   const latencyMs = Math.round(performance.now() - started);
   const reason = pre.action === 'block' ? pre.reason : 'blocked_by_policy';
   logMCPEvent({
-    trace_id: traceId,
+    trace_id: ctx.traceId,
+    organization_id: ctx.organizationId,
     server_id: tool.server_id,
     tool_name: tool.name,
     method: 'execute_route.step',
@@ -242,12 +248,13 @@ const emitExecStep = (
   post: ReturnType<typeof runPostCallPolicies>,
   pre: ReturnType<typeof runPreCallPolicies>,
   started: number,
-  traceId: string,
+  ctx: ExecuteRouteCtx,
 ): ExecuteRouteStep => {
   const latencyMs = exec.upstreamLatencyMs ?? Math.round(performance.now() - started);
   const status: ExecuteRouteStepStatus = exec.ok ? 'ok' : 'origin_error';
   logMCPEvent({
-    trace_id: traceId,
+    trace_id: ctx.traceId,
+    organization_id: ctx.organizationId,
     server_id: tool.server_id,
     tool_name: tool.name,
     method: 'execute_route.step',
@@ -308,15 +315,15 @@ const runExecPhase = async (
   pre: ReturnType<typeof runPreCallPolicies>,
   manifest: Manifest,
   started: number,
-  traceId: string,
+  ctx: ExecuteRouteCtx,
 ): Promise<{
   stepResult: ExecuteRouteStep;
   postResult: unknown;
   exec: Awaited<ReturnType<typeof executeTool>>;
 }> => {
-  const exec = await executeTool(manifest, entry, args, { traceId });
+  const exec = await executeTool(manifest, entry, args, { traceId: ctx.traceId });
   const post = runPostCallPolicies({ ...policyCtx, result: exec.result }, manifest);
-  const stepResult = emitExecStep(step, tool, args, exec, post, pre, started, traceId);
+  const stepResult = emitExecStep(step, tool, args, exec, post, pre, started, ctx);
   return { stepResult, postResult: post.result, exec };
 };
 
@@ -353,9 +360,10 @@ const attemptFallback = async (
   const fallbackPre = runPreCallPolicies(fallbackPolicyCtx, manifest);
   const fallbackStarted = performance.now();
   if (fallbackPre.action === 'block') {
-    const blocked = emitBlockedStep(step, fallback.tool, args, fallbackStarted, fallbackPre, ctx.traceId);
+    const blocked = emitBlockedStep(step, fallback.tool, args, fallbackStarted, fallbackPre, ctx);
     logMCPEvent({
       trace_id: ctx.traceId,
+      organization_id: ctx.organizationId,
       server_id: primaryTool.server_id,
       tool_name: primaryTool.name,
       method: 'execute_route.fallback',
@@ -385,12 +393,13 @@ const attemptFallback = async (
     fallbackPre,
     manifest,
     fallbackStarted,
-    ctx.traceId,
+    ctx,
   );
 
   if (fallbackStep.status === 'ok') {
     logMCPEvent({
       trace_id: ctx.traceId,
+      organization_id: ctx.organizationId,
       server_id: primaryTool.server_id,
       tool_name: primaryTool.name,
       method: 'execute_route.fallback',
@@ -422,6 +431,7 @@ const attemptFallback = async (
 
   logMCPEvent({
     trace_id: ctx.traceId,
+    organization_id: ctx.organizationId,
     server_id: primaryTool.server_id,
     tool_name: primaryTool.name,
     method: 'execute_route.fallback',
@@ -462,13 +472,13 @@ const runSingleStep = async (
       captureBag,
     );
   } catch (err) {
-    return emitInputMappingError(step, tool, started, err, ctx.traceId);
+    return emitInputMappingError(step, tool, started, err, ctx);
   }
 
   const policyCtx = policyCtxBuilder(entry, args);
   const pre = runPreCallPolicies(policyCtx, manifest);
   if (pre.action === 'block') {
-    return emitBlockedStep(step, tool, args, started, pre, ctx.traceId);
+    return emitBlockedStep(step, tool, args, started, pre, ctx);
   }
 
   const { stepResult, postResult } = await runExecPhase(
@@ -480,7 +490,7 @@ const runSingleStep = async (
     pre,
     manifest,
     started,
-    ctx.traceId,
+    ctx,
   );
 
   if (stepResult.status === 'ok') {
@@ -656,6 +666,7 @@ const executeRollback = async (
         summary.compensated_count += 1;
         logMCPEvent({
           trace_id: ctx.traceId,
+          organization_id: ctx.organizationId,
           server_id: compensation.tool.server_id,
           tool_name: compensation.tool.name,
           method: 'execute_route.rollback',
@@ -678,6 +689,7 @@ const executeRollback = async (
       summary.failed_count += 1;
       logMCPEvent({
         trace_id: ctx.traceId,
+        organization_id: ctx.organizationId,
         server_id: compensation.tool.server_id,
         tool_name: compensation.tool.name,
         method: 'execute_route.rollback',
@@ -702,6 +714,7 @@ const executeRollback = async (
       summary.failed_count += 1;
       logMCPEvent({
         trace_id: ctx.traceId,
+        organization_id: ctx.organizationId,
         server_id: compensation.tool.server_id,
         tool_name: compensation.tool.name,
         method: 'execute_route.rollback',

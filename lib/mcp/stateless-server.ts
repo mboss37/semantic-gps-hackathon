@@ -116,6 +116,7 @@ export const createStatelessServer = ({
 
     logMCPEvent({
       trace_id: traceId,
+      organization_id: scope.organization_id,
       method: 'tools/list',
       status: 'ok',
       latency_ms: Math.round(performance.now() - started),
@@ -146,6 +147,7 @@ export const createStatelessServer = ({
     if (!entry) {
       logMCPEvent({
         trace_id: traceId,
+        organization_id: scope.organization_id,
         tool_name: name,
         method: 'tools/call',
         status: 'origin_error',
@@ -163,6 +165,7 @@ export const createStatelessServer = ({
       const result = { content: [{ type: 'text', text: message }] };
       logMCPEvent({
         trace_id: traceId,
+        organization_id: scope.organization_id,
         tool_name: 'echo',
         method: 'tools/call',
         status: 'ok',
@@ -182,6 +185,7 @@ export const createStatelessServer = ({
 
       logMCPEvent({
         trace_id: traceId,
+        organization_id: scope.organization_id,
         server_id: entry.server_id,
         tool_name: entry.name,
         method: 'tools/call',
@@ -209,6 +213,7 @@ export const createStatelessServer = ({
     if (pre.action === 'block') {
       logMCPEvent({
         trace_id: traceId,
+        organization_id: scope.organization_id,
         server_id: entry.server_id,
         tool_name: entry.name,
         method: 'tools/call',
@@ -234,6 +239,7 @@ export const createStatelessServer = ({
 
     logMCPEvent({
       trace_id: traceId,
+      organization_id: scope.organization_id,
       server_id: entry.server_id,
       tool_name: entry.name,
       method: 'tools/call',
@@ -256,6 +262,7 @@ export const createStatelessServer = ({
     server.onerror = (err: Error) => {
       logMCPEvent({
         trace_id: traceId,
+        organization_id: scope.organization_id,
         method: err instanceof McpError ? `jsonrpc:${err.code}` : 'unknown',
         status: 'origin_error',
         payload: { message: err.message, governed: false },
@@ -270,6 +277,7 @@ export const createStatelessServer = ({
     const result = await discoverRelationships(req.params, manifest);
     logMCPEvent({
       trace_id: traceId,
+      organization_id: scope.organization_id,
       method: 'discover_relationships',
       status: 'ok',
       latency_ms: Math.round(performance.now() - started),
@@ -288,6 +296,7 @@ export const createStatelessServer = ({
     const result = await findWorkflowPath(req.params, manifest);
     logMCPEvent({
       trace_id: traceId,
+      organization_id: scope.organization_id,
       method: 'find_workflow_path',
       status: 'ok',
       latency_ms: Math.round(performance.now() - started),
@@ -302,6 +311,7 @@ export const createStatelessServer = ({
     const result = await validateWorkflow(req.params, manifest);
     logMCPEvent({
       trace_id: traceId,
+      organization_id: scope.organization_id,
       method: 'validate_workflow',
       status: 'ok',
       latency_ms: Math.round(performance.now() - started),
@@ -321,6 +331,7 @@ export const createStatelessServer = ({
     const result = await evaluateGoal(req.params, manifest);
     logMCPEvent({
       trace_id: traceId,
+      organization_id: scope.organization_id,
       method: 'evaluate_goal',
       status: 'ok',
       latency_ms: Math.round(performance.now() - started),
@@ -347,9 +358,13 @@ export const createStatelessServer = ({
       headers,
       client_ip: clientIp,
     });
-    const result = await executeRoute(req.params, manifest, policyCtxBuilder, { traceId });
+    const result = await executeRoute(req.params, manifest, policyCtxBuilder, {
+      traceId,
+      organizationId: scope.organization_id,
+    });
     logMCPEvent({
       trace_id: traceId,
+      organization_id: scope.organization_id,
       method: 'execute_route',
       status: result.ok ? 'ok' : 'origin_error',
       latency_ms: Math.round(performance.now() - started),
@@ -373,6 +388,7 @@ export const createStatelessServer = ({
     // McpError here is a method-not-found or protocol-level fault — audit and move on.
     logMCPEvent({
       trace_id: traceId,
+      organization_id: scope.organization_id,
       method: err instanceof McpError ? `jsonrpc:${err.code}` : 'unknown',
       status: 'origin_error',
       payload: { message: err.message },

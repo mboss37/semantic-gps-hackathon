@@ -112,7 +112,15 @@
 - Subagent B (14.3) exited mid-WP notification — main thread caught via git-status + missing-file verify (Sprint 13 lesson holding up); finished button component + test + page header edit in the main session.
 - Validations: 302 pass / 5 skip / 0 fail (+11 net), tsc + lint + `next build` clean with 3 new routes. 1 commit `4a17a64` pushed to main.
 
-## Current:
+## Current: Sprint 15 — Enterprise shape (Fri Apr 24 CET)
+
+Today is the big coding day. Retires demo-level scaffolding so judges browsing the source see an enterprise-shaped codebase under Depth-20 scrutiny. Nothing speculative — all three WPs come straight from the Friday P0 plan locked last night.
+
+- [ ] **C.6** (L) Extract SF/Slack/GitHub to standalone MCP servers. New `mcps/` monorepo; gateway loses three proxy files; demo org re-registers via `POST /api/servers`. Subagent lane A (parallel).
+- [ ] **K.1** (M) Enterprise data-model audit + fixes. `mcp_events.organization_id` add + backfill, `organizations` billing metadata, `memberships.role` widen, `domains` decide-or-drop, `gateway_tokens` cascade review. One migration + docs/ARCHITECTURE.md paragraph. Main thread.
+- [ ] **A.7** (M) First-signup onboarding wizard. `/onboarding` route gated by `profile_completed`, trigger refactor to consume user-provided org_name, retires `<handle>'s Workspace` auto-hack. Main thread, sequenced AFTER K.1 (shared trigger surface).
+
+Lanes: Subagent A (C.6) runs in parallel to main thread. Main executes K.1 → A.7 serially. Pull I.5 (Managed Agents, $5K side prize) mid-sprint if K.1+A.7 land before 17:00 CET. No mid-sprint scope additions without explicit approval.
 
 ## Session Log
 - 2026-04-23 — Sprint 14 shipped: 3 WPs (14.1 overview live + 14.2 origin health + 14.3 rediscover). Subagent B bailed mid-WP, main finished the gap. Reviewer approved with 8 suggestions; fixed 4 easy, BACKLOG'd 4 risky in new P1 "Identified issues" subsection. 302/5/0. 1 commit pushed.

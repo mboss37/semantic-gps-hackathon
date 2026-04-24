@@ -1,20 +1,22 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { encrypt } from '@/lib/crypto/encrypt';
-import type { SalesforceAuthConfig } from '@/lib/mcp/proxy-salesforce';
 
-// Importable helper — NOT a CLI runner. Invoked from J.3 (and from the dev
-// console during demo setup) to register the hero Salesforce server + its 5
-// curated tools. Credentials are encrypted via the same AES-GCM envelope used
-// by `/api/servers` so the manifest cache decode path is identical.
+// Importable helper — NOT a CLI runner. Invoked from J.3 and demo-setup flows
+// to register the Salesforce vendor MCP. After Sprint 15 WP-C.6 the SF proxy
+// lives as a Next.js route under `app/api/mcps/salesforce/route.ts`; this
+// helper registers it into the gateway via the standard http-streamable
+// transport path. Credentials live in env vars on the same deployment, so
+// `auth_config` stays null.
 
 type Args = {
   organization_id: string;
-  credentials: SalesforceAuthConfig;
   // Optional domain binding so the server shows up under the right scoped
   // gateway (e.g. SalesOps). J.3 resolves the domain_id before calling.
   domain_id?: string | null;
-  // Optional name override — defaults to "Demo Salesforce" so the dashboard
-  // row is recognizable at a glance.
+  // Absolute URL of the vendor MCP route. Defaults to the co-deployed route.
+  // Override for tests or a future standalone extraction.
+  origin_url?: string;
+  // Display name — defaults to "Demo Salesforce" so the dashboard row stays
+  // recognizable at a glance.
   name?: string;
 };
 
@@ -86,23 +88,43 @@ const TOOL_SEEDS: ToolSeed[] = [
       required: ['subject', 'whatId'],
     },
   },
+  {
+    name: 'delete_task',
+    description: 'Delete a Salesforce Task by Id. Compensator for create_task on saga rollback.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          pattern: '^[a-zA-Z0-9]{15,18}$',
+          description: 'Salesforce Task Id',
+        },
+      },
+      required: ['id'],
+    },
+  },
 ];
+
+const DEFAULT_ORIGIN_URL = 'http://localhost:3000/api/mcps/salesforce';
 
 export const registerSalesforceServer = async (
   supabase: SupabaseClient,
-  { organization_id, credentials, domain_id = null, name = 'Demo Salesforce' }: Args,
+  {
+    organization_id,
+    domain_id = null,
+    origin_url = DEFAULT_ORIGIN_URL,
+    name = 'Demo Salesforce',
+  }: Args,
 ): Promise<string> => {
-  const auth_config = { ciphertext: encrypt(JSON.stringify(credentials)) };
-
   const { data: server, error: serverErr } = await supabase
     .from('servers')
     .insert({
       organization_id,
       domain_id,
       name,
-      origin_url: credentials.login_url,
-      transport: 'salesforce',
-      auth_config,
+      origin_url,
+      transport: 'http-streamable',
+      auth_config: null,
     })
     .select('id')
     .single();
