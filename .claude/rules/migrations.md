@@ -32,6 +32,11 @@ paths: ["supabase/migrations/**"]
 - Local and Remote columns must match exactly, row-for-row
 - If they don't: stop, reconcile (usually by UPDATE on hosted `schema_migrations.version`), then re-verify before moving on
 
+## Sprint wrap
+- **Before closing any sprint that touched `supabase/migrations/`, run `pnpm supabase migration list --linked` and verify Local == Remote row-for-row.** If any local entry is missing on remote → `pnpm supabase db push` before writing the wrap commit.
+- Sprint 17 → 18 drift cost a user-visible bug: migration 22 (`gateway_tokens_kind`) committed to `main` + applied locally, never pushed to hosted → Sprint 18.3 deploy-test token-mint surfaced it as a generic "create failed" toast. See Hard-Won Lesson #32.
+- Rule of thumb: if the sprint added a `YYYYMMDDHHMMSS_*.sql` file, `db push` is part of the wrap, not a later deploy task.
+
 ## Related
 - `CLAUDE.md` § Off-Limits — banned operations at a glance
 - `docs/ARCHITECTURE.md` § Migration workflow — narrative version with the drift mechanism explained
