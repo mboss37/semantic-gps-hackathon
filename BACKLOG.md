@@ -32,23 +32,6 @@ Sprint 10 validation tested gateway behaviour via direct JSON-RPC, NOT the Playg
 - Start `cloudflared tunnel --url http://localhost:3000`, point `NEXT_PUBLIC_APP_URL` at it
 - Run each preset on `/dashboard/playground`; screen-record both panes; match against DEMO.md script
 
-#### [P0 Sat PM] Landing page rewrite — highest ranking lever (M)
-Current landing is black-void hero + text-only pitch + muted grey CTA + Next.js N-logo. Judges see it in 3 seconds and bounce. Per CLAUDE.md § Competition Mindset rule #1, this is the single highest-leverage Sat move — judges see this BEFORE the demo video, BEFORE the dashboard, BEFORE the source.
-
-Required minimum:
-- Plain-English headline — drop jargon stacks; try "Governance + observability for agentic AI. One gateway across every MCP."
-- Bold primary CTA in brand color (not muted grey); secondary CTA for GitHub
-- Hero media slot: 5-10s loop of saga rollback cascade OR Workflow Graph
-- Stat strip: "12 built-in policies · 8 canonical relationship types · 3 demo MCPs unified · Opus 4.7 with extended thinking"
-- Architecture diagram embed (from VISION.md or regenerated)
-- Screenshot grid: Dashboard + Workflow Graph + Playground A/B + Policy timeline
-- "Built with Claude Opus 4.7" badge + stack-logo strip (Next.js · Supabase · Anthropic SDK · React Flow)
-- Kill the Next.js `N` logo in the bottom-left corner
-- Demo video embed slot — render from `NEXT_PUBLIC_DEMO_VIDEO_URL`; empty env = no slot. Set the env Sun after recording upload; zero code change.
-- "Submitted to Cerebral Valley hackathon 2026" signal
-
-Approach: plan first per CLAUDE.md, then parallel subagents — hero + copy lane A, stat strip + architecture embed lane B, screenshot grid + polish lane C. Content derives from Sat AM's finalized narrative.
-
 ### Sunday Apr 26 AM (CET) — Emergency coding only, freeze at 12:00
 
 - If any P0 slipped Fri/Sat, finish here. Otherwise no commits.

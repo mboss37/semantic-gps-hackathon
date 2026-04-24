@@ -139,9 +139,13 @@
 - **Process retrospective: worktree isolation mandated post-sprint.** Three parallel subagents launched without `isolation: worktree` frontmatter. 17.4's `git stash` dance during baseline verification dropped 17.2's shipped work (migration + route + UI filter). Main thread reconstructed from earlier git-diff output. Follow-up commit `d852859` landed `.claude/agents/general-purpose.md` with `isolation: worktree`, `.worktreeinclude` for `.env.local` propagation, `cleanupPeriodDays: 7` in settings, CLAUDE.md § Parallel Work hard rule + merge contract, ARCHITECTURE.md Hard-Won Lessons #30 + #31. Four memories stored pinning the failure mode + fix. Next parallel sprint cannot regress this way.
 - Validations: 327 pass / 2 skip / 0 fail (+30 net), tsc + lint + `next build` clean with `/dashboard/policies/catalog` registered, `pnpm supabase db reset` applies migration 22 cleanly. 5 commits pushed to main (3d73ee7 open-sprint, d852859 worktree config, 7dad65e sprint-17 feat, 3fdcb37 backlog sync, ea35584 task marks).
 
-## Current:
+## Current: Sprint 18 — Public face (Fri Apr 24 evening CET)
 
-_(sprint not yet opened — run /open-sprint to pull from BACKLOG)_
+Landing page + end-to-end signup/onboarding validated on the deployed app + every shipped platform feature explained using real positioning best practices. Judges see landing → video → dashboard → code in that order, so landing is the single highest-leverage surface we control. Three specialist subagents (Product Owner / Content Manager / UX-UI Designer) do the prework before a line of code is written — no ad-hoc copy, no ad-hoc layout.
+
+- [ ] **18.1** (M) Product Owner + Content Manager + UX-UI Designer prework. Strategy + copy + layout specs before implementation. (Three specialist subagents, sequential: PO solo → Content + Designer in parallel.)
+- [ ] **18.2** (L) Landing page rewrite — hero + features section covering every shipped capability + stats + CTA + architecture + footer. Derived end-to-end from 18.1's prework, nothing ad-hoc. (Main thread.)
+- [ ] **18.3** (M) End-to-end signup + onboarding on the deployed Vercel app. Fresh email, click signup CTA, receive verification, land in onboarding wizard, complete to dashboard, register a server, mint a token, run a Playground preset. Every failure mode hit + fixed. (Main thread after 18.2 lands; exercises the full judge path.)
 
 ## Session Log
 - 2026-04-24 — Sprint 17 shipped: 4 WPs (catalog gallery + token consent + no-MCP guard + empty-state audit). Parallel subagent `git stash` collision wiped 17.2's work mid-sprint; main thread reconstructed + follow-up commit mandated `isolation: worktree` frontmatter on write-capable subagents. 4 new memories + 2 Hard-Won Lessons pin the fix. 327/2/0. 5 commits.
