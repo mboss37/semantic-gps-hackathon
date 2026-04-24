@@ -7,10 +7,11 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 // -- Hoisted mocks -----------------------------------------------------------
 
-const { requireAuthMock, mintTokenMock, betaCreateMock } = vi.hoisted(() => ({
+const { requireAuthMock, mintTokenMock, betaCreateMock, selectMaybeSingleMock } = vi.hoisted(() => ({
   requireAuthMock: vi.fn(),
   mintTokenMock: vi.fn(),
   betaCreateMock: vi.fn(),
+  selectMaybeSingleMock: vi.fn(),
 }));
 
 vi.mock('@/lib/auth', async () => {
@@ -27,7 +28,7 @@ vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: () => {
     const selectChain = {
       eq: () => selectChain,
-      maybeSingle: async () => ({ data: null, error: null }),
+      maybeSingle: () => selectMaybeSingleMock(),
     };
     return {
       from: () => ({
@@ -56,6 +57,8 @@ beforeEach(() => {
   requireAuthMock.mockReset();
   mintTokenMock.mockReset();
   betaCreateMock.mockReset();
+  selectMaybeSingleMock.mockReset();
+  selectMaybeSingleMock.mockResolvedValue({ data: null, error: null });
 });
 
 const { POST } = await import('@/app/api/playground/run/route');
@@ -316,5 +319,37 @@ describe('POST /api/playground/run', () => {
     expect(events.some((e) => e.type === 'error' && /mint/i.test(String(e.message)))).toBe(true);
     expect(events.at(-1)?.type).toBe('done');
     expect(betaCreateMock).not.toHaveBeenCalled();
+  });
+
+  it('reuses an existing system token instead of inserting a new one', async () => {
+    requireAuthMock.mockResolvedValueOnce({
+      user: { id: 'u1' },
+      organization_id: 'org-reuse',
+      role: 'admin',
+      supabase: {},
+    });
+    selectMaybeSingleMock.mockResolvedValueOnce({
+      data: { token_plaintext: 'sgps_existing-reuse-token', id: 'tok-reuse' },
+      error: null,
+    });
+    betaCreateMock.mockResolvedValueOnce({
+      stop_reason: 'end_turn',
+      content: [{ type: 'text', text: 'Reused token path.' }],
+    });
+
+    const res = await post({ prompt: 'reuse test', mode: 'gateway' });
+    expect(res.status).toBe(200);
+    const events = await readNdjson(res);
+    expect(events.some((e) => e.type === 'text')).toBe(true);
+    expect(events.at(-1)?.type).toBe('done');
+
+    // INSERT path should NOT be called when reuse path succeeds.
+    expect(mintTokenMock).not.toHaveBeenCalled();
+
+    // The reused plaintext should be forwarded to the Anthropic connector.
+    const callArgs = betaCreateMock.mock.calls[0][0] as {
+      mcp_servers: Array<{ authorization_token?: string }>;
+    };
+    expect(callArgs.mcp_servers[0].authorization_token).toBe('sgps_existing-reuse-token');
   });
 });

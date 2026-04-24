@@ -91,7 +91,7 @@ export const buildGatewayHandler = (
     const authPayload = {
       reason: 'missing_authorization',
       method: request.method,
-      url: request.url,
+      url: new URL(request.url).pathname,
       user_agent: headers['user-agent'] ?? null,
       referer: headers['referer'] ?? null,
       origin_header: headers['origin'] ?? null,

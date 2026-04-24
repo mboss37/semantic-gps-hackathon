@@ -1,6 +1,5 @@
-import { z } from 'zod';
-import { decrypt } from '@/lib/crypto/encrypt';
 import type { ServerRow, ToolRow } from '@/lib/manifest/cache';
+import { decodeAuthConfig, buildAuthHeaders, type AuthConfig } from '@/lib/servers/auth';
 import { safeFetch, SsrfBlockedError } from '@/lib/security/ssrf-guard';
 import { createServiceClient } from '@/lib/supabase/service';
 
@@ -27,52 +26,12 @@ export type ProxyContext = {
   traceId: string;
 };
 
-const EncryptedAuthSchema = z.object({ ciphertext: z.string().min(1) });
-
-const AuthConfigSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('none') }),
-  z.object({ type: z.literal('bearer'), token: z.string().min(1) }),
-  z.object({
-    type: z.literal('basic'),
-    username: z.string().min(1),
-    password: z.string().min(1),
-  }),
-  z.object({
-    type: z.literal('apikey-header'),
-    header_name: z.string().min(1),
-    header_value: z.string().min(1),
-  }),
-]);
-
-type AuthConfig = z.infer<typeof AuthConfigSchema>;
-
 const HTTP_METHODS = ['get', 'post', 'put', 'delete', 'patch'] as const;
 type HttpMethod = (typeof HTTP_METHODS)[number];
 
 type OpenApiOperation = { operationId?: string };
 type OpenApiPathItem = Partial<Record<HttpMethod, OpenApiOperation>>;
 type StoredOpenApiSpec = { paths?: Record<string, OpenApiPathItem> };
-
-const decodeAuthConfig = (raw: unknown): AuthConfig => {
-  if (raw === null || raw === undefined) return { type: 'none' };
-  const envelope = EncryptedAuthSchema.safeParse(raw);
-  if (!envelope.success) return { type: 'none' };
-  const plaintext = decrypt(envelope.data.ciphertext);
-  const parsed: unknown = JSON.parse(plaintext);
-  const auth = AuthConfigSchema.safeParse(parsed);
-  if (!auth.success) return { type: 'none' };
-  return auth.data;
-};
-
-export const buildAuthHeaders = (auth: AuthConfig): Record<string, string> => {
-  if (auth.type === 'bearer') return { authorization: `Bearer ${auth.token}` };
-  if (auth.type === 'basic') {
-    const b64 = Buffer.from(`${auth.username}:${auth.password}`, 'utf8').toString('base64');
-    return { authorization: `Basic ${b64}` };
-  }
-  if (auth.type === 'apikey-header') return { [auth.header_name.toLowerCase()]: auth.header_value };
-  return {};
-};
 
 const findOperation = (
   spec: StoredOpenApiSpec,

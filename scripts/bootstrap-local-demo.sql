@@ -5,11 +5,16 @@
 -- Playground story can be validated E2E against real upstreams without
 -- reaching for hosted.
 --
--- Apply:
+-- Apply (local — default base_url is http://localhost:3000):
 --   docker cp scripts/bootstrap-local-demo.sql \
 --     supabase_db_semantic-gps-hackathon:/tmp/bootstrap.sql
 --   docker exec supabase_db_semantic-gps-hackathon \
 --     psql -U postgres -d postgres -f /tmp/bootstrap.sql
+--
+-- Apply (hosted — override base_url):
+--   psql "$DATABASE_URL" \
+--     -v base_url='https://semantic-gps.vercel.app' \
+--     -f scripts/bootstrap-local-demo.sql
 --
 -- Preconditions:
 --   - `pnpm supabase start` (local stack up)
@@ -23,15 +28,36 @@
 --   - `.env.local` has `SSRF_ALLOW_LOCALHOST=1` for dev. The gateway's
 --     `proxyHttp` roundtrips `origin_url` through `safeFetch`; localhost
 --     hosts are blocked by default. This flag is a dev-only escape hatch;
---     on Vercel the seed gets rewritten with the live HTTPS domain and the
---     flag stays unset. See `lib/security/ssrf-guard.ts`.
---
--- Hosted deploy: before applying this seed to hosted Supabase, sed-replace
---   every `http://localhost:3000/` with the Vercel domain
---   (e.g. `https://semantic-gps-hackathon.vercel.app/`). SSRF guard accepts
---   public HTTPS; no flag flip needed in prod.
+--     on Vercel the seed uses the live HTTPS domain and the flag stays
+--     unset. See `lib/security/ssrf-guard.ts`.
+
+-- ---------------------------------------------------------------------------
+-- psql variable: base_url (defaults to http://localhost:3000)
+-- Pass -v base_url='https://...' to override for hosted deploys.
+-- ---------------------------------------------------------------------------
+\if :{?base_url}
+\else
+\set base_url 'http://localhost:3000'
+\endif
 
 BEGIN;
+
+-- ---------------------------------------------------------------------------
+-- Precondition: demo org must exist (seed.sql creates it)
+-- ---------------------------------------------------------------------------
+DO $$
+DECLARE
+  _org_id uuid;
+BEGIN
+  SELECT m.organization_id INTO _org_id
+    FROM public.memberships m
+   WHERE m.user_id = '11111111-1111-1111-1111-111111111111'
+   LIMIT 1;
+
+  IF _org_id IS NULL THEN
+    RAISE EXCEPTION 'Demo org not found — run seed.sql first (pnpm supabase db reset)';
+  END IF;
+END $$;
 
 -- ---------------------------------------------------------------------------
 -- Cleanup (safe order — reverse of FK dependency)
@@ -81,7 +107,7 @@ INSERT INTO public.servers (organization_id, name, transport, origin_url, auth_c
 SELECT m.organization_id,
        'Demo Salesforce',
        'http-streamable',
-       'http://localhost:3000/api/mcps/salesforce',
+       :'base_url' || '/api/mcps/salesforce',
        NULL
   FROM public.memberships m
   JOIN auth.users u ON u.id = m.user_id
@@ -92,7 +118,7 @@ INSERT INTO public.servers (organization_id, name, transport, origin_url, auth_c
 SELECT m.organization_id,
        'Demo Slack',
        'http-streamable',
-       'http://localhost:3000/api/mcps/slack',
+       :'base_url' || '/api/mcps/slack',
        NULL
   FROM public.memberships m
   JOIN auth.users u ON u.id = m.user_id
@@ -103,7 +129,7 @@ INSERT INTO public.servers (organization_id, name, transport, origin_url, auth_c
 SELECT m.organization_id,
        'Demo GitHub',
        'http-streamable',
-       'http://localhost:3000/api/mcps/github',
+       :'base_url' || '/api/mcps/github',
        NULL
   FROM public.memberships m
   JOIN auth.users u ON u.id = m.user_id

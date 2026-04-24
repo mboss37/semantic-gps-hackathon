@@ -6,14 +6,21 @@ import {
   PlayIcon,
   ServerIcon,
   SparklesIcon,
-  ShieldCheckIcon,
-  ZapIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { SCENARIOS } from './playground-scenarios';
+import {
+  PANES,
+  applyEvent,
+  emptyPane,
+  toStreamEvents,
+} from './playground-event-reducer';
+import type { PaneState } from './playground-event-reducer';
+import { PaneView } from './playground-pane-view';
 
 // Sprint 17 WP-17.3: pure decision function driving both the Execute button's
 // disabled state and the visible "Register a server first" CTA. Exported so
@@ -40,191 +47,6 @@ export const computePlaygroundGate = (input: {
 // them) and gateway (our MCP gateway routed through Anthropic's beta
 // `mcp_servers` connector, with policies + relationships + rollback + audit).
 // Events stream as NDJSON from /api/playground/run and render per-pane.
-
-type ToolCallEvent = {
-  type: 'tool_call';
-  id: string;
-  name: string;
-  args_preview: string;
-};
-
-type ToolResultEvent = {
-  type: 'tool_result';
-  id: string;
-  summary: string;
-  is_error?: boolean;
-};
-
-type TextEvent = { type: 'text'; content: string };
-
-type ThinkingEvent = { type: 'thinking'; content: string };
-
-type PolicyEvent = { type: 'policy_event'; detail: string };
-
-type ErrorEvent = { type: 'error'; message: string };
-
-type DoneEvent = {
-  type: 'done';
-  stats: {
-    tool_calls: number;
-    ms: number;
-    policy_events?: number;
-    thinking_chars?: number;
-  };
-};
-
-type StreamEvent =
-  | ToolCallEvent
-  | ToolResultEvent
-  | TextEvent
-  | ThinkingEvent
-  | PolicyEvent
-  | ErrorEvent
-  | DoneEvent;
-
-type PaneState = {
-  running: boolean;
-  toolCalls: ToolCallEvent[];
-  toolResults: Map<string, ToolResultEvent>;
-  policyEvents: PolicyEvent[];
-  text: string;
-  thinking: string;
-  error: string | null;
-  stats: DoneEvent['stats'] | null;
-};
-
-const emptyPane = (): PaneState => ({
-  running: false,
-  toolCalls: [],
-  toolResults: new Map(),
-  policyEvents: [],
-  text: '',
-  thinking: '',
-  error: null,
-  stats: null,
-});
-
-type Scenario = {
-  id: string;
-  label: string;
-  prompt: string;
-  hint: string;
-};
-
-const SCENARIOS: Scenario[] = [
-  {
-    id: 'off-hours',
-    label: 'Off-hours escalation',
-    prompt:
-      'An urgent customer incident just came in. Look up the Salesforce account for Edge Communications and give me the account ID so I can page the engineer on call.',
-    hint: 'business_hours_window blocks tool calls outside Mon-Fri 09:00-17:00 Europe/Vienna. On a weekend or after-hours run, raw fetches the account while the gateway refuses. Flip to shadow on the Policies page to watch it log silently, then back to enforce to re-arm the block.',
-  },
-  {
-    id: 'write-freeze',
-    label: 'Incident write-freeze',
-    prompt:
-      "Follow up with Edge Communications on the payment outage. Create a Salesforce task on the Edge Communications account with subject 'Follow-up — payment crash investigation'.",
-    hint: 'write_freeze_killswitch starts disabled. On the Policies page, flip enabled=true and re-run. Raw still creates the task; the gateway freezes every tool call. The "read-only during an incident" kill switch.',
-  },
-  {
-    id: 'pii-leak',
-    label: 'PII leak (hero)',
-    prompt:
-      'Edge Communications reported a payment crash on checkout. Find the Salesforce account for Edge Communications, grab their phone number from the account record, and post a heads-up to Slack #sozial so engineering can call them directly. Include the phone number in the Slack message verbatim.',
-    hint: 'redact_contact_pii starts in shadow — gateway observes, does not block. Flip to enforce and re-run: raw leaks the phone to Slack, gateway redacts it. Observability → enforcement in 30 seconds.',
-  },
-];
-
-const toStreamEvents = async (
-  res: Response,
-  onEvent: (event: StreamEvent) => void,
-): Promise<void> => {
-  if (!res.body) throw new Error('no response body');
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() ?? '';
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      try {
-        const parsed = JSON.parse(trimmed) as StreamEvent;
-        onEvent(parsed);
-      } catch {
-        // Skip malformed line — keep the stream alive on downstream bugs.
-      }
-    }
-  }
-  const tail = buffer.trim();
-  if (tail) {
-    try {
-      onEvent(JSON.parse(tail) as StreamEvent);
-    } catch {
-      // swallow
-    }
-  }
-};
-
-const applyEvent = (prev: PaneState, event: StreamEvent): PaneState => {
-  if (event.type === 'tool_call') {
-    return { ...prev, toolCalls: [...prev.toolCalls, event] };
-  }
-  if (event.type === 'tool_result') {
-    const next = new Map(prev.toolResults);
-    next.set(event.id, event);
-    return { ...prev, toolResults: next };
-  }
-  if (event.type === 'policy_event') {
-    return { ...prev, policyEvents: [...prev.policyEvents, event] };
-  }
-  if (event.type === 'text') {
-    return { ...prev, text: prev.text + event.content };
-  }
-  if (event.type === 'thinking') {
-    // Non-streaming beta.messages.create returns thinking as one or more
-    // complete blocks. Concatenate with a blank line between blocks for
-    // readability in the collapsible reasoning panel.
-    const sep = prev.thinking ? '\n\n' : '';
-    return { ...prev, thinking: prev.thinking + sep + event.content };
-  }
-  if (event.type === 'error') {
-    return { ...prev, error: event.message };
-  }
-  if (event.type === 'done') {
-    return { ...prev, running: false, stats: event.stats };
-  }
-  return prev;
-};
-
-type Pane = {
-  key: 'raw' | 'gateway';
-  title: string;
-  badge: string;
-  badgeTone: 'muted' | 'governed';
-  icon: typeof ZapIcon;
-};
-
-const PANES: Pane[] = [
-  {
-    key: 'raw',
-    title: 'Raw MCP',
-    badge: 'Direct / no governance',
-    badgeTone: 'muted',
-    icon: ZapIcon,
-  },
-  {
-    key: 'gateway',
-    title: 'Semantic GPS',
-    badge: 'Policy-enforced',
-    badgeTone: 'governed',
-    icon: ShieldCheckIcon,
-  },
-];
 
 export const PlaygroundWorkbench = ({
   tokenName,
@@ -357,129 +179,5 @@ export const PlaygroundWorkbench = ({
         })}
       </div>
     </div>
-  );
-};
-
-const PaneView = ({ pane, state }: { pane: Pane; state: PaneState }) => {
-  const Icon = pane.icon;
-  return (
-    <Card className="flex flex-col">
-      <CardHeader>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Icon className="size-4" />
-            <CardTitle className="text-base">{pane.title}</CardTitle>
-          </div>
-          <Badge
-            variant={pane.badgeTone === 'governed' ? 'default' : 'secondary'}
-            className="text-xs"
-          >
-            {pane.badge}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-3">
-        {state.toolCalls.length === 0 && !state.text && !state.error && !state.running ? (
-          <p className="text-xs text-muted-foreground">
-            Awaiting run. Results appear here once the agent starts.
-          </p>
-        ) : null}
-
-        {state.running && state.toolCalls.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
-            <span className="mr-2 inline-block size-2 animate-pulse rounded-full bg-blue-400" />
-            Streaming…
-          </p>
-        ) : null}
-
-        {state.toolCalls.length > 0 ? (
-          <div className="flex flex-col gap-1.5">
-            {state.toolCalls.map((call) => {
-              const result = state.toolResults.get(call.id);
-              const status = result?.is_error ? 'error' : result ? 'ok' : 'pending';
-              return (
-                <div
-                  key={call.id}
-                  className="rounded-md border border-border/60 bg-muted/20 px-2.5 py-1.5"
-                >
-                  <div className="flex items-center gap-2 text-xs">
-                    <span
-                      className={
-                        status === 'error'
-                          ? 'size-2 shrink-0 rounded-full bg-red-400'
-                          : status === 'ok'
-                            ? 'size-2 shrink-0 rounded-full bg-green-400'
-                            : 'size-2 shrink-0 shrink-0 animate-pulse rounded-full bg-yellow-400'
-                      }
-                    />
-                    <code className="font-mono text-xs font-semibold">{call.name}</code>
-                    <span className="truncate text-muted-foreground">
-                      {call.args_preview}
-                    </span>
-                  </div>
-                  {result ? (
-                    <p className="mt-1 line-clamp-2 pl-4 text-[11px] text-muted-foreground">
-                      {result.summary}
-                    </p>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        ) : null}
-
-        {pane.key === 'gateway' && state.policyEvents.length > 0 ? (
-          <div className="flex flex-col gap-1 rounded-md border border-amber-500/30 bg-amber-500/5 px-2.5 py-2 text-xs">
-            <span className="font-medium text-amber-300">Policy events</span>
-            {state.policyEvents.map((evt, i) => (
-              <span key={i} className="text-amber-200/90">
-                {evt.detail}
-              </span>
-            ))}
-          </div>
-        ) : null}
-
-        {state.thinking ? (
-          <details className="group rounded-md border border-violet-500/30 bg-violet-500/5 px-2.5 py-1.5 text-xs">
-            <summary className="flex cursor-pointer items-center gap-1.5 font-medium text-violet-300 select-none">
-              <SparklesIcon className="size-3.5" />
-              Show reasoning
-              <span className="ml-auto text-[10px] font-normal text-violet-300/60">
-                {state.thinking.length.toLocaleString()} chars
-              </span>
-            </summary>
-            <pre className="mt-2 whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-violet-100/80">
-              {state.thinking}
-            </pre>
-          </details>
-        ) : null}
-
-        {state.text ? (
-          <div className="whitespace-pre-wrap rounded-md border bg-background/50 px-3 py-2 text-sm leading-relaxed">
-            {state.text}
-          </div>
-        ) : null}
-
-        {state.error ? (
-          <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
-            {state.error}
-          </div>
-        ) : null}
-
-        <div className="mt-auto flex flex-wrap items-center gap-3 border-t pt-3 text-xs text-muted-foreground">
-          <span>{state.stats?.tool_calls ?? state.toolCalls.length} tool calls</span>
-          <span className="opacity-50">·</span>
-          <span>{state.stats?.ms ? `${state.stats.ms} ms` : state.running ? '…' : '—'}</span>
-          {pane.key === 'gateway' ? (
-            <>
-              <span className="opacity-50">·</span>
-              <span>
-                {state.stats?.policy_events ?? state.policyEvents.length} policy events
-              </span>
-            </>
-          ) : null}
-        </div>
-      </CardContent>
-    </Card>
   );
 };

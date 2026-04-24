@@ -44,15 +44,14 @@ export const completeOnboarding = async (
     return { ok: false, error: 'invalid_input', issues };
   }
 
-  let ctx;
-  try {
-    ctx = await requireAuth();
-  } catch (e) {
-    if (e instanceof UnauthorizedError) {
-      return { ok: false, error: 'unauthorized' };
-    }
+  const ctxOrError = await requireAuth().catch((e: unknown) => {
+    if (e instanceof UnauthorizedError) return null;
     throw e;
+  });
+  if (!ctxOrError) {
+    return { ok: false, error: 'unauthorized' };
   }
+  const ctx = ctxOrError;
 
   if (ctx.profile_completed) {
     return { ok: false, error: 'already_completed' };
@@ -62,11 +61,18 @@ export const completeOnboarding = async (
 
   const orgUpdate = await ctx.supabase
     .from('organizations')
-    .update({ name: org_name, created_by: ctx.user.id })
+    .update({ name: org_name })
     .eq('id', ctx.organization_id);
   if (orgUpdate.error) {
     return { ok: false, error: 'update_failed', detail: 'org_update_failed' };
   }
+
+  // Set created_by only if not already stamped (preserves audit trail on retry)
+  await ctx.supabase
+    .from('organizations')
+    .update({ created_by: ctx.user.id })
+    .eq('id', ctx.organization_id)
+    .is('created_by', null);
 
   const membershipUpdate = await ctx.supabase
     .from('memberships')

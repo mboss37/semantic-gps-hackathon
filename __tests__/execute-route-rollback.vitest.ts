@@ -281,6 +281,59 @@ describe('executeRoute rollback', () => {
     expect(deleteContactArgs.accountId).toBe('acc_1');
   });
 
+  // Sprint 19 WP-19.9 regression: in-process HTTP-Streamable MCPs
+  // (SF/Slack/GitHub under app/api/mcps/<vendor>/) wrap results in the MCP
+  // wire envelope {content:[{type:"text", text:"<JSON>"}]}. Pre-fix the
+  // capture bag stored the envelope verbatim, so every downstream step
+  // with `$steps.<key>.result.<field>` resolved to undefined and the
+  // rollback cascade demo broke. Fix unwraps the envelope at capture time.
+  it('unwraps MCP envelope results so downstream input_mapping and rollback see the logical object', async () => {
+    // proxy-http.ts::extractResult strips the outer {content:...} wrapper
+    // before handing the result to execute-route, so what reaches the
+    // capture bag is a bare array of content parts. Match that shape.
+    const envelopeResult = [{ type: 'text', text: '{"id":"acc_env","name":"EnvAcme"}' }];
+
+    configureExec({
+      'sf.create_account': { ok: true, result: envelopeResult },
+      'sf.create_contact': { ok: true, result: { id: 'con_env', accountId: 'acc_env' } },
+      'sf.create_task': { ok: false, error: 'origin 500' },
+      'sf.delete_account': { ok: true, result: { success: true } },
+      'sf.delete_contact': { ok: true, result: { success: true } },
+    });
+
+    const result = await executeRoute(
+      { route_id: ROUTE_ID, inputs: { name: 'EnvAcme' } },
+      buildManifest(),
+      policyCtxBuilder,
+      { traceId: 'trace-envelope', organizationId: null },
+    );
+
+    expect(result.ok).toBe(false);
+
+    // Forward input_mapping — step 2 reads $steps.account.id. Without the
+    // unwrap this would have been undefined and step 2 would have failed
+    // or been called with accountId: undefined.
+    const createContactCall = executeToolMock.mock.calls.find(
+      (c) => (c[1] as { name: string }).name === 'sf.create_contact',
+    );
+    expect((createContactCall?.[2] as { accountId: unknown }).accountId).toBe('acc_env');
+
+    // Rollback via compensated_by — delete_contact gets its own result's
+    // accountId (con_env → acc_env), proving the envelope unwrap also
+    // covers intermediate captures used by the rollback walk.
+    const deleteContactCall = executeToolMock.mock.calls.find(
+      (c) => (c[1] as { name: string }).name === 'sf.delete_contact',
+    );
+    expect((deleteContactCall?.[2] as { accountId: unknown }).accountId).toBe('acc_env');
+
+    expect(result.rollback_summary).toEqual({
+      attempted: true,
+      compensated_count: 2,
+      skipped_count: 0,
+      failed_count: 0,
+    });
+  });
+
   it('marks a completed step without a compensated_by edge as skipped', async () => {
     // Remove create_account → delete_account edge. Step 1 completes but has
     // no compensation. Step 2 fails, triggering rollback. Since step 2 never

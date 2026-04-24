@@ -54,7 +54,7 @@ const STEPS: readonly Step[] = [
   "method": "execute_route",
   "params": {
     "route": "sales_escalation",
-    "inputs": { "account_name": "Edge" }
+    "inputs": { "query": "Edge" }
   }
 }
 

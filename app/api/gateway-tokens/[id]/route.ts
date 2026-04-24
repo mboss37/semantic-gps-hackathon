@@ -40,6 +40,7 @@ export const DELETE = async (_request: Request, ctx: RouteCtx): Promise<Response
     .delete()
     .eq('id', parsedParams.data.id)
     .eq('organization_id', organization_id)
+    .neq('kind', 'system')
     .select('id');
 
   if (error) {

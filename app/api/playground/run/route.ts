@@ -1,9 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
-import { randomBytes } from 'node:crypto';
 import { requireAuth, UnauthorizedError } from '@/lib/auth';
 import { modelPlayground } from '@/lib/config/models';
-import { hashToken } from '@/lib/mcp/auth-token';
+import { mintPlaygroundToken } from '@/lib/mcp/playground-token';
 
 // Sprint 8 WP-J.1 (refactored): Playground A/B run endpoint. Both modes use
 // Anthropic's beta mcp_servers connector — same Opus, same prompt, same max
@@ -108,55 +107,6 @@ const gatewayBaseUrl = (): string => {
 };
 
 const rawBaseUrl = (): string => gatewayBaseUrl().replace(/\/api\/mcp$/, '/api/mcp/raw');
-
-// Sprint 17 WP-17.2: reuse a single org-owned `kind='system'` token instead
-// of minting a fresh row per Execute click. Behaviour:
-//   1. SELECT the existing system row for this org → reuse its plaintext.
-//   2. Otherwise INSERT one with a stable name + plaintext stored on the row,
-//      so the next call hits the reuse path.
-// System tokens are filtered out of `/dashboard/tokens` (loader + API) so the
-// user never sees, rotates, or deletes them. The user's consent surface for
-// tokens is exclusively the "Create token" dialog, which mints `kind='user'`
-// rows.
-const PLAYGROUND_SYSTEM_TOKEN_NAME = 'playground-internal';
-
-const mintPlaygroundToken = async (
-  organization_id: string,
-): Promise<{ plaintext: string; id: string } | null> => {
-  const { createServiceClient } = await import('@/lib/supabase/service');
-  const supabase = createServiceClient();
-
-  const { data: existing, error: selectError } = await supabase
-    .from('gateway_tokens')
-    .select('id, token_plaintext')
-    .eq('organization_id', organization_id)
-    .eq('kind', 'system')
-    .eq('name', PLAYGROUND_SYSTEM_TOKEN_NAME)
-    .maybeSingle();
-  if (selectError) return null;
-  if (existing && typeof existing.token_plaintext === 'string') {
-    return { plaintext: existing.token_plaintext, id: existing.id as string };
-  }
-
-  // First run on a fresh org — mint the single row and cache its plaintext.
-  // The CHECK on gateway_tokens guarantees only `kind='system'` rows may
-  // carry a plaintext; a user-route writer can't hit this path.
-  const plaintext = `sgps_${randomBytes(32).toString('hex')}`;
-  const token_hash = hashToken(plaintext);
-  const { data, error } = await supabase
-    .from('gateway_tokens')
-    .insert({
-      organization_id,
-      token_hash,
-      token_plaintext: plaintext,
-      name: PLAYGROUND_SYSTEM_TOKEN_NAME,
-      kind: 'system',
-    })
-    .select('id')
-    .single();
-  if (error || !data) return null;
-  return { plaintext, id: data.id as string };
-};
 
 const runWithMcp = async (
   anthropic: Anthropic,

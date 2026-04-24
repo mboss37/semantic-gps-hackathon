@@ -1,8 +1,8 @@
-"use client"
+'use client';
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { type LucideIcon } from "lucide-react"
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { type LucideIcon } from 'lucide-react';
 
 import {
   SidebarGroup,
@@ -10,18 +10,18 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
+} from '@/components/ui/sidebar';
 
 export function NavMain({
   items,
 }: {
   items: {
-    title: string
-    url: string
-    icon?: LucideIcon
-  }[]
+    title: string;
+    url: string;
+    icon?: LucideIcon;
+  }[];
 }) {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   return (
     <SidebarGroup>
@@ -33,8 +33,8 @@ export function NavMain({
                 asChild
                 tooltip={item.title}
                 isActive={
-                  item.url === "/dashboard"
-                    ? pathname === "/dashboard"
+                  item.url === '/dashboard'
+                    ? pathname === '/dashboard'
                     : pathname.startsWith(item.url)
                 }
               >
@@ -48,5 +48,5 @@ export function NavMain({
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
-  )
+  );
 }

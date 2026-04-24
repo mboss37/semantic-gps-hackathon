@@ -11,9 +11,29 @@ export const EncryptedAuthSchema = z.object({ ciphertext: z.string().min(1) });
 export const AuthConfigSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('none') }),
   z.object({ type: z.literal('bearer'), token: z.string().min(1) }),
+  z.object({
+    type: z.literal('basic'),
+    username: z.string().min(1),
+    password: z.string().min(1),
+  }),
+  z.object({
+    type: z.literal('apikey-header'),
+    header_name: z.string().min(1),
+    header_value: z.string().min(1),
+  }),
 ]);
 
 export type AuthConfig = z.infer<typeof AuthConfigSchema>;
+
+export const buildAuthHeaders = (auth: AuthConfig): Record<string, string> => {
+  if (auth.type === 'bearer') return { authorization: `Bearer ${auth.token}` };
+  if (auth.type === 'basic') {
+    const b64 = Buffer.from(`${auth.username}:${auth.password}`, 'utf8').toString('base64');
+    return { authorization: `Basic ${b64}` };
+  }
+  if (auth.type === 'apikey-header') return { [auth.header_name.toLowerCase()]: auth.header_value };
+  return {};
+};
 
 export const decodeAuthConfig = (raw: unknown): AuthConfig => {
   if (raw === null || raw === undefined) return { type: 'none' };

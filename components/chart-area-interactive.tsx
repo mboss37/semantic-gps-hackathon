@@ -165,76 +165,76 @@ export const ChartAreaInteractive = () => {
             </p>
           </div>
         ) : (
-        <ChartContainer
-          config={chartConfig}
-          className="aspect-auto h-[250px] w-full"
-        >
-          <AreaChart data={data ?? []}>
-            <defs>
-              <linearGradient id="fillOk" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-ok)" stopOpacity={0.9} />
-                <stop offset="95%" stopColor="var(--color-ok)" stopOpacity={0.1} />
-              </linearGradient>
-              <linearGradient id="fillBlocked" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-blocked)" stopOpacity={0.9} />
-                <stop offset="95%" stopColor="var(--color-blocked)" stopOpacity={0.1} />
-              </linearGradient>
-              <linearGradient id="fillError" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-error)" stopOpacity={0.9} />
-                <stop offset="95%" stopColor="var(--color-error)" stopOpacity={0.1} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid vertical={false} />
-            <XAxis
-              dataKey="date"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              minTickGap={32}
-              tickFormatter={(value) =>
-                new Date(value).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })
-              }
-            />
-            <ChartTooltip
-              cursor={false}
-              content={
-                <ChartTooltipContent
-                  labelFormatter={(value) =>
-                    new Date(value).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })
-                  }
-                  indicator="dot"
-                />
-              }
-            />
-            <Area
-              dataKey="ok"
-              type="natural"
-              fill="url(#fillOk)"
-              stroke="var(--color-ok)"
-              stackId="a"
-            />
-            <Area
-              dataKey="blocked"
-              type="natural"
-              fill="url(#fillBlocked)"
-              stroke="var(--color-blocked)"
-              stackId="a"
-            />
-            <Area
-              dataKey="error"
-              type="natural"
-              fill="url(#fillError)"
-              stroke="var(--color-error)"
-              stackId="a"
-            />
-          </AreaChart>
-        </ChartContainer>
+          <ChartContainer
+            config={chartConfig}
+            className="aspect-auto h-[250px] w-full"
+          >
+            <AreaChart data={data ?? []}>
+              <defs>
+                <linearGradient id="fillOk" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--color-ok)" stopOpacity={0.9} />
+                  <stop offset="95%" stopColor="var(--color-ok)" stopOpacity={0.1} />
+                </linearGradient>
+                <linearGradient id="fillBlocked" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--color-blocked)" stopOpacity={0.9} />
+                  <stop offset="95%" stopColor="var(--color-blocked)" stopOpacity={0.1} />
+                </linearGradient>
+                <linearGradient id="fillError" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--color-error)" stopOpacity={0.9} />
+                  <stop offset="95%" stopColor="var(--color-error)" stopOpacity={0.1} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="date"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                minTickGap={32}
+                tickFormatter={(value) =>
+                  new Date(value).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                  })
+                }
+              />
+              <ChartTooltip
+                cursor={false}
+                content={
+                  <ChartTooltipContent
+                    labelFormatter={(value) =>
+                      new Date(value).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                      })
+                    }
+                    indicator="dot"
+                  />
+                }
+              />
+              <Area
+                dataKey="ok"
+                type="natural"
+                fill="url(#fillOk)"
+                stroke="var(--color-ok)"
+                stackId="a"
+              />
+              <Area
+                dataKey="blocked"
+                type="natural"
+                fill="url(#fillBlocked)"
+                stroke="var(--color-blocked)"
+                stackId="a"
+              />
+              <Area
+                dataKey="error"
+                type="natural"
+                fill="url(#fillError)"
+                stroke="var(--color-error)"
+                stackId="a"
+              />
+            </AreaChart>
+          </ChartContainer>
         )}
       </CardContent>
     </Card>

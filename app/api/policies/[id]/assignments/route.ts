@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth, UnauthorizedError } from '@/lib/auth';
 import { invalidateManifest } from '@/lib/manifest/cache';
+import {
+  verifyAssignmentTarget,
+  verifyPolicyOrg,
+  verifyResultToResponse,
+} from '@/lib/policies/assignments';
 
 // Sprint 9 WP-G.9: tool-level assignments. Body still accepts {server_id?,
 // tool_id?} but we now enforce that every referenced id resolves to the
@@ -26,14 +31,6 @@ const CreateBody = z
 const unauthorized = (): Response =>
   NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
-type ToolRow = {
-  id: string;
-  server_id: string;
-  servers: { organization_id: string } | null;
-};
-
-type ServerRow = { id: string; organization_id: string };
-
 export const POST = async (
   request: Request,
   ctx: { params: Promise<{ id: string }> },
@@ -52,8 +49,8 @@ export const POST = async (
     return NextResponse.json({ error: 'invalid policy id' }, { status: 400 });
   }
 
-  const json = (await request.json().catch(() => null)) as unknown;
-  const parsedBody = CreateBody.safeParse(json);
+  const body = (await request.json().catch(() => null)) as unknown;
+  const parsedBody = CreateBody.safeParse(body);
   if (!parsedBody.success) {
     return NextResponse.json(
       { error: 'invalid body', details: parsedBody.error.flatten() },
@@ -63,65 +60,15 @@ export const POST = async (
 
   const { server_id, tool_id } = parsedBody.data;
 
-  // Org-scope check for tool_id: walk tool -> server -> organization_id.
-  if (tool_id) {
-    const { data: toolData, error: toolErr } = await supabase
-      .from('tools')
-      .select('id, server_id, servers!inner(organization_id)')
-      .eq('id', tool_id)
-      .maybeSingle();
-    if (toolErr) {
-      return NextResponse.json(
-        { error: 'load failed', details: toolErr.message },
-        { status: 500 },
-      );
-    }
-    const tool = toolData as unknown as ToolRow | null;
-    if (!tool || tool.servers?.organization_id !== organization_id) {
-      return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-    }
-    // If a server_id was also provided, it must match the tool's parent.
-    if (server_id && server_id !== tool.server_id) {
-      return NextResponse.json(
-        { error: 'invalid body', details: 'server_id does not own tool_id' },
-        { status: 400 },
-      );
-    }
-  } else if (server_id) {
-    // Org-scope check for pure server scope.
-    const { data: srvData, error: srvErr } = await supabase
-      .from('servers')
-      .select('id, organization_id')
-      .eq('id', server_id)
-      .maybeSingle();
-    if (srvErr) {
-      return NextResponse.json(
-        { error: 'load failed', details: srvErr.message },
-        { status: 500 },
-      );
-    }
-    const srv = srvData as ServerRow | null;
-    if (!srv || srv.organization_id !== organization_id) {
-      return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-    }
-  }
+  const targetErr = verifyResultToResponse(
+    await verifyAssignmentTarget(supabase, organization_id, { server_id, tool_id }),
+  );
+  if (targetErr) return targetErr;
 
-  // Verify the policy itself belongs to the caller's org — prevents assigning
-  // to a cross-org policy UUID guess.
-  const { data: policyRow, error: policyErr } = await supabase
-    .from('policies')
-    .select('id, organization_id')
-    .eq('id', parsedParams.data.id)
-    .maybeSingle();
-  if (policyErr) {
-    return NextResponse.json(
-      { error: 'load failed', details: policyErr.message },
-      { status: 500 },
-    );
-  }
-  if (!policyRow || policyRow.organization_id !== organization_id) {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-  }
+  const policyErr = verifyResultToResponse(
+    await verifyPolicyOrg(supabase, parsedParams.data.id, organization_id),
+  );
+  if (policyErr) return policyErr;
 
   const { data, error } = await supabase
     .from('policy_assignments')
@@ -135,10 +82,8 @@ export const POST = async (
     .single();
 
   if (error || !data) {
-    return NextResponse.json(
-      { error: 'assign failed', details: error?.message },
-      { status: 500 },
-    );
+    const msg = error instanceof Error ? error.message : 'unknown error';
+    return NextResponse.json({ error: 'assign failed', details: msg }, { status: 500 });
   }
 
   invalidateManifest();

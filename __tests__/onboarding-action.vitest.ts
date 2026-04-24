@@ -35,12 +35,19 @@ const makeStubSupabase = (opts: StubOptions = {}) => {
     from: (table: string) => {
       if (table === 'organizations') {
         return {
-          update: (payload: Record<string, unknown>) => ({
-            eq: (_col: string, value: string) => {
-              orgUpdates.push({ id: value, payload });
-              return Promise.resolve({ error: opts.orgError ?? null });
-            },
-          }),
+          update: (payload: Record<string, unknown>) => {
+            const result = Promise.resolve({ error: opts.orgError ?? null });
+            return {
+              eq: (_col: string, value: string) => {
+                orgUpdates.push({ id: value, payload });
+                return {
+                  is: () => result,
+                  then: result.then.bind(result),
+                  catch: result.catch.bind(result),
+                };
+              },
+            };
+          },
         };
       }
       if (table === 'memberships') {
@@ -106,7 +113,8 @@ describe('completeOnboarding action (Sprint 15 A.7)', () => {
 
     expect(result).toEqual({ ok: true });
     expect(orgUpdates).toEqual([
-      { id: 'org-1', payload: { name: 'Engines Platform', created_by: 'user-1' } },
+      { id: 'org-1', payload: { name: 'Engines Platform' } },
+      { id: 'org-1', payload: { created_by: 'user-1' } },
     ]);
     expect(membershipUpdates).toHaveLength(1);
     expect(membershipUpdates[0].payload).toEqual({ profile_completed: true });

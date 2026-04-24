@@ -53,7 +53,7 @@ export const GET = async (request: Request): Promise<Response> => {
     const series = await fetchCallVolume(supabase, organization_id, rangeToDays(parsed.data.range));
     return NextResponse.json({ range: parsed.data.range, series });
   } catch (e) {
-    console.error('[gateway-traffic] fetch failed', e);
+    console.error('[gateway-traffic] fetch failed', e instanceof Error ? e.message : 'unknown error');
     return NextResponse.json({ error: 'load failed' }, { status: 500 });
   }
 };

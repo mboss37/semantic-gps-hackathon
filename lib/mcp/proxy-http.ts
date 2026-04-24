@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { decrypt } from '@/lib/crypto/encrypt';
 import type { ServerRow, ToolRow } from '@/lib/manifest/cache';
+import { decodeAuthConfig, type AuthConfig } from '@/lib/servers/auth';
 import { safeFetch, SsrfBlockedError } from '@/lib/security/ssrf-guard';
 import { createServiceClient } from '@/lib/supabase/service';
 
@@ -21,15 +21,6 @@ export type ProxyContext = {
   traceId: string;
 };
 
-const EncryptedAuthSchema = z.object({ ciphertext: z.string().min(1) });
-
-const AuthConfigSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('none') }),
-  z.object({ type: z.literal('bearer'), token: z.string().min(1) }),
-]);
-
-type AuthConfig = z.infer<typeof AuthConfigSchema>;
-
 const JsonRpcResponseSchema = z.object({
   jsonrpc: z.literal('2.0'),
   id: z.union([z.string(), z.number(), z.null()]).optional(),
@@ -38,17 +29,6 @@ const JsonRpcResponseSchema = z.object({
 });
 
 type ServerRecord = Pick<ServerRow, 'id' | 'origin_url' | 'auth_config' | 'transport'>;
-
-const decodeAuthConfig = (raw: unknown): AuthConfig => {
-  if (raw === null || raw === undefined) return { type: 'none' };
-  const envelope = EncryptedAuthSchema.safeParse(raw);
-  if (!envelope.success) return { type: 'none' };
-  const plaintext = decrypt(envelope.data.ciphertext);
-  const parsed: unknown = JSON.parse(plaintext);
-  const auth = AuthConfigSchema.safeParse(parsed);
-  if (!auth.success) return { type: 'none' };
-  return auth.data;
-};
 
 const loadServer = async (serverId: string): Promise<ServerRecord | null> => {
   const supabase = createServiceClient();

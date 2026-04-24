@@ -100,15 +100,22 @@ const makeStubSupabase = (rows: TokenRow[]) => {
   };
 
   const deleteQuery = () => {
-    const filters: Array<{ col: keyof TokenRow; value: string }> = [];
+    const eqFilters: Array<{ col: keyof TokenRow; value: string }> = [];
+    const neqFilters: Array<{ col: string; value: string }> = [];
     const chain = {
       eq: (col: keyof TokenRow, value: string) => {
-        filters.push({ col, value });
+        eqFilters.push({ col, value });
+        return chain;
+      },
+      neq: (col: string, value: string) => {
+        neqFilters.push({ col, value });
         return chain;
       },
       select: (_cols: string) => {
-        const matching = snapshot().filter((r) =>
-          filters.every((f) => r[f.col] === f.value),
+        const matching = snapshot().filter(
+          (r) =>
+            eqFilters.every((f) => r[f.col] === f.value) &&
+            neqFilters.every((f) => (r as unknown as Record<string, unknown>)[f.col] !== f.value),
         );
         for (const r of matching) {
           const idx = rows.indexOf(r);

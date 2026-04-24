@@ -114,7 +114,7 @@ export const GET = async (
     .eq('organization_id', organization_id)
     .maybeSingle();
   if (policyErr) {
-    console.error('[policy-timeline] policy lookup failed', policyErr);
+    console.error('[policy-timeline] policy lookup failed', policyErr instanceof Error ? policyErr.message : 'unknown error');
     return NextResponse.json({ error: 'load failed' }, { status: 500 });
   }
   const policy = policyRow as { id: string; name: string } | null;
@@ -129,7 +129,7 @@ export const GET = async (
     .eq('organization_id', organization_id)
     .gte('created_at', since);
   if (eventsErr) {
-    console.error('[policy-timeline] events lookup failed', eventsErr);
+    console.error('[policy-timeline] events lookup failed', eventsErr instanceof Error ? eventsErr.message : 'unknown error');
     return NextResponse.json({ error: 'load failed' }, { status: 500 });
   }
 

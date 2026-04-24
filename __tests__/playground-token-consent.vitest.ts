@@ -13,8 +13,8 @@ const MIGRATION = readFileSync(
   'utf-8',
 );
 
-const PLAYGROUND_ROUTE = readFileSync(
-  join(__dirname, '..', 'app', 'api', 'playground', 'run', 'route.ts'),
+const PLAYGROUND_TOKEN_LIB = readFileSync(
+  join(__dirname, '..', 'lib', 'mcp', 'playground-token.ts'),
   'utf-8',
 );
 
@@ -48,18 +48,18 @@ describe('WP-17.2 token consent — migration schema', () => {
   });
 });
 
-describe('WP-17.2 token consent — Playground route', () => {
+describe('WP-17.2 token consent — Playground token helper', () => {
   it("mints exactly one system token per org, reused across runs", () => {
     // "kind='system'" on the SELECT proves the reuse path is scoped to system
     // rows. The INSERT sets kind: 'system' so the returned token is never
     // surfaced in the tokens UI (which filters to kind='user').
-    expect(PLAYGROUND_ROUTE).toMatch(/\.eq\('kind', 'system'\)/);
-    expect(PLAYGROUND_ROUTE).toMatch(/kind: 'system'/);
-    expect(PLAYGROUND_ROUTE).toMatch(/token_plaintext: plaintext/);
+    expect(PLAYGROUND_TOKEN_LIB).toMatch(/\.eq\('kind', 'system'\)/);
+    expect(PLAYGROUND_TOKEN_LIB).toMatch(/kind: 'system'/);
+    expect(PLAYGROUND_TOKEN_LIB).toMatch(/token_plaintext: plaintext/);
   });
 
   it('uses a stable reusable name so repeat calls always hit the same row', () => {
-    expect(PLAYGROUND_ROUTE).toMatch(/PLAYGROUND_SYSTEM_TOKEN_NAME\s*=\s*'playground-internal'/);
+    expect(PLAYGROUND_TOKEN_LIB).toMatch(/PLAYGROUND_SYSTEM_TOKEN_NAME\s*=\s*'playground-internal'/);
   });
 });
 

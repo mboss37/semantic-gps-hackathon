@@ -41,19 +41,31 @@ export const proxy = async (request: NextRequest) => {
   // Sprint 15 A.7: profile_completed gate. Authed users with an incomplete
   // profile route through /onboarding (except when already there, to avoid
   // the redirect loop). Authed users with profile_completed=true who hit
-  // /onboarding get bounced back to /dashboard. Single extra DB lookup per
-  // dashboard request — B-tree lookup on memberships.user_id (unique index),
-  // cheap at demo scale.
+  // /onboarding get bounced back to /dashboard.
+  //
+  // Sprint 19: read profile_completed from JWT claims instead of a DB query.
+  // The custom_access_token_hook stamps profile_completed into the JWT on
+  // every token issuance (login + refresh). getSession() here is safe
+  // because we already validated the user via getUser() above — we're only
+  // reading a claim from the already-authenticated, Supabase-signed JWT,
+  // not using getSession() as an authentication substitute.
   if (user) {
     const isDashboard = pathname.startsWith('/dashboard');
     const isOnboarding = pathname.startsWith('/onboarding');
     if (isDashboard || isOnboarding) {
-      const { data: membership } = await supabase
-        .from('memberships')
-        .select('profile_completed')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      const completed = membership?.profile_completed === true;
+      const { data: { session } } = await supabase.auth.getSession();
+      const claims = (session?.access_token
+        ? (() => {
+            try {
+              const payload = session.access_token.split('.')[1];
+              if (!payload) return null;
+              return JSON.parse(Buffer.from(payload, 'base64url').toString()) as Record<string, unknown>;
+            } catch {
+              return null;
+            }
+          })()
+        : null);
+      const completed = claims?.profile_completed === true;
       if (isDashboard && !completed) {
         const url = request.nextUrl.clone();
         url.pathname = '/onboarding';

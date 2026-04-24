@@ -1,6 +1,6 @@
-"use client"
+'use client';
 
-import * as React from "react"
+import * as React from 'react';
 import {
   ActivityIcon,
   GaugeIcon,
@@ -8,15 +8,14 @@ import {
   GlobeIcon,
   KeyRoundIcon,
   LayoutDashboardIcon,
-  LibraryIcon,
   NetworkIcon,
   RouteIcon,
   ShieldCheckIcon,
   SparklesIcon,
-} from "lucide-react"
+} from 'lucide-react';
 
-import { NavMain } from "@/components/nav-main"
-import { NavUser } from "@/components/nav-user"
+import { NavMain } from '@/components/nav-main';
+import { NavUser } from '@/components/nav-user';
 import {
   Sidebar,
   SidebarContent,
@@ -25,32 +24,31 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
+} from '@/components/ui/sidebar';
 
 type SessionUser = {
-  name: string
-  email: string
-}
+  name: string;
+  email: string;
+};
 
 const data = {
   navMain: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboardIcon },
-    { title: "Servers", url: "/dashboard/servers", icon: GlobeIcon },
-    { title: "Workflow Graph", url: "/dashboard/graph", icon: NetworkIcon },
-    { title: "Routes", url: "/dashboard/routes", icon: RouteIcon },
-    { title: "Playground", url: "/dashboard/playground", icon: SparklesIcon },
-    { title: "Relationships", url: "/dashboard/relationships", icon: GitMergeIcon },
-    { title: "Tokens", url: "/dashboard/tokens", icon: KeyRoundIcon },
-    { title: "Policies", url: "/dashboard/policies", icon: ShieldCheckIcon },
-    { title: "Policy Catalog", url: "/dashboard/policies/catalog", icon: LibraryIcon },
-    { title: "Monitoring", url: "/dashboard/monitoring", icon: GaugeIcon },
-    { title: "Audit", url: "/dashboard/audit", icon: ActivityIcon },
+    { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboardIcon },
+    { title: 'Servers', url: '/dashboard/servers', icon: GlobeIcon },
+    { title: 'Workflow Graph', url: '/dashboard/graph', icon: NetworkIcon },
+    { title: 'Routes', url: '/dashboard/routes', icon: RouteIcon },
+    { title: 'Playground', url: '/dashboard/playground', icon: SparklesIcon },
+    { title: 'Relationships', url: '/dashboard/relationships', icon: GitMergeIcon },
+    { title: 'Tokens', url: '/dashboard/tokens', icon: KeyRoundIcon },
+    { title: 'Policies', url: '/dashboard/policies', icon: ShieldCheckIcon },
+    { title: 'Monitoring', url: '/dashboard/monitoring', icon: GaugeIcon },
+    { title: 'Audit', url: '/dashboard/audit', icon: ActivityIcon },
   ],
-}
+};
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
-  user: SessionUser
-}
+  user: SessionUser;
+};
 
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
   return (
@@ -77,5 +75,5 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

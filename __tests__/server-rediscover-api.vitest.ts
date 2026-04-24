@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Sprint 14 WP-14.3: /api/servers/[id]/rediscover. Exercises the diff-and-
-// upsert path against a chain-stub Supabase, with discoverTools mocked.
-// Asserts: new tools inserted, existing-name updates preserve display_name,
-// 502 on origin unreachable.
+// Sprint 14 WP-14.3 + batch-upsert refactor: /api/servers/[id]/rediscover.
+// Exercises the diff-and-upsert path against a chain-stub Supabase, with
+// discoverTools mocked. Asserts: batch upsert fires, GET preview returns
+// diff shape, 502 on origin unreachable.
 
 const { requireAuthMock, discoverToolsMock, invalidateManifestMock, decodeAuthConfigMock } =
   vi.hoisted(() => ({
@@ -38,19 +38,16 @@ const SERVER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 type ExistingToolRow = {
   id: string;
   name: string;
+  description: string | null;
+  input_schema: Record<string, unknown> | null;
   display_name: string | null;
   display_description: string | null;
 };
 
-type InsertCall = {
+type UpsertCall = {
   table: string;
   rows: Array<Record<string, unknown>>;
-};
-
-type UpdateCall = {
-  table: string;
-  values: Record<string, unknown>;
-  whereId: string;
+  options: Record<string, unknown>;
 };
 
 type StubOptions = {
@@ -59,8 +56,7 @@ type StubOptions = {
 };
 
 const makeStubSupabase = (opts: StubOptions) => {
-  const insertCalls: InsertCall[] = [];
-  const updateCalls: UpdateCall[] = [];
+  const upsertCalls: UpsertCall[] = [];
 
   const stub = {
     from: (table: string) => {
@@ -82,31 +78,28 @@ const makeStubSupabase = (opts: StubOptions) => {
             eq: (_col: string, _value: string) =>
               Promise.resolve({ data: opts.existingTools, error: null }),
           }),
-          insert: (rows: Array<Record<string, unknown>>) => {
-            insertCalls.push({ table, rows });
+          upsert: (rows: Array<Record<string, unknown>>, options: Record<string, unknown>) => {
+            upsertCalls.push({ table, rows, options });
             return Promise.resolve({ error: null });
           },
-          update: (values: Record<string, unknown>) => ({
-            eq: (_col: string, id: string) => {
-              updateCalls.push({ table, values, whereId: id });
-              return Promise.resolve({ error: null });
-            },
-          }),
         };
       }
       throw new Error(`unexpected table: ${table}`);
     },
   };
 
-  return { stub, insertCalls, updateCalls };
+  return { stub, upsertCalls };
 };
 
-const { POST } = await import('@/app/api/servers/[id]/rediscover/route');
+const { POST, GET } = await import('@/app/api/servers/[id]/rediscover/route');
 
-const makeRequest = () =>
+const makePostRequest = () =>
   new Request(`http://localhost/api/servers/${SERVER_ID}/rediscover`, { method: 'POST' });
 
-describe('server rediscover API (Sprint 14.3)', () => {
+const makeGetRequest = () =>
+  new Request(`http://localhost/api/servers/${SERVER_ID}/rediscover`, { method: 'GET' });
+
+describe('server rediscover API', () => {
   beforeEach(() => {
     requireAuthMock.mockReset();
     discoverToolsMock.mockReset();
@@ -119,8 +112,8 @@ describe('server rediscover API (Sprint 14.3)', () => {
     vi.clearAllMocks();
   });
 
-  it('inserts new tool, updates existing by name, reports counts', async () => {
-    const { stub, insertCalls, updateCalls } = makeStubSupabase({
+  it('POST: upserts all discovered tools in a single batch, reports counts', async () => {
+    const { stub, upsertCalls } = makeStubSupabase({
       server: {
         id: SERVER_ID,
         origin_url: 'https://example.test/mcp',
@@ -128,7 +121,14 @@ describe('server rediscover API (Sprint 14.3)', () => {
         organization_id: 'org-a',
       },
       existingTools: [
-        { id: 't1', name: 'foo', display_name: 'Foo Custom', display_description: 'desc' },
+        {
+          id: 't1',
+          name: 'foo',
+          description: 'old desc',
+          input_schema: null,
+          display_name: 'Foo Custom',
+          display_description: 'desc',
+        },
       ],
     });
 
@@ -147,7 +147,7 @@ describe('server rediscover API (Sprint 14.3)', () => {
       ],
     });
 
-    const res = await POST(makeRequest(), { params: Promise.resolve({ id: SERVER_ID }) });
+    const res = await POST(makePostRequest(), { params: Promise.resolve({ id: SERVER_ID }) });
     expect(res.status).toBe(200);
 
     const body = (await res.json()) as { added: number; updated: number; stale: number };
@@ -155,9 +155,19 @@ describe('server rediscover API (Sprint 14.3)', () => {
 
     expect(invalidateManifestMock).toHaveBeenCalledOnce();
 
-    // Exactly one insert with the new tool only.
-    expect(insertCalls).toHaveLength(1);
-    expect(insertCalls[0].rows).toEqual([
+    // Single upsert call with both tools
+    expect(upsertCalls).toHaveLength(1);
+    expect(upsertCalls[0].options).toEqual({
+      onConflict: 'server_id,name',
+      ignoreDuplicates: false,
+    });
+    expect(upsertCalls[0].rows).toEqual([
+      {
+        server_id: SERVER_ID,
+        name: 'foo',
+        description: 'new desc',
+        input_schema: { type: 'object' },
+      },
       {
         server_id: SERVER_ID,
         name: 'bar',
@@ -166,18 +176,14 @@ describe('server rediscover API (Sprint 14.3)', () => {
       },
     ]);
 
-    // Exactly one update for 'foo' — preserves display_* by NOT including them.
-    expect(updateCalls).toHaveLength(1);
-    expect(updateCalls[0].whereId).toBe('t1');
-    expect(updateCalls[0].values).toEqual({
-      description: 'new desc',
-      input_schema: { type: 'object' },
-    });
-    expect(updateCalls[0].values).not.toHaveProperty('display_name');
-    expect(updateCalls[0].values).not.toHaveProperty('display_description');
+    // Upsert does NOT include display_name / display_description — preserves overrides
+    for (const row of upsertCalls[0].rows) {
+      expect(row).not.toHaveProperty('display_name');
+      expect(row).not.toHaveProperty('display_description');
+    }
   });
 
-  it('counts stale tools (existing name not in discovery)', async () => {
+  it('POST: counts stale tools (existing name not in discovery)', async () => {
     const { stub } = makeStubSupabase({
       server: {
         id: SERVER_ID,
@@ -186,8 +192,8 @@ describe('server rediscover API (Sprint 14.3)', () => {
         organization_id: 'org-a',
       },
       existingTools: [
-        { id: 't1', name: 'foo', display_name: null, display_description: null },
-        { id: 't2', name: 'removed', display_name: null, display_description: null },
+        { id: 't1', name: 'foo', description: null, input_schema: null, display_name: null, display_description: null },
+        { id: 't2', name: 'removed', description: 'old', input_schema: null, display_name: null, display_description: null },
       ],
     });
 
@@ -203,14 +209,14 @@ describe('server rediscover API (Sprint 14.3)', () => {
       tools: [{ name: 'foo', description: null, inputSchema: null }],
     });
 
-    const res = await POST(makeRequest(), { params: Promise.resolve({ id: SERVER_ID }) });
+    const res = await POST(makePostRequest(), { params: Promise.resolve({ id: SERVER_ID }) });
     expect(res.status).toBe(200);
 
     const body = (await res.json()) as { added: number; updated: number; stale: number };
     expect(body).toEqual({ added: 0, updated: 1, stale: 1 });
   });
 
-  it('returns 502 when origin discovery fails', async () => {
+  it('POST: returns 502 when origin discovery fails', async () => {
     const { stub } = makeStubSupabase({
       server: {
         id: SERVER_ID,
@@ -233,7 +239,7 @@ describe('server rediscover API (Sprint 14.3)', () => {
       error: 'origin returned HTTP 500',
     });
 
-    const res = await POST(makeRequest(), { params: Promise.resolve({ id: SERVER_ID }) });
+    const res = await POST(makePostRequest(), { params: Promise.resolve({ id: SERVER_ID }) });
     expect(res.status).toBe(502);
     const body = (await res.json()) as { error: string; reason: string };
     expect(body).toEqual({
@@ -241,6 +247,73 @@ describe('server rediscover API (Sprint 14.3)', () => {
       reason: 'origin returned HTTP 500',
     });
 
+    expect(invalidateManifestMock).not.toHaveBeenCalled();
+  });
+
+  it('GET: returns diff preview without writing', async () => {
+    const { stub, upsertCalls } = makeStubSupabase({
+      server: {
+        id: SERVER_ID,
+        origin_url: 'https://example.test/mcp',
+        auth_config: null,
+        organization_id: 'org-a',
+      },
+      existingTools: [
+        {
+          id: 't1',
+          name: 'foo',
+          description: 'old desc',
+          input_schema: null,
+          display_name: null,
+          display_description: null,
+        },
+        {
+          id: 't2',
+          name: 'stale_tool',
+          description: 'going away',
+          input_schema: null,
+          display_name: null,
+          display_description: null,
+        },
+      ],
+    });
+
+    requireAuthMock.mockResolvedValue({
+      user: { id: 'u1' },
+      supabase: stub,
+      organization_id: 'org-a',
+      role: 'admin',
+    });
+
+    discoverToolsMock.mockResolvedValue({
+      ok: true,
+      tools: [
+        { name: 'foo', description: 'new desc', inputSchema: { type: 'object' } },
+        { name: 'bar', description: 'fresh', inputSchema: null },
+      ],
+    });
+
+    const res = await GET(makeGetRequest(), { params: Promise.resolve({ id: SERVER_ID }) });
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as {
+      toAdd: Array<{ name: string; description: string | null }>;
+      toUpdate: Array<{
+        name: string;
+        old: { description: string | null };
+        new: { description: string | null };
+      }>;
+      stale: Array<{ name: string; description: string | null }>;
+    };
+
+    expect(body.toAdd).toEqual([{ name: 'bar', description: 'fresh' }]);
+    expect(body.toUpdate).toEqual([
+      { name: 'foo', old: { description: 'old desc' }, new: { description: 'new desc' } },
+    ]);
+    expect(body.stale).toEqual([{ name: 'stale_tool', description: 'going away' }]);
+
+    // GET must not write anything
+    expect(upsertCalls).toHaveLength(0);
     expect(invalidateManifestMock).not.toHaveBeenCalled();
   });
 });
