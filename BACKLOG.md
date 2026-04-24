@@ -32,6 +32,21 @@ Sprint 10 validation tested gateway behaviour via direct JSON-RPC, NOT the Playg
 - Start `cloudflared tunnel --url http://localhost:3000`, point `NEXT_PUBLIC_APP_URL` at it
 - Run each preset on `/dashboard/playground`; screen-record both panes; match against DEMO.md script
 
+#### [P0 Sat AM] DEMO.md validation — fix gaps surfaced 2026-04-24
+
+Gateway-layer JSON-RPC validation of all 6 stories in DEMO.md surfaced two regressions + one doc fix. All demo-blocking, all must land before recording.
+
+**Story #9 Rollback Cascade — REGRESSION from Sprint 15 C.6 (blocks second-strongest demo beat).**
+The rollback orchestration runs and the audit trail is honest (`rollback_summary.attempted:true, compensated_count:0, failed_count:2`) but every compensation call fails with `upstream_jsonrpc_error`. Root cause: Sprint 15 C.6 moved SF/Slack/GitHub proxies to in-process HTTP-Streamable MCP routes under `app/api/mcps/<vendor>/`. The gateway now calls them via `proxyDirectMcp`, which returns the MCP envelope `{content: [{type:"text", text:"<JSON-string>"}]}`. `execute-route.ts::captureBag[key] = {args, result: postResult}` stores the envelope verbatim — never unwraps to the logical tool result. Every `input_mapping` and `rollback_input_mapping` that references `$steps.<key>.result.<field>` now resolves to null/undefined because the field is buried at `.content.0.text` as a JSON-encoded string. Same bug breaks step 5's `$steps.account.records.0.Id` reference in `cross_domain_escalation` — the traversal hits null at segment "0" instead of finding the SF account Id, which is why the saga halts earlier than the DEMO.md 2026-04-23 transcript shows.
+
+Fix path (preferred): unwrap MCP envelope in the capture path. In `lib/mcp/execute-route.ts` at `captureBag[step.output_capture_key] = { args, result: postResult }` (line ~416 + ~498), detect the envelope shape (`result.content[0].type === 'text'`), JSON-parse the inner text, store the parsed object as `result`. Backwards-compatible: OpenAPI tools return unwrapped bodies already, so they pass through untouched. Transparent to route authors — zero seed or DSL changes. Test by re-running `execute_route cross_domain_escalation` against Edge Communications — expect `compensated_count:1` with `close_issue` succeeding, matching the 2026-04-23 validation transcript. 30-60 min ship.
+
+**Story #8 Route with Fallback — UNSEEDED.**
+Code path is complete — `lib/mcp/execute-route.ts:288-330` picks the first outgoing `fallback_to` edge for the failing tool, emits `fallback_triggered` audit events, rewrites the step to `status:ok` with `fallback_used` metadata. But zero `fallback_to` relationships in seed and zero `route_steps.fallback_route_id` pointers, so nothing to exercise. Add one honest fallback pair to the bootstrap seed. Candidate: `create_task → chat_post_message` with a fallback_to edge (if SF write fails, post the task intent to Slack instead so the workflow degrades gracefully). Alternative: a second route `sales_escalation_fallback` that step 3 can fall back to when the primary `create_task` errors. 20 min.
+
+**DEMO.md Story #1 prompt — ARG NAME WRONG.**
+The narrator prompt says "grab their phone number from the account record" which is fine, but the example args documented as `account_name` in several mental-model places need to match the actual tool schema which is `{query: string}` (`lib/mcp/vendors/salesforce.ts:228 FindAccountArgs`). The Playground LLM figures this out from the exposed `inputSchema`, so the live demo won't break, but anyone reproducing the JSON-RPC call from DEMO.md verbatim hits `invalid_input`. Fix DEMO.md and any internal validation scripts that pass `account_name` directly. 5 min.
+
 ### Sunday Apr 26 AM (CET) — Emergency coding only, freeze at 12:00
 
 - If any P0 slipped Fri/Sat, finish here. Otherwise no commits.
