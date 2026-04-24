@@ -40,8 +40,7 @@ const SignupPage = () => {
       return;
     }
 
-    toast.success('Check your email to confirm your account');
-    router.push('/login');
+    router.push(`/signup/check-email?email=${encodeURIComponent(email)}`);
   };
 
   return (

@@ -30,6 +30,7 @@ Sprint 18.2 shipped v0 (hero + dashboard mockup + feature sections + integration
 - Stat-strip with honest numbers: `12 builtin policies / 7 governance dimensions / 3 MCP vendors wired / 13 RLS-tenant tables`
 - Trim CSS + delete unused deps (`cobe`, `motion`) now that globe is gone
 - Responsive audit pass at 375 / 768 / 1024 / 1280 / 1440 after copy is final
+- **Delete `landingPageReference/` folder + all four ignore entries** — once v1 has pulled every design cue it needs: (1) `rm -rf landingPageReference/`, (2) remove the `landingPageReference/` line from `.gitignore`, (3) remove it from `.claudeignore`, (4) remove `"landingPageReference"` from `tsconfig.json` exclude, (5) remove `"landingPageReference/**"` from `eslint.config.mjs` ignores. Verify with `git status` that no new files appear tracked + `pnpm lint && pnpm exec tsc --noEmit` still clean.
 
 #### [P0 Sat AM] Finalize demo narrative
 Nail the story Sat morning once all MCPs + routes + policies are live and we can see what the demo looks like on screen. Constraint: avoid positioning as an Agentforce competitor (Mihael works at Salesforce). Candidate angles:
