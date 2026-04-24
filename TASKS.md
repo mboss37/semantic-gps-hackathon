@@ -135,10 +135,10 @@
 
 Close the 3 P0 NEXT-SPRINT items surfaced during Sprint 16 RLS validation + absorb the Sat-AM empty-state audit tonight so Saturday is pure polish (narrative + landing rewrite). Buys a stable, polished dashboard surface for Sat-AM soft-launch + Sat-PM landing screenshot grid. Biggest judging-signal move = the policy catalog gallery (Mulesoft pattern) — judges signing up see the 12 builtin runners as the product, not an empty page.
 
-- [ ] **17.1** (M) Policy catalog gallery — new `/dashboard/policies/catalog` with cards for all 12 builtin runners, each with name + description + config schema preview + "Apply to my org" CTA deep-linking into existing create-instance form. Zero auto-seeding. (Main thread — strategic UI + approval-gated.)
-- [ ] **17.2** (S) Playground token consent fix — migration adds `gateway_tokens.kind text` ('user'|'system'); tokens-UI filters `kind='user'`; `mintPlaygroundToken()` reads-or-creates the single `kind='system'` row. (Subagent lane A.)
-- [ ] **17.3** (S) Playground no-MCP guard — `/dashboard/playground` loads server count on mount, disables Execute with inline register-a-server CTA when count is 0. (Subagent lane B.)
-- [ ] **17.4** (M) Empty-state dashboard audit — fresh signup on hosted, click every nav item, fix crashes + honest empty states. Risk areas: overview chart, monitoring widgets, workflow graph, routes/audit/policy/relationships lists. (Subagent lane C — exploratory + inline fixes.)
+- [x] **17.1** (M) Policy catalog gallery — new `/dashboard/policies/catalog` with cards for all 12 builtin runners, each with name + description + config schema preview + "Apply to my org" CTA deep-linking into existing create-instance form. Zero auto-seeding. (Main thread — strategic UI + approval-gated.)
+- [x] **17.2** (S) Playground token consent fix — migration adds `gateway_tokens.kind text` ('user'|'system'); tokens-UI filters `kind='user'`; `mintPlaygroundToken()` reads-or-creates the single `kind='system'` row. (Subagent lane A.)
+- [x] **17.3** (S) Playground no-MCP guard — `/dashboard/playground` loads server count on mount, disables Execute with inline register-a-server CTA when count is 0. (Subagent lane B.)
+- [x] **17.4** (M) Empty-state dashboard audit — fresh signup on hosted, click every nav item, fix crashes + honest empty states. Risk areas: overview chart, monitoring widgets, workflow graph, routes/audit/policy/relationships lists. (Subagent lane C — exploratory + inline fixes.)
 
 ## Session Log
 - 2026-04-24 — Sprint 16 shipped: L.1 RLS (13 tables, custom hook, 9 isolation tests, 3-org hosted IDOR sweep) + M.1 migrations rule. Follow-up auth callback handler ships PKCE flow. Reviewer caught member_update_self tenant-escape → tighten migration shipped as follow-up. 3 new P0 surfaced for Sprint 17 (policy catalog UI, playground token consent, signup UX polish). 1 commit pushed.
