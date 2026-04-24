@@ -61,7 +61,8 @@ When proposing a sprint, a WP, or a change, name the ranking slot it moves. "Thi
 - `pnpm lint` — ESLint
 - `pnpm typecheck` — `tsc --noEmit`
 - `pnpm supabase db reset` — re-apply all migrations against local DB
-- `pnpm supabase db push` — apply pending migrations to hosted (deploy-only; run deliberately)
+- `pnpm supabase db push` — **canonical** hosted-migration command (deploy-only; run deliberately). Never use MCP `apply_migration` as a substitute — see `.claude/rules/migrations.md`
+- `pnpm supabase migration list --linked` — verify parity; Local column must equal Remote column, row-for-row
 
 ## Architecture & Scope Docs
 These are the source of truth for the build — read them before writing code, and consult them whenever a decision feels ambiguous.
@@ -188,6 +189,8 @@ Wait for all agents to return, synthesize their findings, then act.
   4. **Never** test a demo beat against hosted first — "it works on prod, let's check local later" is the anti-pattern.
 - **`pnpm supabase db reset` wipes all data-plane seeds.** `supabase/seed.sql` is the ONLY thing that auto-re-runs (demo user, org, gateway token). Anything loaded via `docker exec psql -f` or Supabase MCP outside seed.sql is gone after a reset. After any `db reset`, immediately re-run every demo-data seed script (SF/Slack/GH registration, policies, routes) against the fresh local DB before testing anything. Better: fold recurring demo seeds into `supabase/seed.sql` so they're local-reset-durable.
 - **Local must be a full superset of hosted demo state at all times.** If hosted has 3 MCPs + 12 tools + 5 policies registered, local has the same — or strictly more — before any new work starts. An empty local while hosted is populated is always a bug, not a setup choice.
+- **Never run MCP `apply_migration` against hosted Supabase.** It timestamps `schema_migrations.version` with `now()` instead of the filename, causing local↔hosted drift. Use `pnpm supabase db push` exclusively. See `.claude/rules/migrations.md`.
+- **Migration filenames must be 14-digit `YYYYMMDDHHMMSS_*.sql`.** Anything else (e.g. `20260424-02_foo.sql`) is silently skipped by the Supabase CLI — it never applies locally or hosted, and `db reset` won't warn.
 
 ## Key Decisions
 - **MCP gateway is stateless** — fresh `McpServer` per request; no in-memory session state

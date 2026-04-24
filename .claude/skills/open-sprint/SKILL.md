@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 # Open Sprint
 
-Pull 3-6 WPs from `BACKLOG.md` into `TASKS.md § Current`, atomically removing them from the backlog. This skill exists because the "remove from BACKLOG in the same edit" rule in `CLAUDE.md` was violated opening Sprint 12 — shipped WPs stayed listed as open across two sprints. Skill enforces the invariant.
+Pull 3-6 WPs from `BACKLOG.md` into `TASKS.md § Current`, atomically removing them from the backlog. 
 
 ## Preconditions
 

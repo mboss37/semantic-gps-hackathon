@@ -440,6 +440,15 @@ For a 5-day hackathon, keep it simple:
 - Mobile-first responsive
 - PascalCase component files, kebab-case directories, `use-*.ts` for hooks
 
+### Migration workflow
+Rule-of-record: `.claude/rules/migrations.md`. The short version:
+
+- **Filename** — 14-digit `YYYYMMDDHHMMSS_descriptive_name.sql`. Supabase CLI silently skips any other shape (including hyphenated variants like `20260424-02_foo.sql`) — not a warning, a no-op. The file is in the repo but never applies.
+- **Local iteration** — `pnpm supabase db reset` wipes and re-applies every migration cleanly. Iterate freely; this is the only way to catch ordering bugs before hosted sees them.
+- **Hosted push** — `pnpm supabase db push` is the **only** supported path. It stamps `schema_migrations.version` with the filename timestamp, keeping local and remote aligned.
+- **Verification** — after every push, `pnpm supabase migration list --linked`. Local and Remote columns must match exactly.
+- **Anti-pattern: MCP `apply_migration` against hosted.** It writes `schema_migrations.version = now()` (clock time of apply) instead of the filename timestamp, so the same migration ends up with two different `version` values across local and hosted. The next `db push` refuses to run until the drift is reconciled by hand (UPDATE on hosted `schema_migrations`). We hit this mid-Sprint-15; cost ~20 minutes and a manual SQL cleanup. Use `db push` exclusively.
+
 ---
 
 ## Security Baseline (Non-Negotiable)
