@@ -44,3 +44,6 @@ next-env.d.ts
 !.claude/state/.gitkeep
 .claude/settings.local.json
 .claude/worktrees/
+
+# External design reference (not shipped; not typechecked)
+landingPageReference/

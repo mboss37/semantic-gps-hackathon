@@ -37,7 +37,7 @@ export const MonitoringPiiChart = ({ data }: Props) => {
             }}
             labelStyle={{ color: 'hsl(var(--foreground))' }}
           />
-          <Bar dataKey="count" fill="#8b5cf6" name="Detections" />
+          <Bar dataKey="count" fill="var(--chart-1)" name="Detections" />
         </BarChart>
       </ResponsiveContainer>
     </div>

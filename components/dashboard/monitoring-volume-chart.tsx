@@ -45,9 +45,9 @@ export const MonitoringVolumeChart = ({ series }: Props) => {
             labelStyle={{ color: 'hsl(var(--foreground))' }}
           />
           <Legend wrapperStyle={{ fontSize: 11 }} />
-          <Bar dataKey="ok" stackId="1" fill="#22c55e" name="Allowed" />
-          <Bar dataKey="blocked" stackId="1" fill="#ef4444" name="Blocked by policy" />
-          <Bar dataKey="error" stackId="1" fill="#f59e0b" name="Upstream / internal error" />
+          <Bar dataKey="ok" stackId="1" fill="var(--chart-2)" name="Allowed" />
+          <Bar dataKey="blocked" stackId="1" fill="var(--chart-4)" name="Blocked by policy" />
+          <Bar dataKey="error" stackId="1" fill="var(--chart-3)" name="Upstream / internal error" />
         </BarChart>
       </ResponsiveContainer>
     </div>

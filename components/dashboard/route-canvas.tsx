@@ -65,7 +65,7 @@ export const RouteCanvas = ({ steps }: Props) => {
           <MiniMap
             pannable
             zoomable
-            nodeColor={(n) => (n.id.startsWith('rollback:') ? '#a3a3a3' : '#6366f1')}
+            nodeColor={(n) => (n.id.startsWith('rollback:') ? '#a3a3a3' : '#0070f3')}
             maskColor="rgba(9, 9, 11, 0.8)"
           />
         </ReactFlow>

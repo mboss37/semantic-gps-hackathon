@@ -19,6 +19,18 @@ _(all pulled — Sprint 15 + Sprint 16)_
 
 Day closes with all coding done. Narrative locks in the AM so landing-page copy derives from it in the PM.
 
+#### [P0 Sat] Landing page v1 — finalize
+
+Sprint 18.2 shipped v0 (hero + dashboard mockup + feature sections + integrations + security + CTA + footer with Vercel palette + Geist everywhere). Mihael signed it off as "done as v0, not satisfied yet". v1 is the polish pass once Saturday's narrative is locked:
+
+- Tighten hero copy to the final pitch angle (SF-complements-Agentforce / AI-security / DevOps-first)
+- Replace placeholder dashboard-mockup rows with the exact tool names + policy decisions the 3-min demo will showcase
+- Add the demo video loop above the fold (respect `NEXT_PUBLIC_DEMO_VIDEO_URL`)
+- Real architecture diagram in the infrastructure section (not a text-only pillar grid)
+- Stat-strip with honest numbers: `12 builtin policies / 7 governance dimensions / 3 MCP vendors wired / 13 RLS-tenant tables`
+- Trim CSS + delete unused deps (`cobe`, `motion`) now that globe is gone
+- Responsive audit pass at 375 / 768 / 1024 / 1280 / 1440 after copy is final
+
 #### [P0 Sat AM] Finalize demo narrative
 Nail the story Sat morning once all MCPs + routes + policies are live and we can see what the demo looks like on screen. Constraint: avoid positioning as an Agentforce competitor (Mihael works at Salesforce). Candidate angles:
 - "Complements Agentforce" — Agentforce for in-SF, Semantic GPS for cross-surface hops (GH/Slack). Governance on the outbound.

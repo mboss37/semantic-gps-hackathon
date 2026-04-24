@@ -13,7 +13,14 @@ import {
 } from 'recharts';
 import type { PolicyBlockBucket } from '@/lib/monitoring/fetch';
 
-const PALETTE = ['#3b82f6', '#a855f7', '#14b8a6', '#f59e0b', '#ef4444', '#71717a'];
+const PALETTE = [
+  'var(--chart-1)',
+  'oklch(0.62 0.2 290)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-5)',
+];
 const TOP_N = 5;
 const OTHER_KEY = '__other';
 

@@ -111,9 +111,9 @@ export const PolicyTimelineChart = ({ policyId, days = 7 }: Props) => {
             labelStyle={{ color: 'hsl(var(--foreground))' }}
           />
           <Legend wrapperStyle={{ fontSize: 11 }} />
-          <Bar dataKey="allow" stackId="1" fill="#71717a" name="Allowed" />
-          <Bar dataKey="shadow_block" stackId="1" fill="#f59e0b" name="Shadow block (would have)" />
-          <Bar dataKey="enforce_block" stackId="1" fill="#ef4444" name="Enforce block" />
+          <Bar dataKey="allow" stackId="1" fill="var(--chart-5)" name="Allowed" />
+          <Bar dataKey="shadow_block" stackId="1" fill="var(--chart-3)" name="Shadow block (would have)" />
+          <Bar dataKey="enforce_block" stackId="1" fill="var(--chart-4)" name="Enforce block" />
         </BarChart>
       </ResponsiveContainer>
     </div>

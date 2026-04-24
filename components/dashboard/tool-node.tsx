@@ -11,8 +11,8 @@ export const ToolNode = ({ data, selected }: { data: ToolNodeData; selected?: bo
   <div
     className={`rounded-md border px-3 py-2 text-xs shadow-sm ${
       selected
-        ? 'border-indigo-500 bg-indigo-950/40'
-        : 'border-zinc-700 bg-zinc-900'
+        ? 'border-[var(--brand)] bg-[color-mix(in_oklab,var(--brand)_10%,transparent)]'
+        : 'border-border bg-card'
     }`}
   >
     <Handle type="target" position={Position.Top} style={{ background: '#52525b' }} />

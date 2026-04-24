@@ -29,6 +29,8 @@ const eslintConfig = defineConfig([
     // Agent worktrees (isolation=worktree) live under .claude/worktrees/* and
     // contain their own .next/ build artifacts that explode the lint output.
     ".claude/worktrees/**",
+    // External design-reference project; not built, not shipped.
+    "landingPageReference/**",
   ]),
 ]);
 
