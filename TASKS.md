@@ -112,17 +112,25 @@
 - Subagent B (14.3) exited mid-WP notification — main thread caught via git-status + missing-file verify (Sprint 13 lesson holding up); finished button component + test + page header edit in the main session.
 - Validations: 302 pass / 5 skip / 0 fail (+11 net), tsc + lint + `next build` clean with 3 new routes. 1 commit `4a17a64` pushed to main.
 
-## Current: Sprint 15 — Enterprise shape (Fri Apr 24 CET)
+**Sprint 15 — Enterprise shape (Fri Apr 24):**
+- C.6 Extract vendor proxies — SF/Slack/GitHub reshaped as in-process `app/api/mcps/<vendor>/` MCP-HTTP-Streamable routes; dispatcher narrowed to `openapi | http-streamable`; 6 lib files + 6 tests retired; new 5-file vendor adapter folder + 3 new route test suites.
+- K.1 Enterprise data-model audit — migration `20260424140000_enterprise_schema_audit.sql` adds `mcp_events.organization_id` (threaded through `ExecuteRouteCtx` + 26 `logMCPEvent` sites), `organizations` billing metadata (plan/trial/email/created_by), `memberships.role` widened to `admin|member`, `memberships.profile_completed` for A.7 gate. Two Hard-Won Lessons captured (#23 SSRF-localhost dev flag, #24 replace_all indent trap).
+- A.7 First-signup onboarding wizard — `/onboarding` page + client form + server action; `proxy.ts` + dashboard layout gate on `profile_completed`; retires `<handle>'s Workspace` auto-hack.
+- Post-sprint multi-tenancy sweep (smoke-test finding) — migration `20260424150000_multitenant_policies.sql` adds `organization_id NOT NULL` to `policies` + `policy_assignments`; every dashboard page, API route, and manifest loader org-scopes via `requireAuth()`; Graph page killed its unauth'd `/api/mcp` browser fetch via new `fetchGraphData` server action; gateway-handler now captures request headers on auth failures; nav rebuilt with real session user + working logout.
+- Hosted migration sync — earlier version-timestamp drift resolved; all 19 migrations now Local==Remote. Supabase CLI only recognizes 14-digit filenames (Hard-Won Lesson #25).
+- Validations across the sprint: 288 pass / 2 skip / 0 fail, tsc + lint + `next build` clean. Hosted mirrored. 7 commits pushed to main (f0127f1 → 88e1815).
+- BACKLOG: L.1 RLS queued as next P0; migration-id-drift prevention queued for Sprint 16. 5 follow-up suggestions rolled up (route_steps scoping done inline; gateway-handler URL redaction + bootstrap wrapper + assignments handler size + shadcn style sweep all P1).
 
-Today is the big coding day. Retires demo-level scaffolding so judges browsing the source see an enterprise-shaped codebase under Depth-20 scrutiny. Nothing speculative — all three WPs come straight from the Friday P0 plan locked last night.
+## Current: Sprint 16 — Enterprise hardening (Fri Apr 24 PM CET)
 
-- [ ] **C.6** (L) Extract SF/Slack/GitHub to standalone MCP servers. New `mcps/` monorepo; gateway loses three proxy files; demo org re-registers via `POST /api/servers`. Subagent lane A (parallel).
-- [ ] **K.1** (M) Enterprise data-model audit + fixes. `mcp_events.organization_id` add + backfill, `organizations` billing metadata, `memberships.role` widen, `domains` decide-or-drop, `gateway_tokens` cascade review. One migration + docs/ARCHITECTURE.md paragraph. Main thread.
-- [ ] **A.7** (M) First-signup onboarding wizard. `/onboarding` route gated by `profile_completed`, trigger refactor to consume user-provided org_name, retires `<handle>'s Workspace` auto-hack. Main thread, sequenced AFTER K.1 (shared trigger surface).
+App-layer multi-tenancy landed in Sprint 15; DB-layer defense still open. This sprint closes the gap with Postgres RLS on every tenant table + cleans up the migration workflow chaos before Sat coding day.
 
-Lanes: Subagent A (C.6) runs in parallel to main thread. Main executes K.1 → A.7 serially. Pull I.5 (Managed Agents, $5K side prize) mid-sprint if K.1+A.7 land before 17:00 CET. No mid-sprint scope additions without explicit approval.
+- [ ] **L.1** (M) Enable Postgres RLS on every tenant table. Migration `20260424160000_enable_rls_tenant_tables.sql` enables RLS + per-table `org_isolation` policies on 11 tables; Supabase custom-access-token hook exposes `organization_id` as JWT claim so `auth.jwt()` resolves it server-side; audit service-role usage (MCP gateway only); keep app-layer `.eq('organization_id', ...)` filters as belt-and-braces; fixture updates for JWT context. Main thread.
+- [ ] **M.1** (S) Migration workflow hardening. CLAUDE.md hard rule "hosted migrations via `supabase db push` only, never MCP `apply_migration`"; new `.claude/rules/migrations.md` path-scoped rule; verify `pnpm supabase db push --dry-run` is clean against current hosted state; document the canonical flow in `docs/ARCHITECTURE.md`. Subagent lane A (parallel).
+
+Lanes: L.1 main thread, M.1 subagent A. Launch together after approval. Pull I.5 Managed Agents ($5K side prize) mid-sprint if both land before 18:00 CET. No mid-sprint scope additions without explicit approval.
 
 ## Session Log
+- 2026-04-24 — Sprint 15 shipped: 3 WPs (C.6 + K.1 + A.7) + post-sprint multi-tenancy sweep (11 tables scoped, graph unauth'd fetch killed, nav rebuilt). Smoke testing under a 2nd signup account surfaced the cross-org leaks that the original WPs missed — fixed in place, 288/2/0. L.1 RLS added as next P0 for defense-in-depth. 7 commits pushed.
 - 2026-04-23 — Sprint 14 shipped: 3 WPs (14.1 overview live + 14.2 origin health + 14.3 rediscover). Subagent B bailed mid-WP, main finished the gap. Reviewer approved with 8 suggestions; fixed 4 easy, BACKLOG'd 4 risky in new P1 "Identified issues" subsection. 302/5/0. 1 commit pushed.
 - 2026-04-23 — Sprint 13 shipped: 4 WPs (13.1 Routes UI + 13.2 Server detail + 13.3 Monitoring + 13.4 business_hours multi-window). Subagent B premature-completion caught mid-verify → finished in main. Service-role violation caught at review → fixed before commit. Competition-mindset rules + landing-page rewrite queued as #1 Sat P0. 291/5/0. 5 memories harvested. 3 commits pushed.
-- 2026-04-23 — Sprint 12 shipped + wrapped: 4 WPs (I.1 thinking + G.17 compensators + G.18 invalidation + I.4 timeline), 1 commit. Next.js `_` private-folder gotcha caught by subagent B; `__HMR_NONCE__` hack deleted. Honest-A/B principle extended to model capabilities. 269/5/0. 4 memories harvested + 1 updated.
