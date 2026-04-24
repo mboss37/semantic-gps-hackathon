@@ -349,6 +349,7 @@ All endpoints org-scope via `requireAuth()` → `organization_id`. Every read fi
 | POST | `/api/internal/manifest/invalidate` | Dev-gated cache clear (404 in prod unless `MANIFEST_INTROSPECTION_ENABLED=1`). Required after direct DB seeds bypass mutation routes |
 | POST | `/api/auth/login` | Supabase email/password login |
 | POST | `/api/auth/signup` | Signup (single-user mode — could even disable after first signup) |
+| GET | `/auth/callback` | PKCE code exchange after Supabase email verification — establishes session cookies then redirects to `/dashboard` (proxy.ts routes to `/onboarding` if `profile_completed=false`). Shipped Sprint 16 L.1 follow-up |
 
 ---
 
@@ -543,7 +544,7 @@ File convention: `__tests__/*.vitest.ts`. Run with `pnpm test`.
 Things that will silently bite if not explicitly called out:
 
 1. **Manifest invalidation is easy to forget.** Make `invalidateManifest()` the last line of every mutation route. Consider a lint rule.
-2. **Supabase RLS silently returns empty results.** If a user update looks like it "worked" but data doesn't change, RLS is blocking. Use service client for user-self-updates where needed.
+2. **Supabase RLS silently returns empty results.** If a user query looks like it "worked" but data is missing, RLS is blocking. Two causes post-Sprint 16: (a) `custom_access_token_hook` isn't registered in the dashboard → JWT has no `organization_id` claim → `jwt_org_id()` returns NULL → every `organization_id = NULL` predicate is false → empty result set across the whole dashboard. (b) Policy covers fewer rows than the caller expects. Diagnose by decoding the JWT (`jwt.io`) and checking the `organization_id` claim is present. Service-role client bypasses RLS — use for gateway + audit + manifest paths only, never user-facing routes.
 3. **`.parse()` in a route handler will crash the server on bad input.** Always `.safeParse()`. No exceptions.
 4. **`getSession()` can be spoofed.** Use `getUser()` — it hits the auth server and validates the JWT.
 5. **SSE transport is deprecated.** Use HTTP-Streamable only.
@@ -566,6 +567,11 @@ Things that will silently bite if not explicitly called out:
 22. **Background-subagent `completed` notifications can fire on premature exit.** Sprint 13 Subagent B (Monitoring page, 7 spec'd files) reported DONE with only 2 files written; its final transcript line was "### Step 2: Create `lib/monitoring/fetch.ts`" — it bailed mid-work but was marked complete anyway. Verify before trusting: `git status --porcelain` shows expected untracked files, `pnpm test` pass count matches the expected delta from the prompt (always specify "baseline → expected"), `pnpm exec next build` route table shows new routes. If any mismatch, re-dispatch with explicit finish prompt or complete in main thread. Never proceed to combined code-review on unverified subagent output.
 23. **Co-deployed MCP routes need `SSRF_ALLOW_LOCALHOST=1` in dev.** Sprint 15 C.6 moved SF/Slack/GitHub proxies to in-process routes at `app/api/mcps/<vendor>/route.ts`. The gateway's `proxyHttp` roundtrips `origin_url` through `safeFetch` to keep the "same contract as external" property. In dev, `origin_url` is `http://localhost:3000/...` which the SSRF guard blocks by default. Set `SSRF_ALLOW_LOCALHOST=1` in `.env.local` to allow it. Flag stays UNSET in production — Vercel `origin_url` is the live HTTPS domain, the guard accepts it, no exception needed. Document the flag's dual use (vitest + dev-mode co-deployed MCPs) in `lib/security/ssrf-guard.ts::validateUrl`.
 24. **Parallel Edit `replace_all` + overlapping indent levels produce duplicate-key bugs.** Sprint 15 K.1 ran two `replace_all` passes on `lib/mcp/stateless-server.ts` to insert `organization_id: scope.organization_id,` after every `trace_id: traceId,`. The 6-space pattern is a literal substring of the 8-space line, so the second pass matched inside the lines the first pass already modified — producing a duplicate `organization_id` property and tripping TypeScript TS1117. Two fixes: (a) anchor indent by including the newline prefix in the match (`\n      trace_id:` not `      trace_id:`), or (b) run the more-indented pattern FIRST, then the less-indented pattern only matches its native sites. Caught the hard way — 3 follow-up edits to collapse the duplicates.
+25. **Supabase migration filenames MUST be 14-digit `YYYYMMDDHHMMSS_*.sql`.** Hyphenated prefixes (`20260424-02_foo.sql`) are silently skipped by the CLI — no warning, just ignored at `db reset` and `db push`. Cost ~30 min Sprint 15 chasing "why doesn't my migration apply". Codified as `.claude/rules/migrations.md`.
+26. **Supabase `custom_access_token_hook` dashboard registration isn't migratable.** Shipping the function via SQL is only half the work — on hosted, the hook must be explicitly enabled via dashboard → Authentication → Hooks → "Customize Access Token (JWT) Claims hook". No API or migration path. Local uses `supabase/config.toml` `[auth.hook.custom_access_token]` block. After `supabase db push` on any migration that installs the function, the live app is in a broken state (RLS active + empty claim = empty dashboard) until the dashboard toggle fires. Budget ~30 seconds for the dashboard step every time RLS schema lands on hosted.
+27. **RLS `WITH CHECK` must pin every scope-defining column, not just row ownership.** A policy with `USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid())` lets a user `UPDATE row SET organization_id = '<victim>'` because post-update the row is still theirs. WITH CHECK needs `AND organization_id = public.jwt_org_id() AND role = '<immutable>'` to lock the scope columns to their tamper-proof sources (JWT claim). Caught by reviewer on Sprint 16 WP-L.1 `member_update_self`; fix shipped as follow-up migration `20260425160000_rls_member_update_tighten.sql`.
+28. **Vercel preview deployments 401 auth routes.** Preview URLs (`<project>-<branch>.vercel.app`) have "Deployment Protection" on by default — every path returns 401 without a Vercel login or bypass token. Includes `/auth/callback`. Supabase email verification redirects there → user never gets session established → lands on landing page confused. For auth flow testing, always use the production URL (`<project>.vercel.app`) where protection is off. Or disable protection in Vercel project settings.
+29. **Supabase built-in SMTP is locked at 2 emails/hour/project.** The "Rate limit for sending emails" field is greyed out in the dashboard until you configure a custom SMTP provider (Resend, SendGrid, Postmark). For signup iteration (sign up → verify → fix → delete → re-sign-up), 2/h is brutal. Dev workaround: disable "Confirm email" under Auth → Providers. Production: configure Resend (free tier 100/day, 5-min DNS setup). Sprint 16 signup testing hit this.
 
 ---
 
@@ -596,7 +602,6 @@ Once those are in place, every subsequent day builds on a known-good base.
 
 If a 5-day clock is ticking and you find yourself considering any of these, say no:
 
-- RLS policies (single-org, no multi-tenancy)
 - OAuth/SSO providers
 - MFA, device tracking, session management UI
 - Custom email templates
