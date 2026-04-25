@@ -4,6 +4,7 @@ import * as React from "react";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 
 import { useIsMobile } from "@/hooks/use-mobile";
+import { DASHBOARD_REFRESH_EVENT } from "@/hooks/use-dashboard-refresh";
 import {
   Card,
   CardAction,
@@ -85,6 +86,9 @@ export const ChartAreaInteractive = () => {
   const [userRange, setUserRange] = React.useState<Range | null>(null);
   const timeRange: Range = userRange ?? (isMobile ? "7d" : "90d");
   const [data, setData] = React.useState<Bucket[] | null>(null);
+  // Sprint 21 WP-21.5: bumped by the dashboard-refresh window event to
+  // re-trigger the fetch effect without changing timeRange.
+  const [refreshTick, setRefreshTick] = React.useState(0);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -102,7 +106,13 @@ export const ChartAreaInteractive = () => {
     return () => {
       cancelled = true;
     };
-  }, [timeRange]);
+  }, [timeRange, refreshTick]);
+
+  React.useEffect(() => {
+    const onRefresh = () => setRefreshTick((n) => n + 1);
+    window.addEventListener(DASHBOARD_REFRESH_EVENT, onRefresh);
+    return () => window.removeEventListener(DASHBOARD_REFRESH_EVENT, onRefresh);
+  }, []);
 
   const handleRangeChange = (value: string) => {
     if (isRange(value)) setUserRange(value);

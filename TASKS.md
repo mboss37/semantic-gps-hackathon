@@ -132,6 +132,7 @@
 - [x] WP-21.2 Header brand cluster (org name + "Built with Opus 4.7" violet pill) + color-coded KPI badges (emerald/sky/indigo). Sparklines deferred — flat-line on empty DB low signal.
 - [x] WP-21.3 Gateway Traffic empty state: faded mock-chart at opacity-25 with overlay caption. Breadcrumbs cut — existing back-links functional.
 - [x] WP-21.4 Landing v1: real dashboard screenshot replaces 288-line DashboardMockup, new StatStrip (12/7/3/14), new DemoVideoSection at #demo with `NEXT_PUBLIC_DEMO_VIDEO_URL` env. `/` stays static.
+- [x] WP-21.5 Dashboard auto-refresh — `useDashboardRefresh()` hook (`router.refresh()` + window CustomEvent broadcast, 2s debounce), tab-focus listener in SiteHeader, manual `<RefreshButton />`, chart subscribes to event. Realtime deferred to BACKLOG P1.
 
 ## Session Log
 - 2026-04-25 — Sprint 20 shipped: 4 WPs, 6 commits pushed. Dashboard nav perf collapse — `requireAuth` React `cache()` wrap (3 `getUser()` round-trips → 1 per RSC render) + `loading.tsx` skeletons → perceived nav latency ~1-2s blank → <50ms instant paint. Onboarding JWT-refresh fix unblocks every fresh signup: `auth.updateUser` doesn't refresh tokens, so `refreshSession()` after the flag flip is mandatory for the hook to re-stamp claims. Hosted migrations 220000/220100 backfilled mid-sprint after fresh-signup hit hooked-claim drift (Lesson #32 gate held but human skipped it; memo to self next time). 5 memories + Hard-Won Lessons #35/#36. 341/2/0 tests.

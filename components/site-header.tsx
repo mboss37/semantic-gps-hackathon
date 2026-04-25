@@ -1,10 +1,13 @@
 'use client';
 
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { SparklesIcon } from 'lucide-react';
 
+import { RefreshButton } from '@/components/dashboard/refresh-button';
 import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { useDashboardRefresh } from '@/hooks/use-dashboard-refresh';
 
 // Sprint 21 WP-21.2: page title on the left, brand-presence cluster on the
 // right — "Built with Opus 4.7" pill + optional org name. First three seconds
@@ -36,9 +39,27 @@ type Props = {
 export function SiteHeader({ orgName }: Props = {}) {
   const pathname = usePathname();
   const title = resolveTitle(pathname);
+  const { refresh } = useDashboardRefresh();
+
+  // Sprint 21 WP-21.5: tab-focus auto-refresh. visibilitychange fires when
+  // the user returns to this tab from Postman / Claude Desktop / wherever.
+  // The hook itself debounces, so the parallel `focus` listener is harmless
+  // but covers the case of a same-tab window refocus.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    const onFocus = () => refresh();
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [refresh]);
 
   return (
-    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
+    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b bg-sidebar transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
       <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
         <SidebarTrigger className="-ml-1" />
         <Separator
@@ -56,6 +77,7 @@ export function SiteHeader({ orgName }: Props = {}) {
             <SparklesIcon className="size-3.5" />
             Built with Opus 4.7
           </span>
+          <RefreshButton />
         </div>
       </div>
     </header>

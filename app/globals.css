@@ -46,7 +46,10 @@
 
 :root {
   /* Vercel geist — dark, pure contrast, blue accent */
-  --background: oklch(0 0 0);
+  /* Sprint 21: main content card lifted off pure black so the muted card
+     sits on a Vercel-black chrome (sidebar + rail + header). Inverts the
+     classic shadcn dark theme to favor pure-black chrome over content. */
+  --background: oklch(0.10 0 0);
   --foreground: oklch(1 0 0);
   --card: oklch(0.145 0 0);
   --card-foreground: oklch(1 0 0);
@@ -71,6 +74,9 @@
   --chart-4: oklch(0.62 0.22 27);
   --chart-5: oklch(0.708 0 0);
 
+  /* Sprint 21: chrome stays pure Vercel-black; the muted lift moved to
+     --background so the main content card reads as the surface and the
+     surrounding sidebar/rail/header read as the frame. */
   --sidebar: oklch(0 0 0);
   --sidebar-foreground: oklch(1 0 0);
   --sidebar-primary: oklch(1 0 0);
