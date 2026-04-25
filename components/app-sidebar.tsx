@@ -9,6 +9,7 @@ import {
   KeyRoundIcon,
   LayoutDashboardIcon,
   NetworkIcon,
+  PlugZapIcon,
   RouteIcon,
   ShieldCheckIcon,
   SparklesIcon,
@@ -46,6 +47,7 @@ const data = {
     { title: 'Relationships', url: '/dashboard/relationships', icon: GitMergeIcon },
     { title: 'Routes', url: '/dashboard/routes', icon: RouteIcon },
     { title: 'Tokens', url: '/dashboard/tokens', icon: KeyRoundIcon },
+    { title: 'Connect', url: '/dashboard/connect', icon: PlugZapIcon },
   ],
   governance: [
     { title: 'Policies', url: '/dashboard/policies', icon: ShieldCheckIcon },

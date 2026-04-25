@@ -59,6 +59,18 @@ update public.organizations o
  where m.user_id = '11111111-1111-1111-1111-111111111111'
    and o.id = m.organization_id;
 
+-- Sprint 24: SalesOps domain seeded here (demo-only) instead of in the
+-- signup trigger. Real users signing up no longer get an auto-provisioned
+-- "Sales operations — Salesforce, Slack, GitHub" domain — that was demo
+-- content masquerading as platform behavior. Bootstrap scripts that target
+-- the demo user keep working because seed.sql still creates this row.
+insert into public.domains (organization_id, slug, name, description)
+select m.organization_id, 'salesops', 'SalesOps',
+       'Sales operations — Salesforce, Slack, GitHub'
+from public.memberships m
+where m.user_id = '11111111-1111-1111-1111-111111111111'
+on conflict (organization_id, slug) do nothing;
+
 -- Demo gateway token (plaintext intentionally exposed for demo; V2 adds UI
 -- to mint + rotate). Clients authenticate with:
 --   Authorization: Bearer sgps_demo_token_abcdef0123456789abcdef0123456789abcd

@@ -2,14 +2,18 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createServiceClient } from '@/lib/supabase/service';
 
-// DB integration test for the domains table (WP-B.1). Covers the auto-seed
-// via the extended handle_new_user trigger and org-scoped CRUD.
+// DB integration test for the domains table.
+// Sprint 24 contract change: signup no longer auto-seeds a SalesOps domain.
+// New signups get a clean org + membership only — domain creation is
+// user-controlled (UI greyed out as "Soon" pending CRUD work). Tests below
+// reflect the new shape: no domain on signup, domain inserts are explicit,
+// and the per-org unique constraint still holds.
 // Skipped unless Supabase env vars are present.
 
 const shouldRun =
   !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.SUPABASE_SECRET_KEY && !process.env.CI;
 
-describe.skipIf(!shouldRun)('domains table + default seed', () => {
+describe.skipIf(!shouldRun)('domains table contract', () => {
   let supabase: SupabaseClient;
   const createdUserIds: string[] = [];
 
@@ -35,8 +39,8 @@ describe.skipIf(!shouldRun)('domains table + default seed', () => {
     return data.user.id;
   };
 
-  it('new signup gets a default SalesOps domain', async () => {
-    const userId = await createUser(`wp-b1-default-${Date.now()}@test.local`);
+  it('new signup creates a clean org with no auto-seeded domain', async () => {
+    const userId = await createUser(`wp-b1-clean-${Date.now()}@test.local`);
 
     const { data: membership } = await supabase
       .from('memberships')
@@ -46,16 +50,14 @@ describe.skipIf(!shouldRun)('domains table + default seed', () => {
 
     const { data: domains, error } = await supabase
       .from('domains')
-      .select('slug, name, description')
+      .select('slug, name')
       .eq('organization_id', membership?.organization_id);
 
     expect(error).toBeNull();
-    expect(domains).toHaveLength(1);
-    expect(domains?.[0].slug).toBe('salesops');
-    expect(domains?.[0].name).toBe('SalesOps');
+    expect(domains).toHaveLength(0);
   });
 
-  it('two orgs have isolated domain slugs (unique per org, not global)', async () => {
+  it('domain slug uniqueness is per-org, not global', async () => {
     const ts = Date.now();
     const a = await createUser(`wp-b1-iso-a-${ts}@test.local`);
     const b = await createUser(`wp-b1-iso-b-${ts}@test.local`);
@@ -68,21 +70,21 @@ describe.skipIf(!shouldRun)('domains table + default seed', () => {
     const orgIds = memberships.data?.map((m) => m.organization_id) ?? [];
     expect(orgIds).toHaveLength(2);
 
+    // Insert the same slug into both orgs — should succeed twice because
+    // the unique index is composite (organization_id, slug).
+    for (const organization_id of orgIds) {
+      const { error } = await supabase
+        .from('domains')
+        .insert({ organization_id, slug: 'shared', name: 'Shared' });
+      expect(error).toBeNull();
+    }
+
     const domains = await supabase
       .from('domains')
       .select('organization_id, slug')
       .in('organization_id', orgIds);
 
     expect(domains.data).toHaveLength(2);
-    const perOrg = new Map<string, string[]>();
-    for (const d of domains.data ?? []) {
-      const arr = perOrg.get(d.organization_id) ?? [];
-      arr.push(d.slug);
-      perOrg.set(d.organization_id, arr);
-    }
-    for (const slugs of perOrg.values()) {
-      expect(slugs).toEqual(['salesops']);
-    }
   });
 
   it('duplicate slug in same org is rejected by unique constraint', async () => {
@@ -93,16 +95,20 @@ describe.skipIf(!shouldRun)('domains table + default seed', () => {
       .eq('user_id', userId)
       .single();
 
-    const { error } = await supabase
-      .from('domains')
-      .insert({
-        organization_id: membership?.organization_id,
-        slug: 'salesops',
-        name: 'Duplicate',
-      });
+    const organization_id = membership?.organization_id;
+    if (!organization_id) throw new Error('membership missing organization_id');
 
-    expect(error).not.toBeNull();
-    expect(error?.code).toBe('23505');
+    const first = await supabase
+      .from('domains')
+      .insert({ organization_id, slug: 'sales', name: 'First' });
+    expect(first.error).toBeNull();
+
+    const second = await supabase
+      .from('domains')
+      .insert({ organization_id, slug: 'sales', name: 'Duplicate' });
+
+    expect(second.error).not.toBeNull();
+    expect(second.error?.code).toBe('23505');
   });
 });
 
