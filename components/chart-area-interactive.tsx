@@ -66,6 +66,20 @@ const chartConfig = {
   error: { label: "Error", color: "#f59e0b" },
 } satisfies ChartConfig;
 
+// Sprint 21 WP-21.3: deterministic synthetic series for the empty-state
+// faded mock chart. Pre-computed so Recharts doesn't see a fresh array
+// every render (would force unnecessary chart re-mounts).
+const DAY_MS = 24 * 60 * 60 * 1000;
+const MOCK_EMPTY_SERIES: Bucket[] = Array.from({ length: 30 }, (_, i) => {
+  const ts = new Date(Date.now() - (29 - i) * DAY_MS).toISOString().slice(0, 10);
+  return {
+    date: ts,
+    ok: 8 + Math.round(Math.sin(i / 3) * 4 + 6),
+    blocked: 2 + Math.round(Math.cos(i / 4) * 2 + 1),
+    error: 1 + Math.round(Math.sin(i / 5) * 1),
+  };
+});
+
 export const ChartAreaInteractive = () => {
   const isMobile = useIsMobile();
   const [userRange, setUserRange] = React.useState<Range | null>(null);
@@ -147,29 +161,14 @@ export const ChartAreaInteractive = () => {
         </CardAction>
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-        {hasNoTraffic ? (
-          <div
-            data-testid="chart-empty-state"
-            className="flex aspect-auto h-[250px] w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-muted/30 px-6 text-center"
-          >
-            <p className="text-sm text-muted-foreground">No gateway traffic yet.</p>
-            <p className="text-xs text-muted-foreground">
-              Run a preset in the{' '}
-              <a
-                href="/dashboard/playground"
-                className="font-medium text-foreground underline underline-offset-2"
-              >
-                Playground
-              </a>{' '}
-              or hit the gateway from an MCP client to populate this chart.
-            </p>
-          </div>
-        ) : (
+        <div className="relative">
           <ChartContainer
             config={chartConfig}
-            className="aspect-auto h-[250px] w-full"
+            className={`aspect-auto h-[250px] w-full ${
+              hasNoTraffic ? 'pointer-events-none opacity-25' : ''
+            }`}
           >
-            <AreaChart data={data ?? []}>
+            <AreaChart data={hasNoTraffic ? MOCK_EMPTY_SERIES : (data ?? [])}>
               <defs>
                 <linearGradient id="fillOk" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="var(--color-ok)" stopOpacity={0.9} />
@@ -235,7 +234,25 @@ export const ChartAreaInteractive = () => {
               />
             </AreaChart>
           </ChartContainer>
-        )}
+          {hasNoTraffic ? (
+            <div
+              data-testid="chart-empty-state"
+              className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center"
+            >
+              <p className="text-sm font-medium">No gateway traffic yet</p>
+              <p className="max-w-sm text-xs text-muted-foreground">
+                Run a preset in the{' '}
+                <a
+                  href="/dashboard/playground"
+                  className="font-medium text-foreground underline underline-offset-2"
+                >
+                  Playground
+                </a>{' '}
+                — calls will land here once the gateway sees traffic.
+              </p>
+            </div>
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   );
