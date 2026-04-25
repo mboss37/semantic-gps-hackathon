@@ -38,6 +38,16 @@ const DashboardLayout = async ({ children }: { children: React.ReactNode }) => {
   const email = ctx.user.email ?? '';
   const displayName = fullName || email.split('@')[0] || 'Member';
 
+  // Sprint 21 WP-21.2: org name in the site-header brand cluster.
+  // requireAuth is React-cache()-wrapped so this query is the only DB hit
+  // for org metadata across the layout + page tree.
+  const { data: orgRow } = await ctx.supabase
+    .from('organizations')
+    .select('name')
+    .eq('id', ctx.organization_id)
+    .maybeSingle();
+  const orgName = typeof orgRow?.name === 'string' ? orgRow.name : undefined;
+
   return (
     <SidebarProvider
       style={
@@ -49,7 +59,7 @@ const DashboardLayout = async ({ children }: { children: React.ReactNode }) => {
     >
       <AppSidebar variant="inset" user={{ name: displayName, email }} />
       <SidebarInset>
-        <SiteHeader />
+        <SiteHeader orgName={orgName} />
         <div className="flex flex-1 flex-col">{children}</div>
       </SidebarInset>
       <Toaster position="bottom-right" richColors />

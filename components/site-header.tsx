@@ -1,15 +1,25 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { SparklesIcon } from 'lucide-react';
 
 import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 
+// Sprint 21 WP-21.2: page title on the left, brand-presence cluster on the
+// right — "Built with Opus 4.7" pill + optional org name. First three seconds
+// after a judge logs in: this is the framing they see.
+
 const TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/dashboard/servers': 'Servers',
+  '/dashboard/routes': 'Routes',
+  '/dashboard/relationships': 'Relationships',
+  '/dashboard/playground': 'Playground',
   '/dashboard/graph': 'Workflow Graph',
+  '/dashboard/tokens': 'Tokens',
   '/dashboard/policies': 'Policies',
+  '/dashboard/monitoring': 'Monitoring',
   '/dashboard/audit': 'Audit',
 };
 
@@ -19,7 +29,11 @@ const resolveTitle = (pathname: string): string => {
   return base ? TITLES[base] : 'Dashboard';
 };
 
-export function SiteHeader() {
+type Props = {
+  orgName?: string;
+};
+
+export function SiteHeader({ orgName }: Props = {}) {
   const pathname = usePathname();
   const title = resolveTitle(pathname);
 
@@ -32,6 +46,17 @@ export function SiteHeader() {
           className="mx-2 data-[orientation=vertical]:h-4"
         />
         <h1 className="text-base font-medium">{title}</h1>
+        <div className="ml-auto flex items-center gap-3">
+          {orgName ? (
+            <span className="hidden text-sm text-muted-foreground sm:inline">
+              {orgName}
+            </span>
+          ) : null}
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-xs font-medium text-violet-300">
+            <SparklesIcon className="size-3.5" />
+            Built with Opus 4.7
+          </span>
+        </div>
       </div>
     </header>
   );
