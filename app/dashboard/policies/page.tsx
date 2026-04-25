@@ -155,12 +155,13 @@ const PoliciesPage = async ({
         <FilterTabs filter={filter} totalAvailable={totalAvailable} totalApplied={totalApplied} />
       </header>
 
-      {/* URL-driven create dialog. The "+ New policy" button is gone — apply
-          flow is exclusively from a catalog card's `Apply to my org` /
-          `Apply another` CTA, which deep-links here with `?builtin=<key>`.
-          Dialog auto-opens via initialBuiltinKey, hideTrigger suppresses
-          the standalone trigger button. */}
+      {/* URL-driven create dialog. `?builtin=<key>` deep-links here from any
+          card's "Apply to my org" CTA. The `key` prop forces a remount on URL
+          change so the dialog's `useState(Boolean(initialBuiltinKey))`
+          initializer re-runs and reopens — without this, same-page client
+          navigation preserves the (false) initial state. */}
       <PolicyCreateDialog
+        key={initialBuiltinKey ?? 'idle'}
         servers={servers}
         initialBuiltinKey={initialBuiltinKey}
         hideTrigger
@@ -180,31 +181,13 @@ const PoliciesPage = async ({
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-8">
-          {DIMENSION_ORDER.map((dim) => {
-            const entries = byDimension.get(dim) ?? [];
-            if (entries.length === 0) return null;
-            return (
-              <section key={dim} className="flex flex-col gap-3">
-                <h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                  {DIMENSION_LABELS[dim]}
-                </h2>
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {entries.map((entry) => (
-                    <PolicyCatalogCard
-                      key={entry.builtin_key}
-                      entry={entry}
-                      instances={instancesByBuiltin.get(entry.builtin_key) ?? []}
-                      assignmentsByPolicy={assignmentsByPolicy}
-                      servers={servers}
-                      tools={tools}
-                    />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </div>
+        <PolicyDimensionLayout
+          byDimension={byDimension}
+          instancesByBuiltin={instancesByBuiltin}
+          assignmentsByPolicy={assignmentsByPolicy}
+          servers={servers}
+          tools={tools}
+        />
       )}
     </div>
   );
@@ -259,3 +242,76 @@ const FilterPill = ({
     </span>
   </Link>
 );
+
+// Group catalog entries by dimension; render multi-card dimensions
+// (`hygiene` + `identity`) as full-width sections, then pack singleton
+// dimensions (rate / time / residency / kill-switch / idempotency) into one
+// shared 3-col grid so the layout doesn't degenerate into a column of
+// solo cards.
+const PolicyDimensionLayout = ({
+  byDimension,
+  instancesByBuiltin,
+  assignmentsByPolicy,
+  servers,
+  tools,
+}: {
+  byDimension: Map<PolicyDimension, typeof POLICY_CATALOG>;
+  instancesByBuiltin: Map<string, PolicyRow[]>;
+  assignmentsByPolicy: Map<string, AssignmentRow[]>;
+  servers: ServerRow[];
+  tools: Array<{ id: string; name: string; server_id: string; server_name: string }>;
+}) => {
+  const dimsWithEntries = DIMENSION_ORDER.filter((dim) => (byDimension.get(dim)?.length ?? 0) > 0);
+  const multiCardDims = dimsWithEntries.filter((dim) => (byDimension.get(dim)?.length ?? 0) > 1);
+  const singleCardDims = dimsWithEntries.filter((dim) => (byDimension.get(dim)?.length ?? 0) === 1);
+
+  return (
+    <div className="flex flex-col gap-8">
+      {multiCardDims.map((dim) => {
+        const entries = byDimension.get(dim) ?? [];
+        return (
+          <section key={dim} className="flex flex-col gap-3">
+            <h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              {DIMENSION_LABELS[dim]}
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {entries.map((entry) => (
+                <PolicyCatalogCard
+                  key={entry.builtin_key}
+                  entry={entry}
+                  instances={instancesByBuiltin.get(entry.builtin_key) ?? []}
+                  assignmentsByPolicy={assignmentsByPolicy}
+                  servers={servers}
+                  tools={tools}
+                />
+              ))}
+            </div>
+          </section>
+        );
+      })}
+
+      {singleCardDims.length > 0 && (
+        <div className="grid gap-x-4 gap-y-6 sm:grid-cols-2 xl:grid-cols-3">
+          {singleCardDims.map((dim) => {
+            const entry = (byDimension.get(dim) ?? [])[0];
+            if (!entry) return null;
+            return (
+              <section key={dim} className="flex flex-col gap-3">
+                <h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  {DIMENSION_LABELS[dim]}
+                </h2>
+                <PolicyCatalogCard
+                  entry={entry}
+                  instances={instancesByBuiltin.get(entry.builtin_key) ?? []}
+                  assignmentsByPolicy={assignmentsByPolicy}
+                  servers={servers}
+                  tools={tools}
+                />
+              </section>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};

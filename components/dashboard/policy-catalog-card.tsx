@@ -2,19 +2,15 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { ArrowRightIcon, Pencil } from 'lucide-react';
+import { ArrowRightIcon, HelpCircle, Pencil } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { PolicyEditDialog } from '@/components/dashboard/policy-edit-dialog';
 import { DIMENSION_LABELS, type CatalogEntry } from '@/lib/policies/catalog';
-
-// Sprint 28 IA flip + edit-in-place: each catalog card surfaces its applied
-// instances inline as small editable chips. Footer flips between "Apply to
-// my org" (no instances yet) and "Apply another" (already in use). Clicking
-// a chip opens `PolicyEditDialog` for that specific policy_id — no
-// navigation, no separate active page.
+import { cn } from '@/lib/utils';
 
 type Mode = 'shadow' | 'enforce';
 
@@ -50,6 +46,16 @@ type Props = {
   tools: ToolOption[];
 };
 
+// Mode pill is read-only on the catalog card — flipping mode happens inside
+// `<PolicyEditDialog>` so the mutation surface stays in one canonical place.
+// Color semantics:
+//   shadow  → zinc (passive, log-only — observation, no enforcement)
+//   enforce → amber (active, blocking — warning-tone signals "this will reject")
+const MODE_BADGE_CLASS: Record<Mode, string> = {
+  shadow: 'border-zinc-500/40 bg-zinc-500/15 text-zinc-200',
+  enforce: 'border-amber-500/50 bg-amber-500/15 text-amber-300',
+};
+
 export const PolicyCatalogCard = ({
   entry,
   instances,
@@ -62,76 +68,102 @@ export const PolicyCatalogCard = ({
   const editingAssignments = editingId ? (assignmentsByPolicy.get(editingId) ?? []) : [];
 
   const attachedCount = instances.length;
+  const isApplied = attachedCount > 0;
 
   return (
     <>
-      <Card className="flex flex-col">
-        <CardHeader className="space-y-2">
+      <Card
+        className={cn(
+          'flex flex-col gap-3 py-4',
+          isApplied && 'border-emerald-500/40',
+        )}
+      >
+        <CardHeader className="space-y-1.5 px-5">
           <div className="flex items-start justify-between gap-2">
-            <CardTitle className="text-base">{entry.title}</CardTitle>
-            <Badge variant="outline" className="shrink-0 text-xs font-normal">
+            <CardTitle className="text-sm">{entry.title}</CardTitle>
+            <Badge variant="outline" className="shrink-0 text-[10px] font-normal">
               {DIMENSION_LABELS[entry.dimension]}
             </Badge>
           </div>
-          <code className="font-mono text-xs text-muted-foreground">{entry.builtin_key}</code>
+          <code className="font-mono text-[11px] text-muted-foreground">{entry.builtin_key}</code>
           {/* Config row sits in the header so it lands at the same Y on every
-              card regardless of description length. The description below is
-              the only flexible region; everything from "Active in your org"
-              down is anchored to the footer. */}
-          <p className="text-xs text-muted-foreground">
+              card regardless of description length. */}
+          <p className="text-[11px] text-muted-foreground">
             <span className="font-medium text-foreground">Config: </span>
             {entry.config_keys.join(', ')}
           </p>
         </CardHeader>
-        <CardContent className="flex flex-1 flex-col gap-3">
-          <p className="flex-1 text-sm text-muted-foreground">{entry.description}</p>
 
-          {attachedCount > 0 && (
-            <div className="flex flex-col gap-1.5">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                Active in your org
-              </span>
-              <ul className="flex flex-col gap-1.5">
-                {instances.map((p) => (
-                  <li key={p.id}>
-                    <button
-                      type="button"
-                      onClick={() => setEditingId(p.id)}
-                      className="group flex w-full items-center justify-between gap-2 rounded-md border bg-muted/30 px-2.5 py-1.5 text-xs transition-colors hover:border-foreground/30 hover:bg-muted/50"
+        <CardContent className="flex flex-1 flex-col gap-2 px-5">
+          <p className="flex-1 text-xs leading-relaxed text-muted-foreground">{entry.description}</p>
+
+          {isApplied && (
+            <ul className="flex flex-col gap-1.5 pt-1">
+              {instances.map((p) => (
+                <li key={p.id} className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                      Mode
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            aria-label="What is shadow vs enforce?"
+                            className="text-muted-foreground/70 transition-colors hover:text-foreground"
+                          >
+                            <HelpCircle className="size-3" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[260px] text-left normal-case tracking-normal">
+                          <p className="mb-1">
+                            <span className="font-semibold">Shadow</span> — log every violation, never block.
+                            Use this to audit a new policy against real traffic.
+                          </p>
+                          <p>
+                            <span className="font-semibold">Enforce</span> — block or redact at the gateway.
+                            Flip here once the shadow timeline looks clean.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </span>
+                    <span
+                      className={cn(
+                        'inline-flex h-5 items-center rounded border px-1.5 font-mono text-[10px] font-medium uppercase tracking-wider',
+                        MODE_BADGE_CLASS[p.enforcement_mode],
+                      )}
                     >
-                      <span className="flex items-center gap-1.5">
-                        <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                          Mode:
-                        </span>
-                        <span
-                          className={`rounded-sm border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
-                            p.enforcement_mode === 'enforce'
-                              ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
-                              : 'border-zinc-500/30 bg-zinc-500/10 text-zinc-300'
-                          }`}
-                        >
-                          {p.enforcement_mode}
-                        </span>
-                      </span>
-                      <span className="inline-flex shrink-0 items-center gap-1 text-muted-foreground transition-colors group-hover:text-foreground">
-                        <Pencil className="size-3" />
-                        <span className="font-mono uppercase tracking-wider">Edit policy</span>
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                      {p.enforcement_mode}
+                    </span>
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1.5 px-2.5 text-[11px]"
+                    onClick={() => setEditingId(p.id)}
+                  >
+                    <Pencil className="size-3" />
+                    Edit policy
+                  </Button>
+                </li>
+              ))}
+            </ul>
           )}
         </CardContent>
-        <CardFooter>
-          <Button asChild size="sm" variant={attachedCount > 0 ? 'outline' : 'default'} className="w-full">
-            <Link href={`/dashboard/policies?builtin=${entry.builtin_key}`}>
-              {attachedCount > 0 ? 'Apply another' : 'Apply to my org'}
-              <ArrowRightIcon className="size-3.5" />
-            </Link>
-          </Button>
-        </CardFooter>
+
+        {/* Apply CTA disappears once the policy is applied — adding it to more
+            servers / tools happens inside the Edit dialog's assignments
+            section. Keeps the catalog card's footer reserved for the
+            "first-touch" action only. */}
+        {!isApplied && (
+          <CardFooter className="px-5">
+            <Button asChild size="sm" className="w-full">
+              <Link href={`/dashboard/policies?builtin=${entry.builtin_key}`}>
+                Apply to my org
+                <ArrowRightIcon className="size-3.5" />
+              </Link>
+            </Button>
+          </CardFooter>
+        )}
       </Card>
 
       {editing ? (
