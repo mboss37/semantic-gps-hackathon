@@ -57,8 +57,8 @@ const TokensPage = async () => {
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
+      <header className="flex items-start justify-between gap-4">
+        <div className="max-w-2xl">
           <h1 className="text-2xl font-semibold">Gateway tokens</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Bearer credentials your MCP clients present in the{' '}
