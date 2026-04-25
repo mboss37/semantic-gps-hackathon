@@ -47,3 +47,7 @@ next-env.d.ts
 
 # Playwright MCP working dir (screenshots, console logs, page snapshots)
 .playwright-mcp/
+
+# Stray Playwright screenshots written to repo root during dev sessions.
+# Subfolder PNGs (public/, etc.) stay tracked.
+/*.png
