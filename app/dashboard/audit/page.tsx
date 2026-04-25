@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FilterIcon, RefreshCwIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { AuditChart } from '@/components/dashboard/audit-chart';
+import { AuditDetailSheet } from '@/components/dashboard/audit-detail-sheet';
 import { AuditRow } from '@/components/dashboard/audit-row';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ const AuditPage = () => {
   const [traceId, setTraceId] = useState('');
   const [paused, setPaused] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const load = useCallback(async (tid: string, quiet = true) => {
     try {
@@ -127,11 +129,23 @@ const AuditPage = () => {
         ) : (
           <ul className="flex flex-col gap-2">
             {events.map((e) => (
-              <AuditRow key={e.id} event={e} onTraceClick={setTraceId} />
+              <AuditRow
+                key={e.id}
+                event={e}
+                onTraceClick={setTraceId}
+                onSelect={setSelectedEventId}
+              />
             ))}
           </ul>
         )}
       </section>
+
+      <AuditDetailSheet
+        eventId={selectedEventId}
+        onOpenChange={(open) => {
+          if (!open) setSelectedEventId(null);
+        }}
+      />
     </div>
   );
 };

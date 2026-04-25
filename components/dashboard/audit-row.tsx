@@ -15,12 +15,24 @@ const STATUS_COLOR: Record<string, string> = {
 type Props = {
   event: AuditEvent;
   onTraceClick: (traceId: string) => void;
+  onSelect: (eventId: string) => void;
 };
 
-export const AuditRow = ({ event, onTraceClick }: Props) => {
+export const AuditRow = ({ event, onTraceClick, onSelect }: Props) => {
   const statusClass = STATUS_COLOR[event.status] ?? '';
   return (
-    <li className="rounded-md border bg-muted/30 px-3 py-2 text-xs">
+    <li
+      className="cursor-pointer rounded-md border bg-muted/30 px-3 py-2 text-xs transition-colors hover:bg-muted/60"
+      onClick={() => onSelect(event.id)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect(event.id);
+        }
+      }}
+    >
       <div className="flex items-center gap-3">
         <span className="w-16 shrink-0 text-muted-foreground">
           {new Date(event.created_at).toLocaleTimeString()}
@@ -37,7 +49,10 @@ export const AuditRow = ({ event, onTraceClick }: Props) => {
         )}
         <button
           className="text-muted-foreground hover:text-foreground"
-          onClick={() => onTraceClick(event.trace_id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onTraceClick(event.trace_id);
+          }}
           title="Filter by this trace"
         >
           trace {event.trace_id.slice(0, 8)}…
