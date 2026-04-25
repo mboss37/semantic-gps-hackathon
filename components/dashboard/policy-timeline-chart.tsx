@@ -1,19 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart';
+import { verdictChartConfig } from '@/lib/charts/palette';
 
 // Sprint 12 WP-12.4 (I.4): per-policy shadow→enforce timeline chart. Stacks
-// enforce_block (red) + shadow_block (amber) + allow (muted) per day so the
+// enforce_block (red) + shadow_block (amber) + allow (emerald) per day so the
 // judge can see at a glance how often this policy would have fired. Amber
 // bars are the shadow-mode "would-have-blocked" events — the core auditing
 // story we're pitching.
@@ -96,26 +96,25 @@ export const PolicyTimelineChart = ({ policyId, days = 7 }: Props) => {
   const chartData = data.series.map((b) => ({ ...b, dateLabel: formatDate(b.date) }));
 
   return (
-    <div className="h-80 rounded-lg border bg-muted/30 p-4">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-          <XAxis dataKey="dateLabel" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-          <YAxis allowDecimals={false} stroke="hsl(var(--muted-foreground))" fontSize={11} />
-          <Tooltip
-            contentStyle={{
-              background: 'hsl(var(--card))',
-              border: '1px solid hsl(var(--border))',
-              borderRadius: 6,
-            }}
-            labelStyle={{ color: 'hsl(var(--foreground))' }}
+    <div className="rounded-lg border bg-muted/30 p-4">
+      <ChartContainer config={verdictChartConfig} className="aspect-auto h-80 w-full">
+        <BarChart data={chartData} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+          <CartesianGrid vertical={false} strokeDasharray="3 3" />
+          <XAxis dataKey="dateLabel" tickLine={false} axisLine={false} fontSize={11} tickMargin={8} />
+          <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={11} width={24} />
+          <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
+          <ChartLegend content={<ChartLegendContent />} />
+          <Bar dataKey="allow" stackId="1" fill="var(--color-allow)" maxBarSize={44} />
+          <Bar dataKey="shadow_block" stackId="1" fill="var(--color-shadow_block)" maxBarSize={44} />
+          <Bar
+            dataKey="enforce_block"
+            stackId="1"
+            fill="var(--color-enforce_block)"
+            radius={[4, 4, 0, 0]}
+            maxBarSize={44}
           />
-          <Legend wrapperStyle={{ fontSize: 11 }} />
-          <Bar dataKey="allow" stackId="1" fill="var(--chart-5)" name="Allowed" />
-          <Bar dataKey="shadow_block" stackId="1" fill="var(--chart-3)" name="Shadow block (would have)" />
-          <Bar dataKey="enforce_block" stackId="1" fill="var(--chart-4)" name="Enforce block" />
         </BarChart>
-      </ResponsiveContainer>
+      </ChartContainer>
     </div>
   );
 };

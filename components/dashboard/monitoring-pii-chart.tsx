@@ -1,45 +1,45 @@
 'use client';
 
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import type { PiiPatternCount } from '@/lib/monitoring/fetch';
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart';
+import { piiChartConfig } from '@/lib/charts/palette';
 
-type Props = { data: PiiPatternCount[] };
+type PiiCount = { pattern: string; count: number };
 
-export const MonitoringPiiChart = ({ data }: Props) => {
+type Props = { data: PiiCount[]; emptyLabel?: string };
+
+export const MonitoringPiiChart = ({ data, emptyLabel }: Props) => {
   if (data.length === 0) {
     return (
-      <div className="h-64 rounded-lg border border-dashed bg-muted/30 p-4 text-center text-sm text-muted-foreground flex items-center justify-center">
-        No PII detections in the last 7 days.
+      <div className="flex h-64 items-center justify-center rounded-lg border border-dashed bg-muted/30 p-4 text-center text-sm text-muted-foreground">
+        {emptyLabel ?? 'No PII detections in this window.'}
       </div>
     );
   }
 
   return (
-    <div className="h-64 rounded-lg border bg-muted/30 p-4">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} layout="vertical">
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-          <XAxis type="number" allowDecimals={false} stroke="hsl(var(--muted-foreground))" fontSize={11} />
-          <YAxis type="category" dataKey="pattern" stroke="hsl(var(--muted-foreground))" fontSize={11} width={80} />
-          <Tooltip
-            contentStyle={{
-              background: 'hsl(var(--card))',
-              border: '1px solid hsl(var(--border))',
-              borderRadius: 6,
-            }}
-            labelStyle={{ color: 'hsl(var(--foreground))' }}
+    <div className="rounded-lg border bg-muted/30 p-4">
+      <ChartContainer config={piiChartConfig} className="aspect-auto h-64 w-full">
+        <BarChart data={data} layout="vertical" margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+          <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+          <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} fontSize={11} />
+          <YAxis
+            type="category"
+            dataKey="pattern"
+            tickLine={false}
+            axisLine={false}
+            fontSize={11}
+            width={96}
           />
-          <Bar dataKey="count" fill="var(--chart-1)" name="Detections" />
+          <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" hideLabel />} />
+          <Bar dataKey="count" fill="var(--color-count)" radius={[0, 4, 4, 0]} maxBarSize={28} />
         </BarChart>
-      </ResponsiveContainer>
+      </ChartContainer>
     </div>
   );
 };

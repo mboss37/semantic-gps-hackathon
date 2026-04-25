@@ -11,6 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { statusBadgeClassFor } from '@/lib/charts/palette';
 import type { AuditEvent } from '@/lib/schemas/audit-event';
 
 // Sprint 22 WP-22.2: detail drawer for /dashboard/audit. Receives an event id;
@@ -25,15 +26,6 @@ type AuditEventDetail = AuditEvent & {
 type Props = {
   eventId: string | null;
   onOpenChange: (open: boolean) => void;
-};
-
-const STATUS_COLOR: Record<string, string> = {
-  ok: 'border-emerald-500/30 text-emerald-400',
-  blocked_by_policy: 'border-amber-500/30 text-amber-400',
-  origin_error: 'border-red-500/30 text-red-400',
-  fallback_triggered: 'border-blue-500/30 text-blue-400',
-  invalid_input: 'border-amber-500/30 text-amber-400',
-  unauthorized: 'border-red-500/30 text-red-400',
 };
 
 export const AuditDetailSheet = ({ eventId, onOpenChange }: Props) => {
@@ -102,7 +94,7 @@ export const AuditDetailSheet = ({ eventId, onOpenChange }: Props) => {
           <div className="flex flex-col gap-6 px-4 pb-6 text-sm">
             <section className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className={STATUS_COLOR[detail.status] ?? ''}>
+                <Badge variant="outline" className={statusBadgeClassFor(detail.status)}>
                   {detail.status}
                 </Badge>
                 <span className="font-mono text-xs">{detail.method}</span>

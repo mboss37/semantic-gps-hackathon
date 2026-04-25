@@ -1,84 +1,77 @@
 'use client';
 
 import { useMemo } from 'react';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import type { PolicyBlockBucket } from '@/lib/monitoring/fetch';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 
-const PALETTE = [
-  'var(--chart-1)',
-  'oklch(0.62 0.2 290)',
-  'var(--chart-2)',
-  'var(--chart-3)',
-  'var(--chart-4)',
-  'var(--chart-5)',
-];
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart';
+import { buildPolicyChartConfig } from '@/lib/charts/palette';
+
 const TOP_N = 5;
 const OTHER_KEY = '__other';
 
-type Props = { series: PolicyBlockBucket[] };
-
-const formatDate = (iso: string): string => {
-  const d = new Date(`${iso}T00:00:00Z`);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+type BlockBucket = {
+  date: string;
+  dateLabel: string;
+  byPolicy: Record<string, number>;
 };
+
+type Props = { series: BlockBucket[]; emptyLabel?: string };
 
 type Row = { date: string; dateLabel: string } & Record<string, number | string>;
 
-export const MonitoringBlocksChart = ({ series }: Props) => {
-  const { rows, policyKeys } = useMemo(() => buildRows(series), [series]);
+export const MonitoringBlocksChart = ({ series, emptyLabel }: Props) => {
+  const { rows, policyKeys, hasOther } = useMemo(() => buildRows(series), [series]);
+  const config = useMemo(() => {
+    const named = policyKeys.filter((k) => k !== OTHER_KEY);
+    return buildPolicyChartConfig(named, hasOther ? OTHER_KEY : undefined);
+  }, [policyKeys, hasOther]);
+
   const totals = rows.reduce(
     (sum, r) => sum + policyKeys.reduce((s, k) => s + ((r[k] as number) ?? 0), 0),
     0,
   );
   if (totals === 0) {
     return (
-      <div className="h-64 rounded-lg border border-dashed bg-muted/30 p-4 text-center text-sm text-muted-foreground flex items-center justify-center">
-        No policy blocks in the last 7 days.
+      <div className="flex h-64 items-center justify-center rounded-lg border border-dashed bg-muted/30 p-4 text-center text-sm text-muted-foreground">
+        {emptyLabel ?? 'No policy blocks in this window.'}
       </div>
     );
   }
 
   return (
-    <div className="h-64 rounded-lg border bg-muted/30 p-4">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={rows}>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-          <XAxis dataKey="dateLabel" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-          <YAxis allowDecimals={false} stroke="hsl(var(--muted-foreground))" fontSize={11} />
-          <Tooltip
-            contentStyle={{
-              background: 'hsl(var(--card))',
-              border: '1px solid hsl(var(--border))',
-              borderRadius: 6,
-            }}
-            labelStyle={{ color: 'hsl(var(--foreground))' }}
-          />
-          <Legend wrapperStyle={{ fontSize: 11 }} />
+    <div className="rounded-lg border bg-muted/30 p-4">
+      <ChartContainer config={config} className="aspect-auto h-64 w-full">
+        <BarChart data={rows} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+          <CartesianGrid vertical={false} strokeDasharray="3 3" />
+          <XAxis dataKey="dateLabel" tickLine={false} axisLine={false} fontSize={11} tickMargin={8} />
+          <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={11} width={24} />
+          <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
+          <ChartLegend content={<ChartLegendContent />} />
           {policyKeys.map((key, idx) => (
             <Bar
               key={key}
               dataKey={key}
               stackId="1"
-              fill={PALETTE[idx % PALETTE.length]}
-              name={key === OTHER_KEY ? 'other' : key}
+              fill={`var(--color-${key})`}
+              maxBarSize={44}
+              radius={idx === policyKeys.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
             />
           ))}
         </BarChart>
-      </ResponsiveContainer>
+      </ChartContainer>
     </div>
   );
 };
 
-const buildRows = (series: PolicyBlockBucket[]): { rows: Row[]; policyKeys: string[] } => {
+const buildRows = (
+  series: BlockBucket[],
+): { rows: Row[]; policyKeys: string[]; hasOther: boolean } => {
   const totals = new Map<string, number>();
   for (const bucket of series) {
     for (const [name, count] of Object.entries(bucket.byPolicy)) {
@@ -92,7 +85,7 @@ const buildRows = (series: PolicyBlockBucket[]): { rows: Row[]; policyKeys: stri
   const policyKeys = hasOther ? [...top, OTHER_KEY] : top;
 
   const rows: Row[] = series.map((bucket) => {
-    const row: Row = { date: bucket.date, dateLabel: formatDate(bucket.date) };
+    const row: Row = { date: bucket.date, dateLabel: bucket.dateLabel };
     for (const key of top) row[key] = bucket.byPolicy[key] ?? 0;
     if (hasOther) {
       let otherTotal = 0;
@@ -101,5 +94,5 @@ const buildRows = (series: PolicyBlockBucket[]): { rows: Row[]; policyKeys: stri
     }
     return row;
   });
-  return { rows, policyKeys };
+  return { rows, policyKeys, hasOther };
 };
