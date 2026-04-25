@@ -20,6 +20,7 @@ Hard code freeze: **Sun Apr 26 12:00 CET**. Everything below lands Sat or doesn'
 High-ROI items that move judging score. Skip if P0 runs late.
 
 - **Managed Agents wrap** ($5K side prize) — port demo agent to Managed Agents API, keep SDK fallback. Only the demo agent, never the gateway.
+- **NL Policy Author with Opus 4.7** — textarea on policy create/edit → "Translate with Opus" button → `POST /api/policies/translate` → Opus 4.7 returns JSON matching a builtin policy schema (12 builtin shapes in cached system prompt) → user reviews + saves. Files: new `app/api/policies/translate/route.ts` (Anthropic SDK, prompt_caching ephemeral on system block), update policy create flow with NL pane + Sparkles button, validation via existing builtin schemas. Sister-project reference (UX shape only, NOT same DSL): `/Users/mboss37/Projects/semantic-gps/components/policies/nl-translator.tsx`. Biggest Opus 4.7 Use lever in the stack — judges see Opus translate plain English to policy JSON live. Parked from Sprint 22 (last build day, 2-3h scope risk). ~2-3h.
 - **Gateway token auto-mint on signup** — fresh signup → Playground fails (no bearer). Extend `handle_new_user` trigger or onboarding wizard to mint a default token.
 - **Opus relationship inference on import** — feed OpenAPI spec to Opus 4.7 with cached system prompt, user approves/rejects proposals. 1M-context showcase.
 - **Playground "Refine with Opus"** — ingest traces + policy events + manifest, return structured suggestions as cards.
