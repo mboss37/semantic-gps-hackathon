@@ -1,21 +1,17 @@
 'use client';
 
-import { SparklesIcon } from 'lucide-react';
+import { Zap } from 'lucide-react';
 
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useRealtimeDashboardEvents } from '@/hooks/use-realtime-dashboard-events';
 
-// Pure chrome strip — sidebar trigger on the left, brand-presence cluster on
-// the right. Realtime channel is mounted once here as a singleton so every
-// dashboard page picks up live mcp_events updates without a manual refresh.
-// Sprint 26: dropped the manual RefreshButton — realtime + RSC re-fetch on
-// nav covers the use cases it was solving.
+// Pure chrome strip — sidebar trigger on the left, competition/build tag on
+// the right. Org name lives in the sidebar's WorkspaceBadge, not here, so the
+// header stays brand-only across every dashboard page. Realtime channel is
+// mounted once here as a singleton so every page picks up live mcp_events
+// updates without a manual refresh.
 
-type Props = {
-  orgName?: string;
-};
-
-export function SiteHeader({ orgName }: Props = {}) {
+export function SiteHeader() {
   useRealtimeDashboardEvents();
 
   return (
@@ -23,14 +19,9 @@ export function SiteHeader({ orgName }: Props = {}) {
       <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
         <SidebarTrigger className="-ml-1" />
         <div className="ml-auto flex items-center gap-3">
-          {orgName ? (
-            <span className="hidden text-sm text-muted-foreground sm:inline">
-              {orgName}
-            </span>
-          ) : null}
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-xs font-medium text-violet-300">
-            <SparklesIcon className="size-3.5" />
-            Built with Opus 4.7
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/5 px-2.5 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-amber-200">
+            <Zap className="size-3.5" />
+            Anthropic Hackathon 2026
           </span>
         </div>
       </div>

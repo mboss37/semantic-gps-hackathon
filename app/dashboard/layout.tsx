@@ -63,7 +63,7 @@ const DashboardLayout = async ({ children }: { children: React.ReactNode }) => {
         workspace={{ name: orgName ?? '' }}
       />
       <SidebarInset className="border overflow-hidden">
-        <SiteHeader orgName={orgName} />
+        <SiteHeader />
         <div className="flex flex-1 flex-col">{children}</div>
       </SidebarInset>
       <Toaster position="bottom-right" richColors />

@@ -29,9 +29,9 @@ export const WorkspaceBadge = ({ orgName }: Props) => {
       aria-label={`Edit workspace ${display}`}
       title="Edit workspace settings"
     >
-      <div className="rounded-lg bg-gradient-to-br from-violet-500/40 via-fuchsia-500/30 to-violet-500/40 p-px transition-opacity hover:from-violet-500/60 hover:to-fuchsia-500/60 group-focus-visible/workspace:from-violet-500 group-focus-visible/workspace:to-fuchsia-500">
+      <div className="rounded-lg bg-gradient-to-br from-amber-500/40 via-amber-400/30 to-amber-500/40 p-px transition-opacity hover:from-amber-500/60 hover:to-amber-400/60 group-focus-visible/workspace:from-amber-500 group-focus-visible/workspace:to-amber-400">
         <div className="flex items-center gap-2.5 rounded-[7px] bg-sidebar px-2.5 py-2">
-          <div className="relative flex size-8 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm font-semibold text-white shadow-inner">
+          <div className="relative flex size-8 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-amber-500 to-amber-300 text-sm font-semibold text-amber-950 shadow-inner">
             {initial}
             <span className="absolute -bottom-0.5 -right-0.5 flex size-2.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
