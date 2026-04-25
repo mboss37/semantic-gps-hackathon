@@ -6,203 +6,209 @@ type Feature = {
   title: string;
   lede: string;
   bullets: readonly string[];
-  visual: 'leak' | 'govern' | 'rollback' | 'audit';
+  visual: 'policy' | 'route' | 'rollback' | 'audit';
 };
 
 const FEATURES: readonly Feature[] = [
   {
-    title: 'Stop the leak',
+    title: 'Change rules without redeploying agents',
     lede:
-      "PII never enters the agent's context when the gateway is between them. Shadow-observe for a week, then flip a column and start blocking.",
+      'Policies live in the gateway, not in Claude prompts, Cursor instructions, or custom agent code. Shadow first, enforce when the audit proves it is safe.',
     bullets: [
-      'Scrub phone numbers, emails, and card patterns out of tool responses before the agent reads them.',
-      'Block prompt-injection payloads at the gateway, not inside the upstream tool.',
-      'Flip any policy from shadow to enforce with a single click. No restart, no redeploy.',
-      'Review allow, shadow-block, and enforce-block counts per policy over the last seven days.',
+      'Flip a policy between shadow and enforce through the dashboard.',
+      'Apply controls per server or per tool without changing the MCP origin.',
+      'Use shipped runners for PII, injection guard, rate, time, identity, IP, geo, write-freeze, and idempotency.',
     ],
-    visual: 'leak',
+    visual: 'policy',
   },
   {
-    title: 'Govern the call, not the data',
+    title: 'Validate the workflow before the call runs',
     lede:
-      'Twelve gateway-native policies decide who calls what, when, from where, and whether the arguments are safe. Agent frameworks keep the data rules.',
+      'Agents can ask the gateway how tools relate, then preflight a proposed route before it touches a production system.',
     bullets: [
-      'Apply any of twelve built-in policies from a catalog grouped by governance dimension.',
-      'Gate calls on time windows, rate limits, caller identity, or client IP. Per tool or per org.',
-      'Require an agent-identity header so the gateway never runs for an unidentified caller.',
-      'Compare raw MCP and governed gateway in a live A/B, with Opus 4.7 thinking on both panes.',
+      'Expose `discover_relationships`, `find_workflow_path`, and `validate_workflow` on the MCP endpoint.',
+      'Represent tool dependencies with typed edges like `requires_before`, `validates`, and `produces_input_for`.',
+      'Keep the agent layer generic while the gateway owns routing knowledge.',
     ],
-    visual: 'govern',
+    visual: 'route',
   },
   {
-    title: 'Recover when agents fail',
+    title: 'Recover when a multi-step action breaks',
     lede:
-      'Typed relationships tell the gateway how tools connect. When a multi-step workflow halts mid-way, it walks the graph in reverse and undoes the completed steps.',
+      '`execute_route` runs governed workflows with fallback and compensating rollback paths, all tied together by one trace.',
     bullets: [
-      'Declare undo paths once as compensated_by edges. The gateway walks them in reverse on any halt.',
-      'Map compensator arguments per step, so undo calls get correctly-shaped inputs.',
-      'Fall back to an alternative tool chain on origin error, with a fallback_triggered audit event.',
-      'Build on eight typed relationship types, including produces_input_for, validates, alternative_to.',
+      'Walk `fallback_to` routes on origin errors and log `fallback_triggered` events.',
+      'Undo completed steps through `compensated_by` relationships when a route halts.',
+      'Map rollback arguments explicitly with `rollback_input_mapping`, not guesswork.',
     ],
     visual: 'rollback',
   },
   {
-    title: 'Prove it happened',
+    title: 'Give compliance a trace, not a screenshot',
     lede:
-      'Every call lands in the audit log with trace ID, policy decisions, and latency. Charts over the events table turn the log into a dashboard a compliance team can read.',
+      'Every gateway interaction writes method, tool, latency, status, and policy decisions into the audit log.',
     bullets: [
-      'Filter the audit log by scope, time, or trace to walk any single workflow end to end.',
-      'Read call volume, policy blocks per rule, and PII detections per pattern on three live charts.',
-      'Point agents at one org URL, one per-domain URL, or one per-server URL. Every scope honest.',
-      'Rely on Postgres row-level security across thirteen tenant tables, not just app-layer filters.',
+      'Filter events by trace, server, tool, status, and time range.',
+      'Review per-policy decision timelines from the events table.',
+      'Log redacted payloads so the audit trail does not become a new secret store.',
     ],
     visual: 'audit',
   },
 ];
 
-const LeakVisual = () => (
-  <svg viewBox="0 0 320 220" className="w-full h-full" aria-hidden>
-    <rect x="24" y="32" width="160" height="156" rx="6" fill="none" stroke="currentColor" strokeOpacity="0.15" />
-    {[0, 1, 2, 3, 4, 5].map((i) => (
-      <g key={i}>
-        <rect
-          x="40"
-          y={50 + i * 22}
-          width="128"
-          height="8"
-          rx="2"
-          fill="currentColor"
-          fillOpacity="0.08"
-        />
-        {i === 2 && (
-          <rect x="40" y={50 + i * 22} width="80" height="8" rx="2" fill="var(--brand)" fillOpacity="0.85">
-            <animate attributeName="fillOpacity" values="0.5;0.95;0.5" dur="2.4s" repeatCount="indefinite" />
-          </rect>
-        )}
-      </g>
-    ))}
-    <g stroke="var(--brand)" strokeOpacity="0.6" strokeWidth="1.2" fill="none" strokeDasharray="3 4">
-      <line x1="184" y1="110" x2="228" y2="110">
-        <animate attributeName="strokeDashoffset" values="0;-14" dur="1.2s" repeatCount="indefinite" />
-      </line>
-    </g>
-    <rect x="228" y="84" width="60" height="52" rx="6" fill="var(--brand)" fillOpacity="0.08" stroke="var(--brand)" strokeOpacity="0.55" />
-    <text x="258" y="114" textAnchor="middle" fill="var(--brand)" fontSize="10" fontFamily="var(--font-geist-mono)" letterSpacing="0.1em">
-      GATE
-    </text>
-  </svg>
-);
+const DECISIONS = [
+  { label: 'pii_redaction', mode: 'shadow', status: 'observed' },
+  { label: 'agent_identity_required', mode: 'enforce', status: 'allowed' },
+  { label: 'business_hours', mode: 'enforce', status: 'blocked' },
+] as const;
 
-const GovernVisual = () => (
-  <svg viewBox="0 0 320 220" className="w-full h-full" aria-hidden>
-    {[0, 1, 2, 3].map((i) => {
-      const y = 36 + i * 42;
-      const pass = i === 0 || i === 2;
-      return (
-        <g key={i}>
-          <line
-            x1="16"
-            y1={y + 12}
-            x2="132"
-            y2={y + 12}
-            stroke="currentColor"
-            strokeOpacity="0.15"
-            strokeDasharray="3 4"
-          />
-          <circle cx="16" cy={y + 12} r="3" fill="currentColor" opacity="0.5" />
-          <rect
-            x="140"
-            y={y}
-            width="24"
-            height="24"
-            rx="4"
-            fill="none"
-            stroke={pass ? 'var(--brand)' : '#ef4444'}
-            strokeOpacity="0.55"
-          />
-          <line
-            x1="172"
-            y1={y + 12}
-            x2={pass ? 296 : 210}
-            y2={y + 12}
-            stroke={pass ? 'var(--brand)' : '#ef4444'}
-            strokeOpacity="0.7"
-            strokeDasharray={pass ? '' : '3 4'}
-          />
-          {pass ? (
-            <polygon points={`296,${y + 8} 304,${y + 12} 296,${y + 16}`} fill="var(--brand)" fillOpacity="0.85" />
-          ) : (
-            <text x="216" y={y + 16} fill="#ef4444" fontSize="10" fontFamily="var(--font-geist-mono)" letterSpacing="0.05em">
-              blocked
-            </text>
-          )}
-        </g>
-      );
-    })}
-  </svg>
-);
+const ROUTE_STEPS = ['discover_relationships', 'validate_workflow', 'execute_route'] as const;
 
-const RollbackVisual = () => (
-  <svg viewBox="0 0 320 220" className="w-full h-full" aria-hidden>
-    {[0, 1, 2].map((i) => (
-      <g key={i} transform={`translate(${40 + i * 84} 66)`}>
-        <rect width="56" height="44" rx="6" fill="currentColor" fillOpacity="0.04" stroke="currentColor" strokeOpacity="0.2" />
-        <text x="28" y="27" textAnchor="middle" fill="currentColor" opacity="0.55" fontSize="11" fontFamily="var(--font-geist-mono)">
-          step {i + 1}
-        </text>
-      </g>
-    ))}
-    <g stroke="#ef4444" strokeOpacity="0.65" strokeWidth="1.3" fill="none">
-      <path d="M96 88 L124 88" />
-      <path d="M180 88 L208 88" />
-    </g>
-    <g stroke="var(--brand)" strokeOpacity="0.75" strokeWidth="1.4" fill="none">
-      <path d="M224 140 Q160 180 96 140" strokeDasharray="3 4">
-        <animate attributeName="strokeDashoffset" values="0;-14" dur="1.4s" repeatCount="indefinite" />
-      </path>
-      <polygon points="96,140 106,134 106,146" fill="var(--brand)" fillOpacity="0.85" />
-    </g>
-    <text x="160" y="200" textAnchor="middle" fill="var(--brand)" opacity="0.75" fontSize="10" fontFamily="var(--font-geist-mono)" letterSpacing="0.05em">
-      compensated_by
-    </text>
-  </svg>
-);
+const TRACE_ROWS = [
+  { method: 'tools/call', status: 'ok', latency: '184ms' },
+  { method: 'execute_route.step', status: 'ok', latency: '311ms' },
+  { method: 'execute_route.rollback', status: 'ok', latency: '205ms' },
+] as const;
 
-const AuditVisual = () => (
-  <svg viewBox="0 0 320 220" className="w-full h-full" aria-hidden>
-    <rect x="24" y="28" width="272" height="164" rx="6" fill="currentColor" fillOpacity="0.02" stroke="currentColor" strokeOpacity="0.12" />
-    {[0, 1, 2, 3, 4, 5].map((i) => (
-      <g key={i}>
-        <rect x="40" y={44 + i * 22} width="104" height="6" rx="2" fill="currentColor" fillOpacity={0.14 - i * 0.012} />
-        <rect
-          x="156"
-          y={44 + i * 22}
-          width={60 - i * 5}
-          height="6"
-          rx="2"
-          fill="var(--brand)"
-          fillOpacity="0.6"
-        >
-          <animate
-            attributeName="width"
-            values={`0;${60 - i * 5};${60 - i * 5}`}
-            keyTimes="0;0.7;1"
-            dur="2s"
-            begin={`${i * 0.12}s`}
-            repeatCount="indefinite"
-          />
-        </rect>
-      </g>
-    ))}
-  </svg>
-);
-
-const Visual = ({ type }: { type: Feature['visual'] }) => {
-  if (type === 'leak') return <LeakVisual />;
-  if (type === 'govern') return <GovernVisual />;
-  if (type === 'rollback') return <RollbackVisual />;
-  return <AuditVisual />;
+const statusColor = (status: string) => {
+  if (status === 'blocked') return 'text-red-300 border-red-500/20 bg-red-500/10';
+  if (status === 'observed') return 'text-amber-200 border-amber-400/20 bg-amber-400/10';
+  return 'text-emerald-200 border-emerald-400/20 bg-emerald-400/10';
 };
+
+const PolicyConsole = () => (
+  <div className="space-y-3">
+    {DECISIONS.map((decision) => (
+      <div
+        key={decision.label}
+        className="grid grid-cols-[1fr_auto] gap-4 rounded-lg border border-border bg-card/35 p-4"
+      >
+        <div>
+          <p className="font-mono text-xs text-foreground/80">{decision.label}</p>
+          <p className="mt-1.5 text-sm text-foreground/42">mode: {decision.mode}</p>
+        </div>
+        <span
+          className={`self-start rounded-full border px-2 py-0.5 font-mono text-[10px] ${statusColor(
+            decision.status
+          )}`}
+        >
+          {decision.status}
+        </span>
+      </div>
+    ))}
+    <div className="h-1.5 overflow-hidden rounded-full bg-card">
+      <div className="h-full w-2/3 rounded-full bg-foreground/55" />
+    </div>
+  </div>
+);
+
+const RouteConsole = () => (
+  <div className="space-y-4">
+    {ROUTE_STEPS.map((step, index) => (
+      <div key={step} className="flex items-center gap-3">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border bg-card/35 font-mono text-xs text-foreground/48">
+          0{index + 1}
+        </div>
+        <div className="flex-1 rounded-lg border border-border bg-card/35 px-4 py-3">
+          <p className="font-mono text-xs text-foreground/80">{step}</p>
+          <p className="mt-1.5 text-sm text-foreground/42">
+            {index === 0 ? 'load graph' : index === 1 ? 'preflight plan' : 'run governed route'}
+          </p>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const RollbackConsole = () => (
+  <div className="space-y-5">
+    <div className="grid grid-cols-3 gap-2">
+      {['step 1', 'step 2', 'halt'].map((step, index) => (
+        <div
+          key={step}
+          className={`rounded-lg border p-4 text-center font-mono text-sm ${
+            index === 2
+              ? 'border-red-500/25 bg-red-500/10 text-red-200'
+              : 'border-border bg-card/30 text-foreground/65'
+          }`}
+        >
+          {step}
+        </div>
+      ))}
+    </div>
+    <div className="rounded-xl border border-border bg-card/25 p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <span className="font-mono text-[11px] uppercase tracking-widest text-foreground/40">
+          rollback path
+        </span>
+        <span className="rounded-full border border-(--brand)/20 bg-(--brand)/10 px-2 py-0.5 font-mono text-[10px] text-(--brand)">
+          compensated_by
+        </span>
+      </div>
+      <div className="flex items-center gap-2 text-xs text-foreground/55">
+        <span className="h-px flex-1 bg-border" />
+        <span>reverse walk</span>
+        <span className="h-px flex-1 bg-border" />
+      </div>
+    </div>
+    <p className="font-mono text-[11px] text-foreground/40">
+      rollback_input_mapping resolved before compensator call
+    </p>
+  </div>
+);
+
+const AuditConsole = () => (
+  <div className="space-y-3">
+    {TRACE_ROWS.map((row) => (
+      <div
+        key={`${row.method}-${row.latency}`}
+        className="grid grid-cols-[1fr_auto_auto] items-center gap-3 rounded-lg border border-border bg-card/30 px-3 py-2.5"
+      >
+        <span className="font-mono text-[11px] text-foreground/70">{row.method}</span>
+        <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 font-mono text-[10px] text-emerald-200">
+          {row.status}
+        </span>
+        <span className="font-mono text-[10px] text-foreground/35">{row.latency}</span>
+      </div>
+    ))}
+    <div className="rounded-lg border border-border bg-background p-3">
+      <div className="mb-2 flex items-center justify-between text-[11px]">
+        <span className="font-mono text-foreground/45">policy_decisions</span>
+        <span className="font-mono text-foreground/35">trace_id</span>
+      </div>
+      <div className="h-14 rounded-md bg-card/35 p-2">
+        <div className="h-2 w-5/6 rounded bg-foreground/10" />
+        <div className="mt-2 h-2 w-2/3 rounded bg-foreground/10" />
+        <div className="mt-2 h-2 w-1/2 rounded bg-(--brand)/30" />
+      </div>
+    </div>
+  </div>
+);
+
+const ConsoleVisual = ({ type }: { type: Feature['visual'] }) => {
+  if (type === 'policy') return <PolicyConsole />;
+  if (type === 'route') return <RouteConsole />;
+  if (type === 'rollback') return <RollbackConsole />;
+  return <AuditConsole />;
+};
+
+const FeatureVisualFrame = ({ feature }: { feature: Feature }) => (
+  <div className="group relative w-full max-w-[560px] overflow-hidden rounded-xl border border-border bg-background transition-colors duration-300 hover:border-foreground/20">
+    <div className="border-b border-border bg-card/20 px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="font-mono text-[11px] uppercase tracking-widest text-foreground/40">
+          gateway console
+        </span>
+        <span className="rounded-full border border-border bg-background px-2 py-0.5 font-mono text-[10px] text-foreground/45">
+          live
+        </span>
+      </div>
+    </div>
+    <div className="min-h-[360px] p-6">
+      <ConsoleVisual type={feature.visual} />
+    </div>
+  </div>
+);
 
 const FeatureRow = ({ feature, index }: { feature: Feature; index: number }) => {
   const rowRef = useRef<HTMLDivElement>(null);
@@ -232,31 +238,29 @@ const FeatureRow = ({ feature, index }: { feature: Feature; index: number }) => 
       style={{ transitionDelay: `${index * 60}ms` }}
     >
       <div
-        className={`grid lg:grid-cols-2 gap-10 lg:gap-20 py-16 lg:py-24 border-t border-border ${
-          reverse ? 'lg:[&>*:first-child]:order-2' : ''
+        className={`grid border-t border-border py-16 lg:py-24 xl:grid-cols-2 xl:gap-24 ${
+          reverse ? 'xl:[&>*:first-child]:order-2' : ''
         }`}
       >
         <div className="flex flex-col justify-center">
-          <h3 className="text-2xl md:text-3xl font-medium tracking-[-0.02em] text-foreground mb-4">
+          <h3 className="mb-5 max-w-xl text-3xl font-medium leading-tight tracking-tight text-foreground md:text-4xl">
             {feature.title}
           </h3>
-          <p className="text-[15px] md:text-base text-foreground/60 leading-relaxed mb-7 max-w-lg">
+          <p className="mb-8 max-w-xl text-base leading-relaxed text-foreground/60 md:text-lg">
             {feature.lede}
           </p>
-          <ul className="space-y-2.5">
+          <ul className="space-y-3">
             {feature.bullets.map((bullet) => (
-              <li key={bullet} className="flex gap-3 text-[13.5px] text-foreground/75 leading-[1.55]">
-                <span className="mt-[9px] w-1 h-1 rounded-full bg-foreground/40 shrink-0" />
+              <li key={bullet} className="flex gap-3 text-sm leading-[1.6] text-foreground/72">
+                <span className="mt-[9px] size-1 rounded-full bg-foreground/40 shrink-0" />
                 <span>{bullet}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="flex items-center justify-center">
-          <div className="w-full max-w-[440px] aspect-[16/11] rounded-lg border border-border bg-card/30 p-6 text-foreground">
-            <Visual type={feature.visual} />
-          </div>
+        <div className="mt-10 flex items-center justify-center xl:mt-0">
+          <FeatureVisualFrame feature={feature} />
         </div>
       </div>
     </div>
@@ -281,22 +285,22 @@ export const FeaturesSection = () => {
   }, []);
 
   return (
-    <section id="features" ref={sectionRef} className="relative py-20 lg:py-28">
-      <div className="max-w-[1200px] mx-auto px-6 lg:px-8">
+    <section id="features" ref={sectionRef} className="relative py-20 lg:py-32">
+      <div className="mx-auto max-w-[1200px] px-6 lg:px-8">
         <div
-          className={`max-w-2xl mb-6 transition-all duration-500 ${
+          className={`mb-8 max-w-3xl transition-all duration-500 ${
             headerVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
           }`}
         >
-          <p className="text-[12px] text-foreground/50 uppercase tracking-[0.14em] font-medium mb-4">
+          <p className="mb-4 text-[12px] font-medium uppercase tracking-[0.14em] text-foreground/50">
             Capabilities
           </p>
-          <h2 className="text-[32px] md:text-[40px] lg:text-[44px] font-medium leading-[1.1] tracking-[-0.02em] text-foreground mb-4">
-            A gateway-native policy engine.
+          <h2 className="mb-5 text-[38px] font-medium leading-[1.05] tracking-[-0.03em] text-foreground md:text-[52px]">
+            Gateway controls that stay out of the agent code.
           </h2>
-          <p className="text-lg text-foreground/60 leading-relaxed">
-            Govern what the agent can call, observe every decision, and recover when a route halts
-            mid-flight.
+          <p className="max-w-2xl text-lg leading-relaxed text-foreground/60">
+            The shipped gateway governs calls, validates routes, records decisions, and recovers
+            failed workflows while your agents and MCP servers keep their own release cycles.
           </p>
         </div>
 

@@ -1,7 +1,6 @@
 import { Suspense } from 'react';
 
 import { CtaSection } from '@/components/landing/cta-section';
-import { DemoVideoSection } from '@/components/landing/demo-video-section';
 import { FeaturesSection } from '@/components/landing/features-section';
 import { FooterSection } from '@/components/landing/footer-section';
 import { HeroSection } from '@/components/landing/hero-section';
@@ -15,9 +14,9 @@ import { StatStrip } from '@/components/landing/stat-strip';
 import { VerifiedHandler } from './verified-handler';
 
 export const metadata = {
-  title: 'Semantic GPS — The control plane for MCP agents',
+  title: 'Semantic GPS — Govern any MCP before production',
   description:
-    'A gateway that sits between the agent and real tools, redacting data, blocking calls, and rolling back broken workflows.',
+    'A gateway for customer-owned MCP stacks: sandbox workflows, enforce policies, audit every call, and roll back broken agent actions.',
 };
 
 const Home = () => (
@@ -28,7 +27,6 @@ const Home = () => (
     <Navigation />
     <HeroSection />
     <StatStrip />
-    <DemoVideoSection />
     <FeaturesSection />
     <HowItWorksSection />
     <InfrastructureSection />

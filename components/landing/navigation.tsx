@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { name: 'Features', href: '#features' },
   { name: 'How it works', href: '#how-it-works' },
   { name: 'Architecture', href: '#architecture' },
+  { name: 'BYO MCPs', href: '#integrations' },
   { name: 'Governance', href: '#governance' },
 ] as const;
 

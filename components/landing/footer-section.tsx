@@ -22,6 +22,7 @@ const COLUMNS = [
       { label: 'Features', href: '#features' },
       { label: 'How it works', href: '#how-it-works' },
       { label: 'Architecture', href: '#architecture' },
+      { label: 'BYO MCPs', href: '#integrations' },
       { label: 'Governance', href: '#governance' },
     ],
   },
@@ -43,7 +44,6 @@ const COLUMNS = [
         href: 'https://github.com/mboss37/semantic-gps-hackathon/blob/main/docs/ARCHITECTURE.md',
       },
       { label: 'Vision', href: 'https://github.com/mboss37/semantic-gps-hackathon/blob/main/VISION.md' },
-      { label: 'Demo script', href: 'https://github.com/mboss37/semantic-gps-hackathon/blob/main/docs/DEMO.md' },
     ],
   },
 ] as const;
@@ -61,8 +61,8 @@ export const FooterSection = () => (
           </Link>
 
           <p className="text-[13px] text-foreground/55 leading-relaxed mb-6 max-w-xs">
-            The control plane for MCP agents. Govern every call, observe every decision, roll back
-            when a route halts.
+            Gateway infrastructure for customer-owned MCP stacks. Sandbox routes, enforce policy,
+            audit calls, and roll back broken agent actions.
           </p>
 
           <a
@@ -101,7 +101,7 @@ export const FooterSection = () => (
         <p>© 2026 Semantic GPS. Built with Claude Opus 4.7.</p>
         <div className="flex items-center gap-4">
           <span className="inline-flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand)]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-(--brand)" />
             Gateway operational
           </span>
         </div>

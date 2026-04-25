@@ -1,27 +1,28 @@
-// Sprint 21 WP-21.4: stat band between hero copy and the dashboard hero
-// image. Quantifies the gateway in four numbers judges can take in at a
-// glance — what's actually in the box.
-
 const STATS = [
-  { value: '12', label: 'gateway policies' },
-  { value: '7', label: 'governance dimensions' },
-  { value: '3', label: 'reference MCPs' },
-  { value: '14', label: 'curated tools' },
+  { value: 'Any', label: 'MCP server' },
+  { value: '12', label: 'built-in policies' },
+  { value: 'Shadow', label: 'to enforce' },
+  { value: 'Audit', label: '+ rollback' },
 ];
 
 export const StatStrip = () => (
-  <div className="border-y border-border bg-card/30 backdrop-blur-sm">
-    <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-10 grid grid-cols-2 md:grid-cols-4 gap-6">
+  <div className="border-y border-border bg-background">
+    <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
+      <div className="grid grid-cols-1 overflow-hidden border-x border-border sm:grid-cols-2 lg:grid-cols-4">
       {STATS.map((s) => (
-        <div key={s.label} className="flex flex-col items-center text-center md:items-start md:text-left">
-          <div className="text-3xl md:text-4xl font-medium tracking-tight tabular-nums">
+        <div
+          key={s.label}
+          className="border-b border-r border-border px-8 py-10 last:border-b-0 sm:nth-last-[-n+2]:border-b-0 lg:border-b-0 lg:last:border-r-0"
+        >
+          <div className="text-4xl font-medium tracking-[-0.035em] tabular-nums text-foreground md:text-5xl lg:text-4xl xl:text-5xl">
             {s.value}
           </div>
-          <div className="mt-1 text-xs text-foreground/55 uppercase tracking-wide">
+          <div className="mt-2 text-[12px] uppercase tracking-widest text-foreground/45">
             {s.label}
           </div>
         </div>
       ))}
+      </div>
     </div>
   </div>
 );
