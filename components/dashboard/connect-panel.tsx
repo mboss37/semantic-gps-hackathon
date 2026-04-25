@@ -13,6 +13,7 @@ import {
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -22,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CodeBlock } from '@/components/dashboard/code-block';
 import { CopyButton } from '@/components/dashboard/copy-button';
 import {
   TOKEN_PLACEHOLDER,
@@ -31,6 +33,13 @@ import {
   inspectorSnippet,
   type SnippetInput,
 } from '@/lib/connect/snippets';
+
+// Sprint 28 redesign: 4 stacked bespoke panels (each its own bg-muted/30
+// rounded border) collapsed into ONE shadcn <Card>. Internal sections are
+// labeled "1 · SCOPE / 2 · ENDPOINT / 3 · TEST / 4 · SNIPPET" with subtle
+// uppercase mono headings — matches the disclosure pattern from the route
+// timeline. Code shells now use the shared `<CodeBlock>` primitive instead
+// of the reinvented per-page `<pre>` chrome.
 
 type DomainRow = { slug: string; name: string };
 type ServerRow = { id: string; name: string; transport: string };
@@ -59,7 +68,9 @@ const slugify = (input: string): string => {
 
 export const ConnectPanel = ({ domains, servers, tokens }: Props) => {
   const [tier, setTier] = useState<Tier>('org');
-  const [domainSlug, setDomainSlug] = useState<string>(domains[0]?.slug ?? '');
+  // Domain tab is disabled ("Soon"), so the slug stays at its default —
+  // no setter needed until the tab unlocks.
+  const domainSlug = domains[0]?.slug ?? '';
   const [serverId, setServerId] = useState<string>(servers[0]?.id ?? '');
   const [pasteToken, setPasteToken] = useState<string>('');
   const [testState, setTestState] = useState<
@@ -69,11 +80,6 @@ export const ConnectPanel = ({ domains, servers, tokens }: Props) => {
     | { kind: 'error'; message: string }
   >({ kind: 'idle' });
 
-  // Always use the host the user is currently on. Works for localhost in
-  // dev, Vercel domain on hosted, tunnel URL when the browser is on the
-  // tunnel — whatever they're actually viewing the page from. SSR renders
-  // empty origin (path only); useSyncExternalStore swaps in the real origin
-  // on hydration without a setState-in-effect lint trip.
   const origin = useSyncExternalStore(
     subscribeNoop,
     () => window.location.origin,
@@ -147,53 +153,81 @@ export const ConnectPanel = ({ domains, servers, tokens }: Props) => {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <ScopeBar
-        tier={tier}
-        onTierChange={setTier}
-        domains={domains}
-        servers={servers}
-        domainSlug={domainSlug}
-        serverId={serverId}
-        onDomainChange={setDomainSlug}
-        onServerChange={setServerId}
-      />
+    <Card>
+      <CardContent className="flex flex-col gap-6">
+        <Section step="1" label="Scope">
+          <ScopeRow
+            tier={tier}
+            onTierChange={setTier}
+            servers={servers}
+            serverId={serverId}
+            onServerChange={setServerId}
+          />
+        </Section>
 
-      <EndpointRow endpoint={endpoint} />
+        <SectionDivider />
 
-      <TestRow
-        tokens={tokens}
-        pasteToken={pasteToken}
-        setPasteToken={setPasteToken}
-        onTest={onTest}
-        canTest={tierReady && pasteToken.length > 0 && testState.kind !== 'pending'}
-        testState={testState}
-      />
+        <Section step="2" label="Endpoint">
+          <EndpointRow endpoint={endpoint} />
+        </Section>
 
-      <SnippetTabs snippetInput={snippetInput} />
-    </div>
+        <SectionDivider />
+
+        <Section step="3" label="Test connection">
+          <TestRow
+            tokens={tokens}
+            pasteToken={pasteToken}
+            setPasteToken={setPasteToken}
+            onTest={onTest}
+            canTest={tierReady && pasteToken.length > 0 && testState.kind !== 'pending'}
+            testState={testState}
+          />
+        </Section>
+
+        <SectionDivider />
+
+        <Section step="4" label="Client snippet">
+          <SnippetTabs snippetInput={snippetInput} />
+        </Section>
+      </CardContent>
+    </Card>
   );
 };
 
-type ScopeBarProps = {
+const Section = ({
+  step,
+  label,
+  children,
+}: {
+  step: string;
+  label: string;
+  children: React.ReactNode;
+}) => (
+  <section className="flex flex-col gap-3">
+    <div className="flex items-center gap-2">
+      <span className="inline-flex size-5 items-center justify-center rounded-full border bg-muted/50 font-mono text-[10px] tabular-nums">
+        {step}
+      </span>
+      <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+        {label}
+      </span>
+    </div>
+    {children}
+  </section>
+);
+
+const SectionDivider = () => <div className="h-px w-full bg-border" aria-hidden="true" />;
+
+type ScopeRowProps = {
   tier: Tier;
   onTierChange: (tier: Tier) => void;
-  domains: DomainRow[];
   servers: ServerRow[];
-  domainSlug: string;
   serverId: string;
-  onDomainChange: (slug: string) => void;
   onServerChange: (id: string) => void;
 };
 
-const ScopeBar = ({
-  tier,
-  onTierChange,
-  servers,
-  serverId,
-  onServerChange,
-}: ScopeBarProps) => (
-  <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3 sm:flex-row sm:items-center sm:gap-4">
+const ScopeRow = ({ tier, onTierChange, servers, serverId, onServerChange }: ScopeRowProps) => (
+  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
     <Tabs value={tier} onValueChange={(v) => onTierChange(v as Tier)}>
       <TabsList>
         <TabsTrigger value="org">Org-wide</TabsTrigger>
@@ -235,8 +269,8 @@ const ScopeBar = ({
 );
 
 const EndpointRow = ({ endpoint }: { endpoint: string }) => (
-  <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/40 px-3 py-2">
-    <span className="truncate font-mono text-sm">{endpoint}</span>
+  <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
+    <span className="truncate font-mono text-sm text-foreground/90">{endpoint}</span>
     <CopyButton value={endpoint} label="Copy URL" />
   </div>
 );
@@ -244,29 +278,26 @@ const EndpointRow = ({ endpoint }: { endpoint: string }) => (
 type SnippetTabsProps = { snippetInput: SnippetInput };
 
 const SnippetTabs = ({ snippetInput }: SnippetTabsProps) => (
-  <Tabs defaultValue="curl">
+  <Tabs defaultValue="curl" className="gap-3">
     <TabsList>
       <TabsTrigger value="curl">curl</TabsTrigger>
       <TabsTrigger value="claude">Claude Desktop</TabsTrigger>
       <TabsTrigger value="inspector">MCP Inspector</TabsTrigger>
       <TabsTrigger value="sdk">Anthropic SDK</TabsTrigger>
     </TabsList>
-    <SnippetBlock value="curl" code={curlSnippet(snippetInput)} />
-    <SnippetBlock value="claude" code={claudeDesktopSnippet(snippetInput)} />
-    <SnippetBlock value="inspector" code={inspectorSnippet(snippetInput)} />
-    <SnippetBlock value="sdk" code={anthropicSdkSnippet(snippetInput)} />
+    <TabsContent value="curl" className="mt-0">
+      <CodeBlock code={curlSnippet(snippetInput)} ariaLabel="curl snippet" />
+    </TabsContent>
+    <TabsContent value="claude" className="mt-0">
+      <CodeBlock code={claudeDesktopSnippet(snippetInput)} ariaLabel="Claude Desktop snippet" />
+    </TabsContent>
+    <TabsContent value="inspector" className="mt-0">
+      <CodeBlock code={inspectorSnippet(snippetInput)} ariaLabel="MCP Inspector snippet" />
+    </TabsContent>
+    <TabsContent value="sdk" className="mt-0">
+      <CodeBlock code={anthropicSdkSnippet(snippetInput)} ariaLabel="Anthropic SDK snippet" />
+    </TabsContent>
   </Tabs>
-);
-
-const SnippetBlock = ({ value, code }: { value: string; code: string }) => (
-  <TabsContent value={value} className="mt-3">
-    <div className="relative rounded-lg border bg-muted/40">
-      <div className="absolute right-2 top-2">
-        <CopyButton value={code} />
-      </div>
-      <pre className="overflow-x-auto p-3 pr-20 font-mono text-xs leading-relaxed">{code}</pre>
-    </div>
-  </TabsContent>
 );
 
 type TestRowProps = {
@@ -283,12 +314,12 @@ type TestRowProps = {
 };
 
 const TestRow = ({ tokens, pasteToken, setPasteToken, onTest, canTest, testState }: TestRowProps) => (
-  <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-3">
-    <span className="text-xs text-muted-foreground">
+  <div className="flex flex-col gap-3">
+    <p className="text-xs text-muted-foreground">
       {tokens.length === 0
-        ? 'No tokens yet — mint one to authenticate any client. Or paste an existing plaintext below to test live; it stays in your browser.'
-        : 'Test live with one of your tokens. Paste plaintext below — it stays in your browser and never re-renders into snippets unless you choose.'}
-    </span>
+        ? 'Mint a gateway token to authenticate any client. Or paste an existing plaintext value below to test live — it stays in your browser and never re-renders into snippets unless you choose.'
+        : 'Paste a gateway token plaintext value to test live against this scope. The value stays in your browser and never re-renders into snippets unless you choose.'}
+    </p>
     <form
       onSubmit={(e) => {
         e.preventDefault();
