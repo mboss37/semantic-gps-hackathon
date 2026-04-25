@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import {
   CircleCheckIcon,
@@ -44,6 +44,10 @@ type Props = {
   tokens: TokenRow[];
 };
 
+// useSyncExternalStore needs a subscribe fn even for static browser values.
+// origin doesn't change after mount, so the subscriber is a no-op.
+const subscribeNoop = () => () => {};
+
 const slugify = (input: string): string => {
   const base = input
     .toLowerCase()
@@ -51,13 +55,6 @@ const slugify = (input: string): string => {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
   return base.length > 0 ? base : 'semantic-gps';
-};
-
-const resolveOrigin = (): string => {
-  const envUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (envUrl && envUrl.length > 0) return envUrl.replace(/\/+$/, '');
-  if (typeof window !== 'undefined') return window.location.origin;
-  return '';
 };
 
 export const ConnectPanel = ({ domains, servers, tokens }: Props) => {
@@ -72,7 +69,16 @@ export const ConnectPanel = ({ domains, servers, tokens }: Props) => {
     | { kind: 'error'; message: string }
   >({ kind: 'idle' });
 
-  const origin = resolveOrigin();
+  // Always use the host the user is currently on. Works for localhost in
+  // dev, Vercel domain on hosted, tunnel URL when the browser is on the
+  // tunnel — whatever they're actually viewing the page from. SSR renders
+  // empty origin (path only); useSyncExternalStore swaps in the real origin
+  // on hydration without a setState-in-effect lint trip.
+  const origin = useSyncExternalStore(
+    subscribeNoop,
+    () => window.location.origin,
+    () => '',
+  );
 
   const endpointPath = useMemo(() => {
     if (tier === 'org') return '/api/mcp';
