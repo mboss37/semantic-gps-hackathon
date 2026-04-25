@@ -20,6 +20,3 @@ coverage/
 .env
 .env.*
 !.env.example
-
-# External design reference — kept locally but excluded from builds/lint/typecheck
-landingPageReference/
