@@ -8,6 +8,7 @@ import { RefreshButton } from '@/components/dashboard/refresh-button';
 import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useDashboardRefresh } from '@/hooks/use-dashboard-refresh';
+import { useRealtimeDashboardEvents } from '@/hooks/use-realtime-dashboard-events';
 
 // Sprint 21 WP-21.2: page title on the left, brand-presence cluster on the
 // right — "Built with Opus 4.7" pill + optional org name. First three seconds
@@ -40,6 +41,11 @@ export function SiteHeader({ orgName }: Props = {}) {
   const pathname = usePathname();
   const title = resolveTitle(pathname);
   const { refresh } = useDashboardRefresh();
+
+  // Sprint 22 WP-22.1: push-based refresh on every gateway call. Mounted
+  // here (singleton on dashboard pages) so one Realtime channel covers
+  // every screen the user can see.
+  useRealtimeDashboardEvents();
 
   // Sprint 21 WP-21.5: tab-focus auto-refresh. visibilitychange fires when
   // the user returns to this tab from Postman / Claude Desktop / wherever.
