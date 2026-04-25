@@ -431,11 +431,29 @@ SELECT r.id, 3, t.id,
 -- Step 4 posts to Slack. rollback_input_mapping derives delete_message's
 -- {channel, ts} from the captured result so a saga halt (step 5 failing)
 -- unwinds the Slack message instead of leaving it orphaned on the channel.
-INSERT INTO public.route_steps (route_id, step_order, tool_id, input_mapping, output_capture_key, rollback_input_mapping)
+-- fallback_input_mapping translates Slack's {text, channel} into GitHub's
+-- {owner, repo, title, body} so the chat_post_message → create_issue
+-- fallback edge (Sprint 22 WP-22.4) actually executes when Slack is down.
+-- fallback_rollback_input_mapping translates the fallback target's captured
+-- result (GitHub create_issue → {number, html_url, state}) into close_issue's
+-- {owner, repo, issue_number} input so saga halts after a fallback success
+-- still leave zero orphans.
+INSERT INTO public.route_steps (route_id, step_order, tool_id, input_mapping, output_capture_key, rollback_input_mapping, fallback_input_mapping, fallback_rollback_input_mapping)
 SELECT r.id, 4, t.id,
        '{"text":"$inputs.slack_message","channel":"#general"}'::jsonb,
        'notification',
-       jsonb_build_object('channel', '$steps.notification.result.channel', 'ts', '$steps.notification.result.ts')
+       jsonb_build_object('channel', '$steps.notification.result.channel', 'ts', '$steps.notification.result.ts'),
+       jsonb_build_object(
+         'owner', 'mboss37',
+         'repo', 'semantic-gps-sandbox',
+         'title', '$inputs.issue_title',
+         'body', '$inputs.slack_message'
+       ),
+       jsonb_build_object(
+         'owner', 'mboss37',
+         'repo', 'semantic-gps-sandbox',
+         'issue_number', '$steps.notification.result.number'
+       )
   FROM public.routes r, public.tools t JOIN public.servers s ON s.id = t.server_id
  WHERE r.name = 'cross_domain_escalation' AND t.name = 'chat_post_message' AND s.name = 'Demo Slack';
 

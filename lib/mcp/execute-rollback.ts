@@ -59,7 +59,17 @@ export const executeRollback = async (
     const planPair = plan.find((p) => p.step.step_order === stepEntry?.step_order);
     if (!stepEntry || !planPair) continue;
 
-    const compensation = pickCompensationEdge(planPair.tool.id, manifest);
+    // Sprint 22 WP-22.4 follow-on: when this step succeeded via its
+    // fallback path, the captured result + compensator semantics belong to
+    // the fallback target tool, not the primary. Pick the compensator edge
+    // from whichever tool actually ran, and prefer the step's
+    // fallback_rollback_input_mapping over rollback_input_mapping.
+    const fallbackUsed = stepEntry.fallback_used;
+    const effectiveToolId = fallbackUsed
+      ? fallbackUsed.fallback_tool_id
+      : planPair.tool.id;
+
+    const compensation = pickCompensationEdge(effectiveToolId, manifest);
     if (!compensation) {
       const rollback: ExecuteRouteRollback = {
         attempted: false,
@@ -81,21 +91,24 @@ export const executeRollback = async (
       continue;
     }
 
-    // Build compensation args. Preferred path: explicit rollback_input_mapping
-    // on the step, resolved against the capture bag + route inputs. Fallback:
-    // pass the producer's result verbatim (legacy behaviour; rarely works
-    // when producer + compensator field names differ).
+    // Build compensation args. Preference order:
+    //   1. fallback_rollback_input_mapping if fallback_used and set
+    //   2. rollback_input_mapping (canonical saga path) on the step
+    //   3. producer's result verbatim (legacy)
+    const activeMapping =
+      fallbackUsed &&
+      planPair.step.fallback_rollback_input_mapping &&
+      Object.keys(planPair.step.fallback_rollback_input_mapping).length > 0
+        ? planPair.step.fallback_rollback_input_mapping
+        : planPair.step.rollback_input_mapping &&
+            Object.keys(planPair.step.rollback_input_mapping).length > 0
+          ? planPair.step.rollback_input_mapping
+          : null;
+
     let compArgs: Record<string, unknown>;
     try {
-      if (
-        planPair.step.rollback_input_mapping &&
-        Object.keys(planPair.step.rollback_input_mapping).length > 0
-      ) {
-        compArgs = resolveInputMapping(
-          planPair.step.rollback_input_mapping,
-          inputs,
-          captureBag,
-        );
+      if (activeMapping) {
+        compArgs = resolveInputMapping(activeMapping, inputs, captureBag);
       } else {
         const originalResult = stepEntry.result;
         compArgs =
@@ -160,7 +173,8 @@ export const executeRollback = async (
           original_step_order: stepEntry.step_order,
           error: exec.error,
           args_sent: redactPayload(compArgs),
-          mapping_used: planPair.step.rollback_input_mapping ?? null,
+          mapping_used: activeMapping,
+          fallback_aware: Boolean(fallbackUsed),
         },
       });
     } catch (err) {

@@ -57,7 +57,11 @@ const DashboardLayout = async ({ children }: { children: React.ReactNode }) => {
         } as React.CSSProperties
       }
     >
-      <AppSidebar variant="inset" user={{ name: displayName, email }} />
+      <AppSidebar
+        variant="inset"
+        user={{ name: displayName, email }}
+        workspace={{ name: orgName ?? '' }}
+      />
       <SidebarInset className="border overflow-hidden">
         <SiteHeader orgName={orgName} />
         <div className="flex flex-1 flex-col">{children}</div>

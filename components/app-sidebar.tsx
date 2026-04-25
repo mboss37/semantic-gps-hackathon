@@ -16,6 +16,7 @@ import {
 
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
+import { WorkspaceBadge } from '@/components/workspace-badge';
 import {
   Sidebar,
   SidebarContent,
@@ -29,6 +30,10 @@ import {
 type SessionUser = {
   name: string;
   email: string;
+};
+
+type Workspace = {
+  name: string;
 };
 
 // Sprint 21 WP-21.1: 3 grouped sections instead of flat 10-item list.
@@ -53,9 +58,10 @@ const data = {
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   user: SessionUser;
+  workspace: Workspace;
 };
 
-export function AppSidebar({ user, ...props }: AppSidebarProps) {
+export function AppSidebar({ user, workspace, ...props }: AppSidebarProps) {
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -72,6 +78,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        <WorkspaceBadge orgName={workspace.name} />
       </SidebarHeader>
       <SidebarContent>
         <NavMain label="Overview" items={data.overview} />

@@ -98,6 +98,8 @@ const routeSteps: RouteStepRow[] = [
     tool_id: T.findAccount,
     input_mapping: { query: '$inputs.query' },
     rollback_input_mapping: null,
+    fallback_input_mapping: null,
+    fallback_rollback_input_mapping: null,
     output_capture_key: 'account',
     fallback_route_id: null,
     rollback_tool_id: null,
@@ -110,6 +112,8 @@ const routeSteps: RouteStepRow[] = [
     tool_id: T.findContact,
     input_mapping: { accountId: '$steps.account.id' },
     rollback_input_mapping: null,
+    fallback_input_mapping: null,
+    fallback_rollback_input_mapping: null,
     output_capture_key: 'contact',
     fallback_route_id: null,
     rollback_tool_id: null,
@@ -220,6 +224,7 @@ describe('executeRoute fallback_to', () => {
     expect(contactStep?.fallback_used).toEqual({
       original_tool_name: 'find_contact',
       fallback_tool_name: 'find_contact_cached',
+      fallback_tool_id: T.findContactCached,
       original_error: 'upstream 503',
     });
     expect(contactStep?.fallback_also_failed).toBeUndefined();

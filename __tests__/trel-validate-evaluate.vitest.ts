@@ -61,10 +61,10 @@ const baseManifest = (): Manifest => ({
     },
   ],
   route_steps: [
-    { id: uuid(40), route_id: ROUTE.escalation, step_order: 0, tool_id: T.search, input_mapping: {}, rollback_input_mapping: null, output_capture_key: null, fallback_route_id: null, rollback_tool_id: null, created_at: new Date().toISOString() },
-    { id: uuid(41), route_id: ROUTE.escalation, step_order: 1, tool_id: T.getCustomer, input_mapping: {}, rollback_input_mapping: null, output_capture_key: null, fallback_route_id: null, rollback_tool_id: null, created_at: new Date().toISOString() },
-    { id: uuid(42), route_id: ROUTE.escalation, step_order: 2, tool_id: T.createTicket, input_mapping: {}, rollback_input_mapping: null, output_capture_key: null, fallback_route_id: null, rollback_tool_id: null, created_at: new Date().toISOString() },
-    { id: uuid(43), route_id: ROUTE.notify, step_order: 0, tool_id: T.sendEmail, input_mapping: {}, rollback_input_mapping: null, output_capture_key: null, fallback_route_id: null, rollback_tool_id: null, created_at: new Date().toISOString() },
+    { id: uuid(40), route_id: ROUTE.escalation, step_order: 0, tool_id: T.search, input_mapping: {}, rollback_input_mapping: null, fallback_input_mapping: null, fallback_rollback_input_mapping: null, output_capture_key: null, fallback_route_id: null, rollback_tool_id: null, created_at: new Date().toISOString() },
+    { id: uuid(41), route_id: ROUTE.escalation, step_order: 1, tool_id: T.getCustomer, input_mapping: {}, rollback_input_mapping: null, fallback_input_mapping: null, fallback_rollback_input_mapping: null, output_capture_key: null, fallback_route_id: null, rollback_tool_id: null, created_at: new Date().toISOString() },
+    { id: uuid(42), route_id: ROUTE.escalation, step_order: 2, tool_id: T.createTicket, input_mapping: {}, rollback_input_mapping: null, fallback_input_mapping: null, fallback_rollback_input_mapping: null, output_capture_key: null, fallback_route_id: null, rollback_tool_id: null, created_at: new Date().toISOString() },
+    { id: uuid(43), route_id: ROUTE.notify, step_order: 0, tool_id: T.sendEmail, input_mapping: {}, rollback_input_mapping: null, fallback_input_mapping: null, fallback_rollback_input_mapping: null, output_capture_key: null, fallback_route_id: null, rollback_tool_id: null, created_at: new Date().toISOString() },
   ],
 });
 

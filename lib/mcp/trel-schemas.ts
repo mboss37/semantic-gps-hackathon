@@ -83,6 +83,7 @@ export type ExecuteRouteStepStatus =
 export type ExecuteRouteFallbackUsed = {
   original_tool_name: string;
   fallback_tool_name: string;
+  fallback_tool_id: string;
   original_error: string;
 };
 

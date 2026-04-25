@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOutIcon, MoreVerticalIcon } from 'lucide-react';
+import Link from 'next/link';
+import { LogOutIcon, MoreVerticalIcon, SettingsIcon } from 'lucide-react';
 
 import {
   Avatar,
@@ -117,6 +118,13 @@ export function NavUser({ user }: NavUserProps) {
                 </div>
               </div>
             </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/settings">
+                <SettingsIcon />
+                Settings
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} disabled={pending}>
               <LogOutIcon />

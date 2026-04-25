@@ -98,6 +98,8 @@ export type RouteStepRow = {
   tool_id: string;
   input_mapping: Record<string, unknown>;
   rollback_input_mapping: Record<string, unknown> | null;
+  fallback_input_mapping: Record<string, unknown> | null;
+  fallback_rollback_input_mapping: Record<string, unknown> | null;
   output_capture_key: string | null;
   fallback_route_id: string | null;
   rollback_tool_id: string | null;

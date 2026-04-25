@@ -227,6 +227,7 @@ const attemptFallback = async (
   pair: { step: RouteStepRow; tool: ToolRow },
   manifest: Manifest,
   args: Record<string, unknown>,
+  inputs: Record<string, unknown>,
   policyCtxBuilder: PolicyContextBuilder,
   ctx: ExecuteRouteCtx,
   captureBag: Record<string, CapturedStep>,
@@ -244,14 +245,40 @@ const attemptFallback = async (
   const fallbackEntry = findCatalogEntry(catalog, fallback.tool);
   if (!fallbackEntry) return primaryStep;
 
+  // Translate args for the fallback tool. Default = legacy verbatim reuse
+  // (preserves all existing routes that assume schema compatibility). When
+  // step.fallback_input_mapping is set, resolve its DSL against inputs +
+  // capture bag — same primitive used by primary input_mapping and
+  // rollback_input_mapping. WP-22.4 added this for cross-MCP fallbacks
+  // where the fallback target's schema differs from the primary's.
+  let fallbackArgs = args;
+  if (
+    step.fallback_input_mapping &&
+    Object.keys(step.fallback_input_mapping).length > 0
+  ) {
+    try {
+      fallbackArgs = resolveInputMapping(
+        step.fallback_input_mapping,
+        inputs,
+        captureBag,
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'unknown error';
+      return {
+        ...primaryStep,
+        fallback_also_failed: true,
+        error: `${originalError} (fallback ${fallback.tool.name} mapping failed: ${message})`,
+      };
+    }
+  }
+
   // Re-run pre-policies against the fallback tool identity so allowlist /
-  // injection-guard decisions reflect the new target. Input args are reused
-  // verbatim — the contract assumes schema compatibility.
-  const fallbackPolicyCtx = policyCtxBuilder(fallbackEntry, args);
+  // injection-guard decisions reflect the new target.
+  const fallbackPolicyCtx = policyCtxBuilder(fallbackEntry, fallbackArgs);
   const fallbackPre = runPreCallPolicies(fallbackPolicyCtx, manifest);
   const fallbackStarted = performance.now();
   if (fallbackPre.action === 'block') {
-    const blocked = emitBlockedStep(step, fallback.tool, args, fallbackStarted, fallbackPre, ctx);
+    const blocked = emitBlockedStep(step, fallback.tool, fallbackArgs, fallbackStarted, fallbackPre, ctx);
     logMCPEvent({
       trace_id: ctx.traceId,
       organization_id: ctx.organizationId,
@@ -279,7 +306,7 @@ const attemptFallback = async (
     step,
     fallback.tool,
     fallbackEntry,
-    args,
+    fallbackArgs,
     fallbackPolicyCtx,
     fallbackPre,
     manifest,
@@ -304,7 +331,7 @@ const attemptFallback = async (
       },
     });
     if (step.output_capture_key) {
-      captureBag[step.output_capture_key] = { args, result: unwrapMcpEnvelope(fallbackPostResult) };
+      captureBag[step.output_capture_key] = { args: fallbackArgs, result: unwrapMcpEnvelope(fallbackPostResult) };
     }
     return {
       step_order: step.step_order,
@@ -315,6 +342,7 @@ const attemptFallback = async (
       fallback_used: {
         original_tool_name: primaryTool.name,
         fallback_tool_name: fallback.tool.name,
+        fallback_tool_id: fallback.tool.id,
         original_error: originalError,
       },
     };
@@ -400,6 +428,7 @@ const runSingleStep = async (
     pair,
     manifest,
     args,
+    inputs,
     policyCtxBuilder,
     ctx,
     captureBag,
