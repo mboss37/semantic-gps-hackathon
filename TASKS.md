@@ -111,48 +111,18 @@
 - 18.3 E2E signup validated on deploy — bonus: `/signup/check-email` page, auth-callback error surfacing, hosted migration 22 pushed
 - Hard-Won Lesson #32: migration drift gate codified in `.claude/rules/migrations.md § Sprint wrap`.
 
-## Current: Sprint 19 — Reviewer findings sweep (15 items)
+**Sprint 19 — Reviewer findings sweep + rollback cascade fix:**
+- 15 findings cleared: shadcn style sweep + dual-sidebar demote + DEMO.md arg, onboarding let-ctx + `created_by` guard, security defense-in-depth (`kind` filter + URL pathname + console.error sanitize), auth-config dedup to `lib/servers/auth.ts`, assignments + `mintPlaygroundToken` extractions, `bootstrap.sql` templating + fail-loud
+- WP-19.6 file splits: `executeRollback` → `lib/mcp/execute-rollback.ts`; `playground-workbench.tsx` 485→183 via `playground-{scenarios,event-reducer,pane-view}`. New `route-utils.ts` leaf breaks execute-route↔rollback cycle
+- WP-19.7 rediscover: batch upsert + `(server_id,name)` UNIQUE migration + dry-run preview Dialog
+- WP-19.8 auth hook: `profile_completed` folded into JWT claim, `active_org_id` metadata + `PUT /api/user/active-org`, `decodeJwtClaims` reused by `proxy.ts`
+- WP-19.9 rollback cascade: `unwrapMcpEnvelope` at capture bag (handles bare-array + wrapped shapes). Lessons #33 + #34. Verified unit + proven-negative integration + local E2E (compensated_count:2, failed_count:0)
 
-**WP-19.1: Doc + cosmetic + sidebar sweep**
-- [ ] DEMO.md Story #1 arg name fix (`account_name` → `query`)
-- [ ] `chart-area-interactive.tsx:167-238` indent fix
-- [ ] shadcn components style sweep (single-quote + semis: nav-user, app-sidebar, nav-main, site-header)
-- [ ] Dual sidebar "Policies" + "Policy Catalog" → demote catalog entry
+## Current:
 
-**WP-19.2: Onboarding fixes**
-- [ ] `onboarding/actions.ts:47-55` let-ctx style → dedicated helper
-- [ ] Onboarding `created_by` clobber on retry → `.is('created_by', null)` guard
-
-**WP-19.3: Security defense-in-depth**
-- [ ] `gateway-tokens/[id]/route.ts` DELETE missing `kind` filter → `.neq('kind', 'system')`
-- [ ] `gateway-handler.ts` auth-fail payload leaks `request.url` query params → strip search
-- [ ] `console.error` leaking Supabase error bodies — sweep ~10 route handlers
-
-**WP-19.4: Code extraction & dedup**
-- [ ] Auth-config decode duplication in `proxy-openapi.ts` + `proxy-http.ts` → consolidate to `lib/servers/auth.ts`
-- [ ] `policies/[id]/assignments/route.ts` POST at 88 lines → extract `verifyAssignmentTarget`
-- [ ] `mintPlaygroundToken` extract to `lib/mcp/playground-token.ts` + reuse-branch test
-
-**WP-19.5: Script hardening**
-- [ ] `bootstrap-local-demo.sql` hardcodes `localhost` → `psql -v base_url=...` templating
-- [ ] `bootstrap-local-demo.sql` silent no-op when demo membership missing → fail-loud
-
-**WP-19.6: File splits**
-- [ ] `execute-route.ts` (794 lines) → extract `executeRollback` to `lib/mcp/execute-rollback.ts`
-- [ ] `playground-workbench.tsx` (485 lines) → extract `PaneView` + event reducer + scenarios
-
-**WP-19.7: Rediscover overhaul**
-- [ ] Upsert batch instead of N individual UPDATEs (+ UNIQUE constraint migration)
-- [ ] Dry-run preview GET endpoint + confirmation UI before applying diff
-
-**WP-19.8: Auth hook enhancements**
-- [ ] Fold `profile_completed` into JWT custom claim → remove DB query from `proxy.ts`
-- [ ] `custom_access_token_hook` LIMIT 1 → add `active_org_id` user metadata + prefer it in hook
-
-**WP-19.9: Rollback cascade regression (P0 demo-blocker)**
-- [ ] Unwrap MCP envelope (`{content:[{type:"text", text:"<JSON>"}]}`) at capture-bag write in `execute-route.ts` so `$steps.<key>.result.<field>` resolves against the logical object, not the wrapper. Unblocks demo story #9.
+(Awaiting next sprint plan — pull WPs from `BACKLOG.md` when opening.)
 
 ## Session Log
+- 2026-04-24 — Sprint 19 shipped: 9 WPs, 21 items, 2 commits pushed. MCP envelope unwrap at capture bag unblocks demo story #9 (verified three ways: 7 unit + proven-negative integration + live E2E against real SF/Slack/GH). Reviewer flagged 7 blockers — fixed 5 (circular via route-utils leaf, getSession waivers, `as` cast cleanup), accepted 2 (execute-route.ts 610 lines, executeRollback 155 lines) as pragma. 7 memories + Hard-Won Lessons #33/#34. 337/2/0 tests.
 - 2026-04-24 — Sprint 18 shipped: 3 WPs (specialist prework + landing v0 + end-to-end deploy signup validation). Bonuses mid-WP-3: `/signup/check-email` industry page, `/login` `?error=` surfacing, hosted migration 22 push closing a week-old Sprint 17 drift. New Hard-Won Lesson #32 + `migrations.md § Sprint wrap` gate pin the drift class. Four memories stored. 327/2/0. 6 commits.
 - 2026-04-24 — Sprint 17 shipped: 4 WPs (catalog gallery + token consent + no-MCP guard + empty-state audit). Parallel subagent `git stash` collision wiped 17.2's work mid-sprint; main thread reconstructed + follow-up commit mandated `isolation: worktree` frontmatter on write-capable subagents. 4 new memories + 2 Hard-Won Lessons pin the fix. 327/2/0. 5 commits.
-- 2026-04-24 — Sprint 16 shipped: L.1 RLS (13 tables, custom hook, 9 isolation tests, 3-org hosted IDOR sweep) + M.1 migrations rule. Follow-up auth callback handler ships PKCE flow. Reviewer caught member_update_self tenant-escape → tighten migration shipped as follow-up. 3 new P0 surfaced for Sprint 17. 1 commit pushed.
