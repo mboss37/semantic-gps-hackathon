@@ -61,8 +61,10 @@ const TokensPage = async () => {
         <div>
           <h1 className="text-2xl font-semibold">Gateway tokens</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Bearer tokens MCP clients send as <code className="rounded bg-muted px-1 py-0.5 text-xs">Authorization: Bearer sgps_…</code>.
-            Plaintext is shown <span className="text-foreground">once</span> at creation — copy it immediately.
+            Bearer credentials your MCP clients present in the{' '}
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">Authorization</code> header.
+            Each token&apos;s plaintext value is shown <span className="text-foreground">once</span>{' '}
+            on creation. Store it in your secrets manager before closing the dialog.
           </p>
         </div>
         <GatewayTokenCreateDialog />
