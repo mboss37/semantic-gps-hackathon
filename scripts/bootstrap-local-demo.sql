@@ -380,7 +380,7 @@ SELECT m.organization_id,
 INSERT INTO public.routes (organization_id, name, description)
 SELECT m.organization_id,
        'cross_domain_escalation',
-       'High-value customer bug: find account, file engineering ticket, notify CS channel, log on the opportunity.'
+       'Triage a high-value customer bug: locate the account + primary contact, file a GitHub engineering ticket, notify the CS Slack channel, and log a Salesforce follow-up task.'
   FROM public.memberships m JOIN auth.users u ON u.id = m.user_id
  WHERE u.email = 'demo@semantic-gps.dev' LIMIT 1;
 

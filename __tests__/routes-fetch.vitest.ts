@@ -16,18 +16,21 @@ const STEP_2 = uuid(31);
 
 type QueryResult = { data: unknown; error: null };
 
-type MockTables = {
+type MockTables = Partial<{
   routes: Array<Record<string, unknown>>;
   route_steps: Array<Record<string, unknown>>;
   tools: Array<Record<string, unknown>>;
-};
+  servers: Array<Record<string, unknown>>;
+  mcp_events: Array<Record<string, unknown>>;
+}>;
 
 // Minimal Supabase client stub. Returns the configured fixture for each
 // .from(table).select().<filter>... chain. We only implement the subset the
-// fetch helpers use: eq, in, order, maybeSingle.
+// fetch helpers use: eq, in, order, maybeSingle, gte. Unknown tables resolve
+// to an empty array so callers can lazy-stub only the tables they care about.
 const makeClient = (tables: MockTables) => {
   const buildChain = (table: keyof MockTables) => {
-    let rows: Array<Record<string, unknown>> = [...tables[table]];
+    let rows: Array<Record<string, unknown>> = [...(tables[table] ?? [])];
     const chain = {
       select: () => chain,
       eq: (col: string, val: unknown) => {
@@ -37,6 +40,10 @@ const makeClient = (tables: MockTables) => {
       in: (col: string, vals: unknown[]) => {
         const set = new Set(vals);
         rows = rows.filter((r) => set.has(r[col]));
+        return chain;
+      },
+      gte: (col: string, val: unknown) => {
+        rows = rows.filter((r) => (r[col] as string | number | null) !== null && (r[col] as string | number) >= (val as string | number));
         return chain;
       },
       order: (col: string, opts?: { ascending?: boolean }) => {
@@ -95,9 +102,9 @@ const baseTables = (): MockTables => ({
     },
   ],
   tools: [
-    { id: TOOL_1, name: 'find_account', display_name: 'Find Account' },
-    { id: TOOL_2, name: 'create_task', display_name: null },
-    { id: ROLLBACK_TOOL, name: 'delete_task', display_name: null },
+    { id: TOOL_1, name: 'find_account', display_name: 'Find Account', server_id: null },
+    { id: TOOL_2, name: 'create_task', display_name: null, server_id: null },
+    { id: ROLLBACK_TOOL, name: 'delete_task', display_name: null, server_id: null },
   ],
 });
 
