@@ -74,16 +74,20 @@ export const PolicyCatalogCard = ({
             </Badge>
           </div>
           <code className="font-mono text-xs text-muted-foreground">{entry.builtin_key}</code>
-        </CardHeader>
-        <CardContent className="flex-1 space-y-3">
-          <p className="text-sm text-muted-foreground">{entry.description}</p>
-          <div className="text-xs text-muted-foreground">
+          {/* Config row sits in the header so it lands at the same Y on every
+              card regardless of description length. The description below is
+              the only flexible region; everything from "Active in your org"
+              down is anchored to the footer. */}
+          <p className="text-xs text-muted-foreground">
             <span className="font-medium text-foreground">Config: </span>
             {entry.config_keys.join(', ')}
-          </div>
+          </p>
+        </CardHeader>
+        <CardContent className="flex flex-1 flex-col gap-3">
+          <p className="flex-1 text-sm text-muted-foreground">{entry.description}</p>
 
           {attachedCount > 0 && (
-            <div className="flex flex-col gap-1.5 pt-1">
+            <div className="flex flex-col gap-1.5">
               <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                 Active in your org
               </span>
@@ -95,11 +99,12 @@ export const PolicyCatalogCard = ({
                       onClick={() => setEditingId(p.id)}
                       className="group flex w-full items-center justify-between gap-2 rounded-md border bg-muted/30 px-2.5 py-1.5 text-xs transition-colors hover:border-foreground/30 hover:bg-muted/50"
                     >
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span className="size-1.5 shrink-0 rounded-full bg-emerald-400" aria-hidden="true" />
-                        <span className="truncate font-mono text-foreground/90">{p.name}</span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Mode:
+                        </span>
                         <span
-                          className={`shrink-0 rounded-sm border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
+                          className={`rounded-sm border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
                             p.enforcement_mode === 'enforce'
                               ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
                               : 'border-zinc-500/30 bg-zinc-500/10 text-zinc-300'
@@ -110,7 +115,7 @@ export const PolicyCatalogCard = ({
                       </span>
                       <span className="inline-flex shrink-0 items-center gap-1 text-muted-foreground transition-colors group-hover:text-foreground">
                         <Pencil className="size-3" />
-                        <span className="font-mono uppercase tracking-wider">Edit</span>
+                        <span className="font-mono uppercase tracking-wider">Edit policy</span>
                       </span>
                     </button>
                   </li>
