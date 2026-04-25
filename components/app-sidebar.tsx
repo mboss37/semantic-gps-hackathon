@@ -36,17 +36,19 @@ type Workspace = {
   name: string;
 };
 
-// Sprint 21 WP-21.1: 3 grouped sections instead of flat 10-item list.
-// Overview = where you check status. Configure = where you set the rules.
-// Operate = where you run things and watch what happened.
+// Sections mirror the customer journey: see status (Overview) → build the
+// stack (Build, in step order: connect → relate → routify) → govern at the
+// gateway plane (Governance, Kong/Mulesoft model) → run + observe (Operate).
 const data = {
   overview: [{ title: 'Dashboard', url: '/dashboard', icon: LayoutDashboardIcon }],
-  configure: [
-    { title: 'Servers', url: '/dashboard/servers', icon: GlobeIcon },
-    { title: 'Routes', url: '/dashboard/routes', icon: RouteIcon },
+  build: [
+    { title: 'MCP Servers', url: '/dashboard/servers', icon: GlobeIcon },
     { title: 'Relationships', url: '/dashboard/relationships', icon: GitMergeIcon },
-    { title: 'Policies', url: '/dashboard/policies', icon: ShieldCheckIcon },
+    { title: 'Routes', url: '/dashboard/routes', icon: RouteIcon },
     { title: 'Tokens', url: '/dashboard/tokens', icon: KeyRoundIcon },
+  ],
+  governance: [
+    { title: 'Policies', url: '/dashboard/policies', icon: ShieldCheckIcon },
   ],
   operate: [
     { title: 'Playground', url: '/dashboard/playground', icon: SparklesIcon },
@@ -82,7 +84,8 @@ export function AppSidebar({ user, workspace, ...props }: AppSidebarProps) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain label="Overview" items={data.overview} />
-        <NavMain label="Configure" items={data.configure} />
+        <NavMain label="Build" items={data.build} />
+        <NavMain label="Governance" items={data.governance} />
         <NavMain label="Operate" items={data.operate} />
       </SidebarContent>
       <SidebarFooter>
