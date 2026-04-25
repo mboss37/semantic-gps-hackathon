@@ -4,15 +4,33 @@ import { requireAuth, UnauthorizedError } from '@/lib/auth';
 import { invalidateManifest } from '@/lib/manifest/cache';
 
 // Sprint 6 WP-G.2: per-relationship PATCH + DELETE. Cross-org edges surface
-// as 404 (never leak that they exist). Only `description` is mutable —
-// changing relationship_type is done by delete + create to preserve audit.
+// as 404 (never leak that they exist). Sprint 27: PATCH now accepts
+// `relationship_type` in addition to `description` — at least one of the
+// two must be present.
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const PatchBody = z.object({
-  description: z.string().min(5).max(500),
-});
+const RELATIONSHIP_TYPES = [
+  'produces_input_for',
+  'requires_before',
+  'suggests_after',
+  'mutually_exclusive',
+  'alternative_to',
+  'validates',
+  'compensated_by',
+  'fallback_to',
+] as const;
+
+const PatchBody = z
+  .object({
+    description: z.string().min(5).max(500).optional(),
+    relationship_type: z.enum(RELATIONSHIP_TYPES).optional(),
+  })
+  .refine(
+    (v) => v.description !== undefined || v.relationship_type !== undefined,
+    { message: 'at least one of description or relationship_type required' },
+  );
 
 const unauthorized = (): Response =>
   NextResponse.json({ error: 'unauthorized' }, { status: 401 });
@@ -71,9 +89,14 @@ export const PATCH = async (
     );
   }
 
+  const update: Record<string, string> = {};
+  if (parsed.data.description !== undefined) update.description = parsed.data.description;
+  if (parsed.data.relationship_type !== undefined)
+    update.relationship_type = parsed.data.relationship_type;
+
   const { data, error } = await supabase
     .from('relationships')
-    .update({ description: parsed.data.description })
+    .update(update)
     .eq('id', id)
     .select('id, from_tool_id, to_tool_id, relationship_type, description')
     .single();

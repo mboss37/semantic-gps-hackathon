@@ -1,18 +1,89 @@
 'use client';
 
+import {
+  ArrowRightIcon,
+  BanIcon,
+  GitForkIcon,
+  LightbulbIcon,
+  Link2Icon,
+  ShieldCheckIcon,
+  ShuffleIcon,
+  Undo2Icon,
+  type LucideIcon,
+} from 'lucide-react';
+
 // Canonical 8 TRel edge types (docs/USER-STORIES.md §Relationships & Graph).
 // Colors are also consumed by the React Flow edge styling in the graph page —
-// keep the two in sync.
+// keep the two in sync. Sprint 27: each type has a Lucide icon + a short
+// label so the relationships row renders a single colored icon-with-caption
+// per edge — no unicode connector strings (which rendered with inconsistent
+// weight/centering across types).
 
-export const EDGE_STYLES: Record<string, { stroke: string; label: string; description: string }> = {
-  produces_input_for: { stroke: '#34d399', label: 'produces_input_for', description: 'output of A feeds B as input' },
-  requires_before: { stroke: '#f97316', label: 'requires_before', description: 'B cannot run until A succeeds' },
-  suggests_after: { stroke: '#22d3ee', label: 'suggests_after', description: 'B commonly follows A (non-binding)' },
-  mutually_exclusive: { stroke: '#ef4444', label: 'mutually_exclusive', description: 'A and B cannot coexist in a trace' },
-  alternative_to: { stroke: '#a78bfa', label: 'alternative_to', description: 'B is an interchangeable substitute for A' },
-  validates: { stroke: '#facc15', label: 'validates', description: 'B checks the output of A' },
-  compensated_by: { stroke: '#a3a3a3', label: 'compensated_by', description: 'B rolls back A on downstream failure' },
-  fallback_to: { stroke: '#60a5fa', label: 'fallback_to', description: 'route to B if A fails' },
+export type EdgeStyle = {
+  stroke: string;
+  label: string;
+  shortLabel: string;
+  description: string;
+  icon: LucideIcon;
+};
+
+export const EDGE_STYLES: Record<string, EdgeStyle> = {
+  produces_input_for: {
+    stroke: '#34d399',
+    label: 'produces_input_for',
+    shortLabel: 'produces',
+    description: 'output of A feeds B as input',
+    icon: ArrowRightIcon,
+  },
+  requires_before: {
+    stroke: '#f97316',
+    label: 'requires_before',
+    shortLabel: 'requires',
+    description: 'B cannot run until A succeeds',
+    icon: Link2Icon,
+  },
+  suggests_after: {
+    stroke: '#22d3ee',
+    label: 'suggests_after',
+    shortLabel: 'suggests',
+    description: 'B commonly follows A (non-binding)',
+    icon: LightbulbIcon,
+  },
+  mutually_exclusive: {
+    stroke: '#ef4444',
+    label: 'mutually_exclusive',
+    shortLabel: 'excludes',
+    description: 'A and B cannot coexist in a trace',
+    icon: BanIcon,
+  },
+  alternative_to: {
+    stroke: '#a78bfa',
+    label: 'alternative_to',
+    shortLabel: 'alternative',
+    description: 'B is an interchangeable substitute for A',
+    icon: ShuffleIcon,
+  },
+  validates: {
+    stroke: '#facc15',
+    label: 'validates',
+    shortLabel: 'validates',
+    description: 'B checks the output of A',
+    icon: ShieldCheckIcon,
+  },
+  compensated_by: {
+    stroke: '#a3a3a3',
+    label: 'compensated_by',
+    shortLabel: 'rollback',
+    description: 'B rolls back A on downstream failure',
+    icon: Undo2Icon,
+  },
+  fallback_to: {
+    stroke: '#60a5fa',
+    label: 'fallback_to',
+    shortLabel: 'fallback',
+    description: 'route to B if A fails',
+    icon: GitForkIcon,
+  },
 };
 
 // Non-canonical edge key, used only when a `compensated_by` edge is actively
