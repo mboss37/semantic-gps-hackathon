@@ -15,6 +15,10 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const QuerySchema = z.object({
+  // Sprint 29: trace_id can be the per-request UUID (one Claude Desktop tool
+  // call) OR the caller-supplied UUID a Playground Run threads through every
+  // internal MCP call — same field, two filling strategies. One filter
+  // surfaces both naturally.
   trace_id: z.string().uuid().optional(),
   range: z
     .enum(MONITORING_RANGES as unknown as [MonitoringRange, ...MonitoringRange[]])
@@ -65,16 +69,20 @@ export const GET = async (request: Request): Promise<Response> => {
   let query = supabase
     .from('mcp_events')
     .select(
-      'id, trace_id, server_id, tool_name, method, status, policy_decisions, latency_ms, created_at',
+      'id, trace_id, server_id, tool_name, method, status, policy_decisions, latency_ms, created_at, servers(name)',
       { count: 'exact' },
     )
     .eq('organization_id', organization_id)
     .order('created_at', { ascending: false })
-    .range(parsed.data.offset, parsed.data.offset + parsed.data.limit - 1)
-    .gte('created_at', sinceFor(range));
+    .range(parsed.data.offset, parsed.data.offset + parsed.data.limit - 1);
 
+  // trace_id filter overrides the time-range narrowing — a Playground deep
+  // link should surface every event from the run even if it falls outside
+  // the default window. Otherwise apply the standard range gate.
   if (parsed.data.trace_id) {
     query = query.eq('trace_id', parsed.data.trace_id);
+  } else {
+    query = query.gte('created_at', sinceFor(range));
   }
 
   const { data, error, count } = await query;
@@ -82,7 +90,26 @@ export const GET = async (request: Request): Promise<Response> => {
     return NextResponse.json({ error: 'query failed' }, { status: 500 });
   }
 
-  const events = data ?? [];
+  // PostgREST returns the embedded `servers(name)` as a single object at
+  // runtime (the FK is to-one), even though Supabase JS's generated TS types
+  // declare it as an array. Cast through `unknown` to match the runtime
+  // shape and flatten to `server_name` so callers consume one flat record.
+  type Row = {
+    id: string;
+    trace_id: string;
+    server_id: string | null;
+    tool_name: string | null;
+    method: string;
+    status: string;
+    policy_decisions: unknown[];
+    latency_ms: number | null;
+    created_at: string;
+    servers: { name: string } | null;
+  };
+  const events = ((data as unknown as Row[] | null) ?? []).map(({ servers, ...rest }) => ({
+    ...rest,
+    server_name: servers?.name ?? null,
+  }));
   const timeline = bucketAuditTimeline(events, range);
 
   return NextResponse.json({

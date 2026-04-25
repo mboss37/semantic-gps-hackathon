@@ -1,7 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CheckIcon, CopyIcon } from 'lucide-react';
+import {
+  CheckCircle2Icon,
+  CheckIcon,
+  CopyIcon,
+  EyeOffIcon,
+  ShieldAlertIcon,
+  TriangleAlertIcon,
+} from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import {
@@ -13,6 +20,63 @@ import {
 } from '@/components/ui/sheet';
 import { statusBadgeClassFor } from '@/lib/charts/palette';
 import type { AuditEvent } from '@/lib/schemas/audit-event';
+import { cn } from '@/lib/utils';
+
+// Visual hierarchy on policy verdicts. The audit panel must answer "which
+// policy was the cause of the block?" at a glance — without forcing the
+// reader to parse `decision` + `mode` text on every row. Mapping:
+//   block + enforce → red, ShieldAlert, "CAUSE" pill — actually halted the call
+//   block + shadow  → amber, TriangleAlert, "WOULD BLOCK · SHADOW"
+//   redact          → orange, EyeOff — post-call PII redaction landed
+//   allow           → muted, CheckCircle2 — ran clean, no action
+const verdictStyle = (decision: string, mode: string) => {
+  if (decision === 'block' && mode === 'enforce') {
+    return {
+      Icon: ShieldAlertIcon,
+      container: 'border-red-500/40 bg-red-500/[0.08]',
+      icon: 'text-red-400',
+      name: 'text-red-100',
+      decision: 'font-semibold text-red-300',
+      reason: 'text-red-200/90',
+      pill: 'border-red-500/50 bg-red-500/15 text-red-200',
+      pillLabel: 'Cause',
+    };
+  }
+  if (decision === 'block' && mode === 'shadow') {
+    return {
+      Icon: TriangleAlertIcon,
+      container: 'border-amber-500/30 bg-amber-500/[0.05]',
+      icon: 'text-amber-400',
+      name: '',
+      decision: 'text-amber-300',
+      reason: 'text-amber-200/80',
+      pill: 'border-amber-500/30 bg-amber-500/10 text-amber-200/90',
+      pillLabel: 'Would block',
+    };
+  }
+  if (decision === 'redact') {
+    return {
+      Icon: EyeOffIcon,
+      container: 'border-orange-500/30 bg-orange-500/[0.05]',
+      icon: 'text-orange-400',
+      name: '',
+      decision: 'text-orange-300',
+      reason: 'text-orange-200/80',
+      pill: 'border-orange-500/30 bg-orange-500/10 text-orange-200/90',
+      pillLabel: 'Redacted',
+    };
+  }
+  return {
+    Icon: CheckCircle2Icon,
+    container: 'border-border/40 bg-muted/20',
+    icon: 'text-emerald-400/70',
+    name: 'text-foreground/80',
+    decision: 'text-muted-foreground',
+    reason: 'text-muted-foreground',
+    pill: '',
+    pillLabel: '',
+  };
+};
 
 // Sprint 22 WP-22.2: detail drawer for /dashboard/audit. Receives an event id;
 // fetches /api/audit/[id]; renders status + policy verdicts + redacted payload
@@ -98,6 +162,9 @@ export const AuditDetailSheet = ({ eventId, onOpenChange }: Props) => {
                   {detail.status}
                 </Badge>
                 <span className="font-mono text-xs">{detail.method}</span>
+                {detail.server_name && (
+                  <span className="text-muted-foreground">· {detail.server_name}</span>
+                )}
                 {detail.tool_name && (
                   <span className="text-muted-foreground">· {detail.tool_name}</span>
                 )}
@@ -117,23 +184,36 @@ export const AuditDetailSheet = ({ eventId, onOpenChange }: Props) => {
                 </h3>
                 <ul className="flex flex-col gap-1.5">
                   {detail.policy_decisions.map((d, i) => {
-                    const decision = (d as { decision?: string }).decision;
-                    const mode = (d as { mode?: string }).mode;
-                    const name = (d as { policy_name?: string }).policy_name;
+                    const decision = (d as { decision?: string }).decision ?? '';
+                    const mode = (d as { mode?: string }).mode ?? '';
+                    const name = (d as { policy_name?: string }).policy_name ?? '';
                     const reason = (d as { reason?: string }).reason;
+                    const style = verdictStyle(decision, mode);
+                    const Icon = style.Icon;
                     return (
                       <li
                         key={i}
-                        className="rounded-md border bg-muted/30 px-3 py-2 text-xs"
+                        className={cn('rounded-md border px-3 py-2 text-xs', style.container)}
                       >
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">{name}</span>
+                          <Icon className={cn('size-3.5 shrink-0', style.icon)} />
+                          <span className={cn('font-medium', style.name)}>{name}</span>
                           <span className="text-muted-foreground">·</span>
-                          <span>{decision}</span>
+                          <span className={style.decision}>{decision}</span>
                           <span className="text-muted-foreground">·</span>
                           <span className="text-muted-foreground">{mode}</span>
+                          {style.pillLabel && (
+                            <span
+                              className={cn(
+                                'ml-auto rounded-sm border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider',
+                                style.pill,
+                              )}
+                            >
+                              {style.pillLabel}
+                            </span>
+                          )}
                         </div>
-                        {reason && <p className="mt-1 text-muted-foreground">{reason}</p>}
+                        {reason && <p className={cn('mt-1', style.reason)}>{reason}</p>}
                       </li>
                     );
                   })}

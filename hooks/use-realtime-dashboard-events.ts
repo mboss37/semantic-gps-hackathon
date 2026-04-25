@@ -16,6 +16,11 @@ import { useDashboardRefresh } from './use-dashboard-refresh';
 // useDashboardRefresh that only need the manual refresh fn (e.g. the
 // header refresh button) do NOT call this hook — one channel per tab.
 //
+// Other dashboard surfaces (Overview chart, Monitoring, Audit) listen for
+// the DASHBOARD_REFRESH_EVENT window CustomEvent that useDashboardRefresh
+// dispatches — they don't open their own channel. One websocket per tab,
+// many readers.
+//
 // RLS isolation: the browser client carries the user JWT, and the
 // custom_access_token_hook stamps `organization_id`. Realtime applies
 // the same `org_isolation` RLS policy used by jwt_org_id() before

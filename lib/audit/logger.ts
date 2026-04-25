@@ -17,6 +17,12 @@ export type McpEventStatus =
   | 'unauthorized';
 
 export type McpEvent = {
+  // Sprint 29: trace_id can be supplied by the caller via `?trace_id=<uuid>`
+  // on the gateway URL — every MCP call from a single Playground (or any
+  // batched) run shares the same trace_id, so the audit page filters all of
+  // them with one click. Ad-hoc callers (Claude Desktop, Inspector, customer
+  // agents) don't pass it; the gateway falls back to a fresh per-request
+  // UUID so each tool call still has a unique audit row.
   trace_id: string;
   // Sprint 15 K.1: scope identity for every event. Nullable because the
   // gateway logs auth-level events before a scope resolves (missing bearer,

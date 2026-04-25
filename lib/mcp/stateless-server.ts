@@ -30,6 +30,11 @@ const SERVER_INFO = {
 } as const;
 
 type CreateServerOpts = {
+  // Sprint 29: trace_id is now caller-supplied (`?trace_id=<uuid>` on the
+  // gateway URL) for batched orchestrators that want every internal MCP
+  // call to share one id; the gateway-handler falls back to a fresh per-
+  // request UUID for ad-hoc callers. By the time we get here, it's already
+  // resolved — this server just threads it onto every audit row.
   traceId: string;
   // Manifest scope dictates which servers/tools this gateway instance sees.
   // `org` for the root `/api/mcp`, `domain` for `/api/mcp/domain/[slug]`,

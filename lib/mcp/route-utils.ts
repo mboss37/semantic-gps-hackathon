@@ -2,6 +2,10 @@ import type { ToolRow } from '@/lib/manifest/cache';
 import type { ToolCatalogEntry } from '@/lib/mcp/tool-dispatcher';
 
 export type ExecuteRouteCtx = {
+  // Sprint 29: trace_id is caller-supplied at the gateway URL (`?trace_id=`)
+  // when a batched orchestrator wants every internal call to share one id;
+  // otherwise it's a fresh per-request UUID. Threaded onto every audit row
+  // emitted during route execution + rollback.
   traceId: string;
   organizationId: string | null;
 };

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { FilterIcon, RefreshCwIcon } from 'lucide-react';
+import { FilterIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { AuditDetailSheet } from '@/components/dashboard/audit-detail-sheet';
@@ -20,6 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { DASHBOARD_REFRESH_EVENT } from '@/hooks/use-dashboard-refresh';
 import type { AuditTimelineBucket } from '@/lib/audit/timeline';
 import { statusBadgeClassFor } from '@/lib/charts/palette';
 import {
@@ -30,7 +31,11 @@ import {
 } from '@/lib/monitoring/range';
 import type { AuditEvent } from '@/lib/schemas/audit-event';
 
-const POLL_MS = 1000;
+// Sprint 26 WP-26.1: same realtime invalidation pattern as Monitoring +
+// Overview chart. Dashboard shell mounts useRealtimeDashboardEvents which
+// dispatches DASHBOARD_REFRESH_EVENT (debounced 2s) on every mcp_events
+// INSERT. We listen, bump refreshTick, the load() effect re-runs. One
+// websocket per tab; many readers. No polling, no per-page channel.
 
 type Filter = 'all' | 'ok' | 'blocked' | 'errors' | 'fallbacks' | 'rollbacks';
 
@@ -59,9 +64,11 @@ const isFilter = (value: string): value is Filter =>
   value === 'rollbacks';
 
 const AuditPage = () => {
-  // Sprint 26 — deep-link from /dashboard recent activity row "View audit
-  // trail" action lands here with ?trace_id=<uuid>. Seed local state from
-  // the URL once at mount so the trace input + filter chip pre-populate.
+  // Deep-link surface: `?trace_id=<uuid>` covers both the per-call form
+  // (Dashboard row → "View audit trail") and the per-Run form (Playground
+  // → "View audit trail"). The Playground threads its trace_id through every
+  // internal MCP call via `?trace_id=` on the gateway URL, so the same
+  // filter naturally surfaces all of them.
   const searchParams = useSearchParams();
   const initialTraceId = searchParams.get('trace_id') ?? '';
 
@@ -69,13 +76,16 @@ const AuditPage = () => {
   const [timeline, setTimeline] = useState<AuditTimelineBucket[]>([]);
   const [total, setTotal] = useState(0);
   const [traceId, setTraceId] = useState(initialTraceId);
-  const [paused, setPaused] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
   // null = "let server auto-pick the smallest range that contains data".
   // Synced from response on first load; user clicks set it explicitly.
   const [range, setRange] = useState<MonitoringRange | null>(null);
+  // Bumped by the dashboard-refresh window event to retrigger the fetch
+  // effect without changing the trace/range/filter. Same pattern as
+  // components/dashboard/monitoring-dashboard.tsx.
+  const [refreshTick, setRefreshTick] = useState(0);
 
   const load = useCallback(
     async (tid: string, r: MonitoringRange | null, quiet = true) => {
@@ -110,15 +120,13 @@ const AuditPage = () => {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load(traceId, range, true);
-  }, [load, traceId, range]);
+  }, [load, traceId, range, refreshTick]);
 
   useEffect(() => {
-    if (paused) return;
-    const timer = setInterval(() => {
-      void load(traceId, range, true);
-    }, POLL_MS);
-    return () => clearInterval(timer);
-  }, [paused, load, traceId, range]);
+    const onRefresh = () => setRefreshTick((n) => n + 1);
+    window.addEventListener(DASHBOARD_REFRESH_EVENT, onRefresh);
+    return () => window.removeEventListener(DASHBOARD_REFRESH_EVENT, onRefresh);
+  }, []);
 
   const filteredEvents = useMemo(
     () => events.filter((e) => matchesFilter(e, filter)),
@@ -137,7 +145,7 @@ const AuditPage = () => {
           <h1 className="text-2xl font-semibold">Audit</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Every gateway call. Filter by <code className="text-zinc-300">trace_id</code> to
-            reconstruct a workflow. {paused ? 'Polling paused.' : 'Polling every 1s.'}
+            reconstruct a workflow.
           </p>
         </div>
         <ToggleGroup
@@ -185,10 +193,6 @@ const AuditPage = () => {
             >
               <FilterIcon className="size-4" />
               Clear
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setPaused((p) => !p)}>
-              <RefreshCwIcon className={`size-4 ${paused ? '' : 'animate-spin'}`} />
-              {paused ? 'Resume' : 'Pause'}
             </Button>
           </div>
           <ToggleGroup
@@ -240,6 +244,7 @@ const AuditPage = () => {
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
                   <TableHead className="w-24 text-xs">Time</TableHead>
                   <TableHead className="text-xs">Method</TableHead>
+                  <TableHead className="text-xs">Server</TableHead>
                   <TableHead className="text-xs">Tool</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
                   <TableHead className="text-right text-xs">Latency</TableHead>
@@ -267,6 +272,9 @@ const AuditPage = () => {
                         {new Date(event.created_at).toLocaleTimeString()}
                       </TableCell>
                       <TableCell className="font-mono text-xs">{event.method}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {event.server_name ?? '—'}
+                      </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {event.tool_name ?? '—'}
                       </TableCell>

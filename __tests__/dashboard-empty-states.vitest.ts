@@ -90,6 +90,7 @@ describe('/dashboard overview — recent-events empty guard', () => {
       id: 'e1',
       trace_id: 't1',
       server_id: null,
+      server_name: null,
       tool_name: null,
       method: 'initialize',
       status: 'ok',

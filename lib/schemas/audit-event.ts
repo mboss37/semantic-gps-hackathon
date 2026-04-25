@@ -4,6 +4,7 @@ export const auditEventSchema = z.object({
   id: z.string(),
   trace_id: z.string(),
   server_id: z.string().nullable(),
+  server_name: z.string().nullable(),
   tool_name: z.string().nullable(),
   method: z.string(),
   status: z.string(),

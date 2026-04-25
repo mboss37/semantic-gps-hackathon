@@ -27,7 +27,7 @@ High-ROI items that move judging score. Skip if P0 runs late.
 
 ## P2 — After hackathon
 
-Signals ambition to judges who browse deep. Full vision in [`VISION.md`](./VISION.md).
+Signals ambition to judges who browse deep. Full vision in [`docs/VISION.md`](./docs/VISION.md).
 
 **Enterprise:** Multi-org invite flow + RLS widening, custom policy DSL, workflow evaluator benchmark, email change, monitoring widget customization.
 

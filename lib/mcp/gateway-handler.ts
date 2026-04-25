@@ -79,9 +79,21 @@ export const buildGatewayHandler = (
 ) => {
   const governed = options.governed ?? true;
   return async (request: Request): Promise<Response> => {
-    const traceId = randomUUID();
     const headers = collectHeaders(request);
     const clientIp = extractClientIp(headers);
+
+    // Sprint 29: trace_id can be supplied by the caller via `?trace_id=<uuid>`
+    // so a batched orchestrator (Playground today, future cron/queue contexts
+    // later) can stamp every internal MCP call from one logical operation
+    // with the same id. Strict UUID format — anything else falls back to a
+    // fresh per-request UUID so we never log a forged or malformed value.
+    const url = new URL(request.url);
+    const requestedTraceId = url.searchParams.get('trace_id');
+    const traceId =
+      requestedTraceId &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestedTraceId)
+        ? requestedTraceId
+        : randomUUID();
 
     // Sprint 15 diagnostic hook — capture request provenance on auth failures
     // so audit rows answer "who called /api/mcp unauthenticated?" in one

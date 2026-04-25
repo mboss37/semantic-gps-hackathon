@@ -1,25 +1,13 @@
 import { createClient } from '@/lib/supabase/server';
+import { PlaygroundSandboxInfo } from '@/components/dashboard/playground-sandbox-info';
 import { PlaygroundWorkbench } from '@/components/dashboard/playground-workbench';
 
-// Sprint 8 WP-J.1: Playground A/B hero page. Side-by-side Opus 4.7 runs
-// against two surfaces — left = raw/simulated tools, right = our governed
-// gateway. The contrast is the whole demo: relationships, PII policy, and
-// rollback only show up on the right.
-//
-// Sprint 17 WP-17.2: the Playground no longer relies on a user-minted gateway
-// token. `/api/playground/run` mints (or reuses) a single org-owned
-// `kind='system'` token internally — the user's consent surface for tokens is
-// exclusively `/dashboard/tokens`. This page accordingly drops the
-// "mint a token first" gate.
-//
-// Sprint 17 WP-17.3: instead we gate on "at least one MCP server registered",
-// since without servers the governed pane returns an empty manifest and the
-// model responds text-only. The gate itself lives inside `PlaygroundWorkbench`
-// so the busy/empty-prompt states can render consistently.
+// Playground A/B page. Side-by-side runs of the same prompt — Raw (no
+// governance) vs Semantic GPS (full control plane). Server fetches the org's
+// MCP servers so the workbench can show the scope picker; the run uses the
+// auto-managed system token via `/api/playground/run`.
 
 export const dynamic = 'force-dynamic';
-
-const SYSTEM_TOKEN_DISPLAY_NAME = 'playground-internal';
 
 const PlaygroundPage = async () => {
   const supabase = await createClient();
@@ -42,29 +30,27 @@ const PlaygroundPage = async () => {
     return <div className="p-6 text-sm text-muted-foreground">No organization membership.</div>;
   }
 
-  const { count: serverCount } = await supabase
+  const { data: serversData } = await supabase
     .from('servers')
-    .select('id', { count: 'exact', head: true })
-    .eq('organization_id', organizationId);
-  const hasServers = (serverCount ?? 0) > 0;
+    .select('id, name')
+    .eq('organization_id', organizationId)
+    .order('name');
+
+  const servers = (serversData ?? []) as Array<{ id: string; name: string }>;
 
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Playground</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Same prompt, two agents. Left runs Claude Opus 4.7 against a minimal raw tool set
-            with no governance. Right routes through Semantic GPS with policies, relationships,
-            and rollback. Watch what the gateway catches.
-          </p>
+    <div className="flex flex-col gap-3 p-4 md:p-6">
+      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight">Playground</h1>
+          <PlaygroundSandboxInfo />
         </div>
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+          Same prompt · two agents · watch the gateway intercept
+        </p>
       </header>
 
-      <PlaygroundWorkbench
-        tokenName={SYSTEM_TOKEN_DISPLAY_NAME}
-        hasServers={hasServers}
-      />
+      <PlaygroundWorkbench servers={servers} />
     </div>
   );
 };

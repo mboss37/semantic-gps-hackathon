@@ -12,6 +12,11 @@ export type ToolResultEvent = {
   id: string;
   summary: string;
   is_error?: boolean;
+  // Wall-clock latency the model perceives — Anthropic dispatch + our
+  // gateway + upstream + round-trip — measured between mcp_tool_use start
+  // and mcp_tool_result start. Undefined if the start timestamp went
+  // missing (defensive — should never happen in practice).
+  ms?: number;
 };
 
 export type TextEvent = { type: 'text'; content: string };
@@ -29,6 +34,10 @@ export type DoneEvent = {
     ms: number;
     policy_events?: number;
     thinking_chars?: number;
+    // Sprint 29: every event in mcp_events from this Run shares this trace_id.
+    // Pane footer surfaces it as a "View audit trail" link to the audit
+    // page's existing trace_id filter.
+    trace_id: string;
   };
 };
 
@@ -66,26 +75,12 @@ export const emptyPane = (): PaneState => ({
 export type Pane = {
   key: 'raw' | 'gateway';
   title: string;
-  badge: string;
-  badgeTone: 'muted' | 'governed';
   icon: typeof ZapIcon;
 };
 
 export const PANES: Pane[] = [
-  {
-    key: 'raw',
-    title: 'Raw MCP',
-    badge: 'Direct / no governance',
-    badgeTone: 'muted',
-    icon: ZapIcon,
-  },
-  {
-    key: 'gateway',
-    title: 'Semantic GPS',
-    badge: 'Policy-enforced',
-    badgeTone: 'governed',
-    icon: ShieldCheckIcon,
-  },
+  { key: 'raw', title: 'Raw MCP', icon: ZapIcon },
+  { key: 'gateway', title: 'Semantic GPS', icon: ShieldCheckIcon },
 ];
 
 export const toStreamEvents = async (
@@ -139,11 +134,9 @@ export const applyEvent = (prev: PaneState, event: StreamEvent): PaneState => {
     return { ...prev, text: prev.text + event.content };
   }
   if (event.type === 'thinking') {
-    // Non-streaming beta.messages.create returns thinking as one or more
-    // complete blocks. Concatenate with a blank line between blocks for
-    // readability in the collapsible reasoning panel.
-    const sep = prev.thinking ? '\n\n' : '';
-    return { ...prev, thinking: prev.thinking + sep + event.content };
+    // Streaming beta.messages.stream emits thinking as incremental deltas.
+    // Append verbatim — the model produces sensible whitespace within deltas.
+    return { ...prev, thinking: prev.thinking + event.content };
   }
   if (event.type === 'error') {
     return { ...prev, error: event.message };

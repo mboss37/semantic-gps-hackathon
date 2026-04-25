@@ -1,18 +1,39 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-// WP-J.1 (refactored): Playground /api/playground/run endpoint. Both modes
-// now go through Anthropic's beta mcp_servers connector — the only variable
-// is the URL pointed at /api/mcp vs /api/mcp/raw. Tests verify the NDJSON
-// event stream shape, the URL routing per mode, and the auth gate.
+// WP-J.1 (Sprint 29): Playground /api/playground/run endpoint. Both modes go
+// through Anthropic's beta mcp_servers connector via the streaming API
+// (`messages.stream`) — events flow back per-block (text deltas, thinking
+// deltas, tool_use, tool_result) so the client can render live latency.
+// Tests verify the NDJSON event stream shape, the URL routing per mode, the
+// trace_id query param threading, and the auth gate.
 
 // -- Hoisted mocks -----------------------------------------------------------
 
-const { requireAuthMock, mintTokenMock, betaCreateMock, selectMaybeSingleMock } = vi.hoisted(() => ({
-  requireAuthMock: vi.fn(),
-  mintTokenMock: vi.fn(),
-  betaCreateMock: vi.fn(),
-  selectMaybeSingleMock: vi.fn(),
-}));
+type ContentBlock =
+  | { type: 'text'; text: string }
+  | { type: 'thinking'; thinking: string; signature?: string }
+  | {
+      type: 'mcp_tool_use';
+      id: string;
+      name: string;
+      input: Record<string, unknown>;
+      server_name?: string;
+    }
+  | {
+      type: 'mcp_tool_result';
+      tool_use_id: string;
+      content: Array<{ type: 'text'; text: string }> | string;
+      is_error?: boolean;
+    };
+
+const { requireAuthMock, mintTokenMock, betaStreamMock, selectMaybeSingleMock } = vi.hoisted(
+  () => ({
+    requireAuthMock: vi.fn(),
+    mintTokenMock: vi.fn(),
+    betaStreamMock: vi.fn(),
+    selectMaybeSingleMock: vi.fn(),
+  }),
+);
 
 vi.mock('@/lib/auth', async () => {
   const actual = await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth');
@@ -20,10 +41,10 @@ vi.mock('@/lib/auth', async () => {
 });
 
 // Service-client stub so the token mint path never hits a real DB.
-// Sprint 17 WP-17.2: mintPlaygroundToken first SELECTs an existing kind=system
-// row and reuses it if present, else INSERTs a new one. The mock defaults to
-// "no existing row" (maybeSingle → null) so every test exercises the INSERT
-// path unless it explicitly queues a row via mintTokenMock.
+// `mintPlaygroundToken` first SELECTs an existing kind=system row and reuses
+// it if present, else INSERTs a new one. The mock defaults to "no existing
+// row" (maybeSingle → null) so every test exercises the INSERT path unless
+// it explicitly queues a row via `selectMaybeSingleMock`.
 vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: () => {
     const selectChain = {
@@ -45,10 +66,78 @@ vi.mock('@/lib/supabase/service', () => ({
 
 vi.mock('@anthropic-ai/sdk', () => {
   class FakeAnthropic {
-    public beta = { messages: { create: betaCreateMock } };
+    public beta = { messages: { stream: betaStreamMock } };
   }
   return { default: FakeAnthropic };
 });
+
+// Translate a buffered `content` array into the streaming events the route
+// consumes (`content_block_start` / `content_block_delta`) plus a
+// `finalMessage()` returning the consolidated message. Lets the test author
+// declare results in the natural buffered shape without hand-rolling delta
+// events.
+const makeStream = (content: ContentBlock[]) => {
+  const events: Array<Record<string, unknown>> = [];
+  for (const block of content) {
+    if (block.type === 'text') {
+      events.push({
+        type: 'content_block_start',
+        content_block: { type: 'text', text: '' },
+      });
+      events.push({
+        type: 'content_block_delta',
+        delta: { type: 'text_delta', text: block.text },
+      });
+      events.push({ type: 'content_block_stop' });
+      continue;
+    }
+    if (block.type === 'thinking') {
+      events.push({
+        type: 'content_block_start',
+        content_block: { type: 'thinking', thinking: '' },
+      });
+      events.push({
+        type: 'content_block_delta',
+        delta: { type: 'thinking_delta', thinking: block.thinking },
+      });
+      events.push({ type: 'content_block_stop' });
+      continue;
+    }
+    if (block.type === 'mcp_tool_use') {
+      events.push({
+        type: 'content_block_start',
+        content_block: {
+          type: 'mcp_tool_use',
+          id: block.id,
+          name: block.name,
+          input: block.input,
+          server_name: block.server_name ?? 'semantic-gps',
+        },
+      });
+      events.push({ type: 'content_block_stop' });
+      continue;
+    }
+    if (block.type === 'mcp_tool_result') {
+      events.push({
+        type: 'content_block_start',
+        content_block: {
+          type: 'mcp_tool_result',
+          tool_use_id: block.tool_use_id,
+          content: block.content,
+          is_error: block.is_error ?? false,
+        },
+      });
+      events.push({ type: 'content_block_stop' });
+    }
+  }
+
+  return {
+    [Symbol.asyncIterator]: async function* () {
+      for (const ev of events) yield ev;
+    },
+    finalMessage: async () => ({ stop_reason: 'end_turn', content }),
+  };
+};
 
 // Keep the env sane so we don't bail on ANTHROPIC_API_KEY or model helpers.
 beforeEach(() => {
@@ -56,7 +145,7 @@ beforeEach(() => {
   process.env.PLAYGROUND_MODEL = 'claude-opus-4-7';
   requireAuthMock.mockReset();
   mintTokenMock.mockReset();
-  betaCreateMock.mockReset();
+  betaStreamMock.mockReset();
   selectMaybeSingleMock.mockReset();
   selectMaybeSingleMock.mockResolvedValue({ data: null, error: null });
 });
@@ -68,7 +157,13 @@ const { POST } = await import('@/app/api/playground/run/route');
 type StreamEvent = {
   type: string;
   [key: string]: unknown;
-  stats?: { tool_calls: number; ms: number; policy_events?: number };
+  stats?: {
+    tool_calls: number;
+    ms: number;
+    policy_events?: number;
+    thinking_chars?: number;
+    trace_id?: string;
+  };
 };
 
 const readNdjson = async (res: Response): Promise<StreamEvent[]> => {
@@ -123,15 +218,13 @@ describe('POST /api/playground/run', () => {
       data: { id: 'tok-raw' },
       error: null,
     });
-    betaCreateMock.mockResolvedValueOnce({
-      stop_reason: 'end_turn',
-      content: [
+    betaStreamMock.mockReturnValueOnce(
+      makeStream([
         {
           type: 'mcp_tool_use',
           id: 'mcp-r1',
           name: 'find_contact',
           input: { email: 'sarah@edge.com' },
-          server_name: 'semantic-gps',
         },
         {
           type: 'mcp_tool_result',
@@ -140,8 +233,8 @@ describe('POST /api/playground/run', () => {
           is_error: false,
         },
         { type: 'text', text: 'Found Sarah.' },
-      ],
-    });
+      ]),
+    );
 
     const res = await post({ prompt: 'find sarah', mode: 'raw' });
     expect(res.status).toBe(200);
@@ -158,20 +251,26 @@ describe('POST /api/playground/run', () => {
     expect(toolCall?.name).toBe('find_contact');
 
     const done = events[events.length - 1] as {
-      stats: { tool_calls: number; ms: number; policy_events?: number };
+      stats: { tool_calls: number; ms: number; policy_events?: number; trace_id: string };
     };
     expect(done.stats.tool_calls).toBe(1);
     // Raw mode reports policy_events = 0 by definition — the observable
     // contrast vs governed.
     expect(done.stats.policy_events).toBe(0);
+    // Sprint 29: every run ships a trace_id so the client can deep-link the
+    // audit page filtered to this run's events.
+    expect(done.stats.trace_id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
 
-    // Both modes use the beta MCP connector; raw mode points at /api/mcp/raw.
-    expect(betaCreateMock).toHaveBeenCalledTimes(1);
-    const callArgs = betaCreateMock.mock.calls[0][0] as {
+    // Both modes use the beta MCP connector; raw mode points at /api/mcp/raw
+    // with the trace_id appended as a query param.
+    expect(betaStreamMock).toHaveBeenCalledTimes(1);
+    const callArgs = betaStreamMock.mock.calls[0][0] as {
       mcp_servers: Array<{ authorization_token?: string; url: string }>;
       tools: Array<{ type: string; mcp_server_name: string }>;
     };
-    expect(callArgs.mcp_servers[0].url).toMatch(/\/api\/mcp\/raw$/);
+    expect(callArgs.mcp_servers[0].url).toMatch(/\/api\/mcp\/raw\?trace_id=[0-9a-f-]{36}$/);
     expect(callArgs.mcp_servers[0].authorization_token).toMatch(/^sgps_/);
     expect(callArgs.tools[0].type).toBe('mcp_toolset');
   });
@@ -187,15 +286,13 @@ describe('POST /api/playground/run', () => {
       data: { id: 'tok-1' },
       error: null,
     });
-    betaCreateMock.mockResolvedValueOnce({
-      stop_reason: 'end_turn',
-      content: [
+    betaStreamMock.mockReturnValueOnce(
+      makeStream([
         {
           type: 'mcp_tool_use',
           id: 'mcp-1',
           name: 'find_account',
           input: { query: 'Edge' },
-          server_name: 'semantic-gps',
         },
         {
           type: 'mcp_tool_result',
@@ -204,8 +301,8 @@ describe('POST /api/playground/run', () => {
           is_error: false,
         },
         { type: 'text', text: 'Done.' },
-      ],
-    });
+      ]),
+    );
 
     const res = await post({ prompt: 'find edge', mode: 'gateway' });
     expect(res.status).toBe(200);
@@ -214,20 +311,23 @@ describe('POST /api/playground/run', () => {
     expect(events.some((e) => e.type === 'tool_call' && e.name === 'find_account')).toBe(true);
     expect(events.some((e) => e.type === 'tool_result')).toBe(true);
     const done = events.at(-1) as {
-      stats: { tool_calls: number; policy_events?: number };
+      stats: { tool_calls: number; policy_events?: number; trace_id: string };
     };
     expect(done.stats.policy_events).toBe(0);
+    expect(done.stats.trace_id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
 
     expect(mintTokenMock).toHaveBeenCalledTimes(1);
-    expect(betaCreateMock).toHaveBeenCalledTimes(1);
-    const callArgs = betaCreateMock.mock.calls[0][0] as {
+    expect(betaStreamMock).toHaveBeenCalledTimes(1);
+    const callArgs = betaStreamMock.mock.calls[0][0] as {
       mcp_servers: Array<{ authorization_token?: string; url: string }>;
     };
     expect(callArgs.mcp_servers[0].authorization_token).toMatch(/^sgps_/);
     // Governed mode hits /api/mcp (not /api/mcp/raw) — anchor so raw doesn't
-    // accidentally match.
-    expect(callArgs.mcp_servers[0].url).toMatch(/\/api\/mcp$/);
-    expect(callArgs.mcp_servers[0].url).not.toMatch(/\/api\/mcp\/raw$/);
+    // accidentally match. trace_id query param trails the path.
+    expect(callArgs.mcp_servers[0].url).toMatch(/\/api\/mcp\?trace_id=[0-9a-f-]{36}$/);
+    expect(callArgs.mcp_servers[0].url).not.toMatch(/\/api\/mcp\/raw/);
   });
 
   it('streams thinking blocks as their own event type + accumulates thinking_chars in stats', async () => {
@@ -242,10 +342,9 @@ describe('POST /api/playground/run', () => {
       error: null,
     });
     // Extended thinking returns blocks interleaved with text/tool_use.
-    // Shape: { type: 'thinking', thinking: string, signature: string }.
-    betaCreateMock.mockResolvedValueOnce({
-      stop_reason: 'end_turn',
-      content: [
+    // Streaming variant: thinking blocks arrive as `thinking_delta` events.
+    betaStreamMock.mockReturnValueOnce(
+      makeStream([
         {
           type: 'thinking',
           thinking: 'User wants Edge Communications account. find_account first.',
@@ -256,7 +355,6 @@ describe('POST /api/playground/run', () => {
           id: 'mcp-1',
           name: 'find_account',
           input: { query: 'Edge Communications' },
-          server_name: 'semantic-gps',
         },
         {
           type: 'mcp_tool_result',
@@ -270,9 +368,9 @@ describe('POST /api/playground/run', () => {
           signature: 'sig-b',
         },
         { type: 'text', text: 'Done.' },
-      ],
-    });
-    // Also verify the thinking parameter is sent on the request.
+      ]),
+    );
+
     const res = await post({ prompt: 'edge follow-up', mode: 'gateway' });
     expect(res.status).toBe(200);
 
@@ -291,7 +389,7 @@ describe('POST /api/playground/run', () => {
     );
 
     // Request param sanity — thinking must be enabled on the call.
-    const callArgs = betaCreateMock.mock.calls[0][0] as {
+    const callArgs = betaStreamMock.mock.calls[0][0] as {
       thinking?: { type: string; budget_tokens: number };
       max_tokens: number;
     };
@@ -318,7 +416,7 @@ describe('POST /api/playground/run', () => {
     const events = await readNdjson(res);
     expect(events.some((e) => e.type === 'error' && /mint/i.test(String(e.message)))).toBe(true);
     expect(events.at(-1)?.type).toBe('done');
-    expect(betaCreateMock).not.toHaveBeenCalled();
+    expect(betaStreamMock).not.toHaveBeenCalled();
   });
 
   it('reuses an existing system token instead of inserting a new one', async () => {
@@ -332,10 +430,9 @@ describe('POST /api/playground/run', () => {
       data: { token_plaintext: 'sgps_existing-reuse-token', id: 'tok-reuse' },
       error: null,
     });
-    betaCreateMock.mockResolvedValueOnce({
-      stop_reason: 'end_turn',
-      content: [{ type: 'text', text: 'Reused token path.' }],
-    });
+    betaStreamMock.mockReturnValueOnce(
+      makeStream([{ type: 'text', text: 'Reused token path.' }]),
+    );
 
     const res = await post({ prompt: 'reuse test', mode: 'gateway' });
     expect(res.status).toBe(200);
@@ -347,7 +444,7 @@ describe('POST /api/playground/run', () => {
     expect(mintTokenMock).not.toHaveBeenCalled();
 
     // The reused plaintext should be forwarded to the Anthropic connector.
-    const callArgs = betaCreateMock.mock.calls[0][0] as {
+    const callArgs = betaStreamMock.mock.calls[0][0] as {
       mcp_servers: Array<{ authorization_token?: string }>;
     };
     expect(callArgs.mcp_servers[0].authorization_token).toBe('sgps_existing-reuse-token');

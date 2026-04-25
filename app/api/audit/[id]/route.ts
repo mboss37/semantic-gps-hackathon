@@ -41,7 +41,7 @@ export const GET = async (
   const { data, error } = await supabase
     .from('mcp_events')
     .select(
-      'id, trace_id, server_id, tool_name, method, status, policy_decisions, latency_ms, payload_redacted, created_at',
+      'id, trace_id, server_id, tool_name, method, status, policy_decisions, latency_ms, payload_redacted, created_at, servers(name)',
     )
     .eq('id', parsed.data.id)
     .eq('organization_id', organization_id)
@@ -54,5 +54,11 @@ export const GET = async (
   if (!data) {
     return NextResponse.json({ error: 'not found' }, { status: 404 });
   }
-  return NextResponse.json({ event: data });
+  // Flatten the embedded `servers(name)` (PostgREST returns a single object
+  // at runtime for the to-one FK; Supabase JS's generated types lie and call
+  // it an array — cast through unknown). Same shape as the list route.
+  const row = data as unknown as typeof data & { servers: { name: string } | null };
+  const { servers, ...rest } = row;
+  const event = { ...rest, server_name: servers?.name ?? null };
+  return NextResponse.json({ event });
 };

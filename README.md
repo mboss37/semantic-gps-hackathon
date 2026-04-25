@@ -6,7 +6,7 @@ Built for the Anthropic "Keep Thinking" Hackathon (April 2026) — 5-day scope, 
 
 - **Live demo:** https://semantic-gps-hackathon.vercel.app/
 - **Demo video:** _(link added on submission)_
-- **Vision beyond the wedge:** [`VISION.md`](./VISION.md) — split control/data plane, Rust data plane deploy-anywhere, multi-region Next.js control plane.
+- **Vision beyond the wedge:** [`docs/VISION.md`](./docs/VISION.md) — split control/data plane, Rust data plane deploy-anywhere, multi-region Next.js control plane.
 
 ---
 
@@ -145,7 +145,7 @@ The current build is one Next.js app doing two jobs. The architecture it points 
 - **Protocol-agnostic surface** — MCP today, A2A tomorrow. Routes are the abstraction; transports plug in.
 - **Semantic layer** — decouple "what a Lead _is_" from "how Salesforce represents a Lead" via a shared Semantic Definition Store.
 
-Full vision + roadmap in [`VISION.md`](./VISION.md).
+Full vision + roadmap in [`docs/VISION.md`](./docs/VISION.md).
 
 ---
 

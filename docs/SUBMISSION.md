@@ -12,7 +12,7 @@ The demo gateway fronts real Salesforce, Slack, and GitHub integrations across 1
 
 Opus 4.7 drives the product loop: `evaluate_goal` ranking, Playground agent orchestration, and the 1M-context review cycles that let one builder ship this in five days.
 
-The architecture points at a split control/data plane — Rust data plane deploy-anywhere, Next.js control plane multi-region — covered in `VISION.md`.
+The architecture points at a split control/data plane — Rust data plane deploy-anywhere, Next.js control plane multi-region — covered in `docs/VISION.md`.
 
 ---
 
@@ -26,7 +26,7 @@ Governed MCP control plane for enterprise agents. Live policies, saga rollback, 
 
 - **Repo:** https://github.com/mboss37/semantic-gps-hackathon
 - **Live:** https://semantic-gps-hackathon.vercel.app/
-- **Vision:** [`VISION.md`](../VISION.md)
+- **Vision:** [`VISION.md`](./VISION.md)
 - **Architecture:** [`docs/ARCHITECTURE.md`](./ARCHITECTURE.md)
 - **Demo playbook:** [`docs/DEMO.md`](./DEMO.md)
 

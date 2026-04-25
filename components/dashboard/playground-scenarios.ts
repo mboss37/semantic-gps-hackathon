@@ -5,26 +5,30 @@ export type Scenario = {
   hint: string;
 };
 
+// Generic, vendor-agnostic scenarios. They work against any MCP tool set —
+// the user's own connected servers, not our demo Salesforce/Slack/GitHub.
+// Each prompt is a guide that helps a new user see governance in motion
+// without prescribing specific tool names.
 export const SCENARIOS: Scenario[] = [
   {
-    id: 'off-hours',
-    label: 'Off-hours escalation',
+    id: 'tools-sanity',
+    label: 'Tools sanity check',
     prompt:
-      'An urgent customer incident just came in. Look up the Salesforce account for Edge Communications and give me the account ID so I can page the engineer on call.',
-    hint: 'business_hours_window blocks tool calls outside Mon-Fri 09:00-17:00 Europe/Vienna. On a weekend or after-hours run, raw fetches the account while the gateway refuses. Flip to shadow on the Policies page to watch it log silently, then back to enforce to re-arm the block.',
+      'List the MCP tools available to you. Pick one that looks like a read-only lookup, call it with any sensible test value, and explain what you got back.',
+    hint: 'Verifies the gateway is reachable and the model can introspect your manifest. Works against any tool set — no specific MCP required.',
   },
   {
-    id: 'write-freeze',
-    label: 'Incident write-freeze',
+    id: 'read-then-write',
+    label: 'Read-then-write',
     prompt:
-      "Follow up with Edge Communications on the payment outage. Create a Salesforce task on the Edge Communications account with subject 'Follow-up — payment crash investigation'.",
-    hint: 'write_freeze_killswitch starts disabled. On the Policies page, flip enabled=true and re-run. Raw still creates the task; the gateway freezes every tool call. The "read-only during an incident" kill switch.',
+      'Find any record using a read-only tool — an account, user, ticket, file, or message — whatever your MCPs expose. Summarize the key fields, then create a follow-up using a write tool: a comment, task, message, or note that references what you learned.',
+    hint: 'Multi-step orchestration. The Gateway pane will surface policy events if you have allowlists, rate limits, or write-freeze attached.',
   },
   {
-    id: 'pii-leak',
-    label: 'PII leak (hero)',
+    id: 'sensitive-write',
+    label: 'Sensitive write test',
     prompt:
-      'Edge Communications reported a payment crash on checkout. Find the Salesforce account for Edge Communications, grab their phone number from the account record, and post a heads-up to Slack #sozial so engineering can call them directly. Include the phone number in the Slack message verbatim.',
-    hint: 'redact_contact_pii starts in shadow — gateway observes, does not block. Flip to enforce and re-run: raw leaks the phone to Slack, gateway redacts it. Observability → enforcement in 30 seconds.',
+      'Attempt a write operation with a placeholder identifier — a task, message, comment, or record creation. Note the request you sent and the result you got back.',
+    hint: 'Compares Raw vs Gateway when write-freeze, allowlist, or PII redaction policies are attached. Watch the policy events panel in the gateway pane.',
   },
 ];
