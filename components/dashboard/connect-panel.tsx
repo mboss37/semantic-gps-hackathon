@@ -331,10 +331,16 @@ const TestRow = ({ tokens, pasteToken, setPasteToken, onTest, canTest, testState
         value={pasteToken}
         onChange={(e) => setPasteToken(e.target.value)}
         placeholder="sgps_…"
-        type="password"
+        type="text"
         autoComplete="off"
         spellCheck={false}
         aria-label="Gateway token"
+        // Tell every major password manager this is NOT a credential field —
+        // the token is session-only paste-to-test, never stored. Without
+        // these, Dashlane/1Password/LastPass offer to save it as a password.
+        data-form-type="other"
+        data-1p-ignore
+        data-lpignore="true"
         className="max-w-md flex-1 font-mono"
       />
       <Button type="submit" disabled={!canTest}>
