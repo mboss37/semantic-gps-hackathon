@@ -1,6 +1,6 @@
 -- Sprint 10 follow-up: idempotent local demo bootstrap.
 --
--- Seeds the full demo stack (3 MCPs + 12 tools + 10 relationships +
+-- Seeds the full demo stack (3 MCPs + 12 tools + 13 relationships +
 -- 2 routes + 3 policies + assignments) into local Supabase so every
 -- Playground story can be validated E2E against real upstreams without
 -- reaching for hosted.
@@ -242,7 +242,7 @@ SELECT s.id,
   FROM public.servers s WHERE s.name = 'Demo GitHub';
 
 -- ---------------------------------------------------------------------------
--- Relationships (10 total — TRel graph edges)
+-- Relationships (13 total — TRel graph edges)
 -- ---------------------------------------------------------------------------
 
 -- Salesforce: find_account → find_contact (produces_input_for)
@@ -352,6 +352,19 @@ SELECT ft.id, tt.id, 'produces_input_for', 'GitHub issue number + html_url feed 
        JOIN public.servers ts ON ts.id = tt.server_id
  WHERE ft.name = 'create_issue' AND fs.name = 'Demo GitHub'
    AND ts.name = 'Demo Salesforce';
+
+-- Slack → GitHub: chat_post_message → create_issue (fallback_to) — degraded
+-- escalation channel. When Slack is unreachable, the gateway routes the
+-- escalation to a GitHub issue with the same content. Backs demo story #8
+-- (Sprint 22 WP-22.4): proves `executeRoute` walks the `fallback_to` edge on
+-- origin_error without breaking the saga.
+INSERT INTO public.relationships (from_tool_id, to_tool_id, relationship_type, description)
+SELECT ft.id, tt.id, 'fallback_to', 'When Slack is unavailable, file the escalation as a GitHub issue instead.'
+  FROM public.tools ft JOIN public.servers fs ON fs.id = ft.server_id
+       JOIN public.tools tt ON tt.name = 'create_issue'
+       JOIN public.servers ts ON ts.id = tt.server_id
+ WHERE ft.name = 'chat_post_message' AND fs.name = 'Demo Slack'
+   AND ts.name = 'Demo GitHub';
 
 -- ---------------------------------------------------------------------------
 -- Routes
