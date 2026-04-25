@@ -25,7 +25,6 @@ High-ROI items that move judging score. Skip if P0 runs late.
   - *Monitoring KPI hero strip* (~2h). Mirror overview's `SectionCards` pattern: 4-card row above the charts (Total calls / Error rate % / Block rate % / p95 latency), each with delta vs prior period + sparkline. Right now Monitoring opens with 3 mostly-empty stacked bars and zero KPI signal — judges have to mentally aggregate.
   
   Total ~7-9h. Lifts the Operate cluster from "alpha tooling" to "Datadog-tier first impression." After this, every dashboard surface (landing → overview → audit → monitoring) reads as ONE product with ONE design system. Tied to Demo 25 + Depth & Execution 20 weights.
-- **Gateway token auto-mint on signup** — fresh signup → Playground fails (no bearer). Extend `handle_new_user` trigger or onboarding wizard to mint a default token.
 - **Opus relationship inference on import** — feed OpenAPI spec to Opus 4.7 with cached system prompt, user approves/rejects proposals. 1M-context showcase.
 - **Playground "Refine with Opus"** — ingest traces + policy events + manifest, return structured suggestions as cards.
 - **Email verification decision** — disable "Confirm email" for soft-launch OR configure Resend SMTP.
