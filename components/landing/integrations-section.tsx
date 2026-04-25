@@ -5,17 +5,17 @@ import { useEffect, useRef, useState } from 'react';
 type Integration = {
   name: string;
   kind: string;
-  status: 'live' | 'bring-your-own';
+  status: 'mcp' | 'openapi';
   initial: string;
 };
 
 const INTEGRATIONS: readonly Integration[] = [
-  { name: 'Salesforce', kind: 'CRM · 5 tools registered', status: 'live', initial: 'SF' },
-  { name: 'Slack', kind: 'Messaging · 4 tools registered', status: 'live', initial: 'SL' },
-  { name: 'GitHub', kind: 'Code · 4 tools registered', status: 'live', initial: 'GH' },
-  { name: 'OpenAPI', kind: 'Import any spec · auto-discover', status: 'bring-your-own', initial: 'OA' },
-  { name: 'HTTP-Streamable MCP', kind: 'Any compliant server', status: 'bring-your-own', initial: 'MC' },
-  { name: 'Custom', kind: 'Register via dashboard', status: 'bring-your-own', initial: '+' },
+  { name: 'Internal MCPs', kind: 'Customer-hosted tools behind your firewall', status: 'mcp', initial: 'IN' },
+  { name: 'Vendor MCPs', kind: 'Any compliant HTTP-Streamable server', status: 'mcp', initial: 'VD' },
+  { name: 'OpenAPI services', kind: 'Import specs and expose them as MCP tools', status: 'openapi', initial: 'OA' },
+  { name: 'Custom tools', kind: 'Register bespoke operations from the dashboard', status: 'mcp', initial: '+' },
+  { name: 'Local or VPC apps', kind: 'Govern tools without moving data to a SaaS proxy', status: 'mcp', initial: 'VP' },
+  { name: 'Sandbox endpoints', kind: 'Validate routes before promoting to production', status: 'openapi', initial: 'SB' },
 ];
 
 export const IntegrationsSection = () => {
@@ -48,14 +48,14 @@ export const IntegrationsSection = () => {
           }`}
         >
           <p className="text-[12px] text-foreground/50 uppercase tracking-[0.14em] font-medium mb-4">
-            Integrations
+            MCP-independent
           </p>
           <h2 className="text-[32px] md:text-[40px] lg:text-[44px] font-medium leading-[1.1] tracking-[-0.02em] text-foreground mb-4">
-            Bring your own MCPs. Three already live.
+            Bring your own MCP stack.
           </h2>
           <p className="text-lg text-foreground/60 leading-relaxed">
-            Register any HTTP-Streamable MCP or OpenAPI service. Tools discover automatically,
-            relationships wire the graph, every call lands in the audit log.
+            Semantic GPS is not a vendor-specific integration bundle. It is the governance layer in
+            front of whatever MCP servers your company already trusts.
           </p>
         </div>
 
@@ -74,13 +74,13 @@ export const IntegrationsSection = () => {
                     {integration.initial}
                   </span>
                 </div>
-                {integration.status === 'live' ? (
+                {integration.status === 'mcp' ? (
                   <span className="inline-flex items-center gap-1.5 text-[11px] text-foreground/60 font-mono">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand)]" />
-                    Live
+                    <span className="w-1.5 h-1.5 rounded-full bg-(--brand)" />
+                    MCP
                   </span>
                 ) : (
-                  <span className="text-[11px] text-foreground/40 font-mono">Connect</span>
+                  <span className="text-[11px] text-foreground/40 font-mono">OpenAPI</span>
                 )}
               </div>
               <div className="text-[15px] font-medium text-foreground mb-1 tracking-[-0.01em]">

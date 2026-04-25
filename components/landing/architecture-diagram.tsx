@@ -1,142 +1,101 @@
-// Hand-authored inline SVG for the architecture section. Three zones: Agent,
-// Gateway (4 internal pills), Upstreams (SF/Slack/GitHub). `currentColor` +
-// `var(--brand)` so dark/light stays correct. One animated pulse along the
-// agent→gateway arrow = "this is live" signal without Lottie weight.
+const AGENTS = ['Claude', 'Cursor', 'custom agents'] as const;
+const GATEWAY = ['Tool manifest', 'Policy engine', 'Workflow validator', 'Audit + rollback'] as const;
+const DATA_LAYER = ['Raw MCPs', 'OpenAPI services', 'internal systems'] as const;
+
+const LayerCard = ({
+  eyebrow,
+  title,
+  description,
+  items,
+  featured = false,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  items: readonly string[];
+  featured?: boolean;
+}) => (
+  <div
+    className={`relative min-h-[360px] rounded-xl border p-5 md:p-6 ${
+      featured
+        ? 'border-(--brand)/50 bg-card/45 shadow-[0_0_0_1px_rgba(0,112,243,0.12)]'
+        : 'border-border bg-card/25'
+    }`}
+  >
+    <div className="mb-8">
+      <p className="mb-3 font-mono text-[11px] uppercase tracking-widest text-foreground/42">
+        {eyebrow}
+      </p>
+      <h3 className="text-2xl font-medium tracking-tight text-foreground">{title}</h3>
+      <p className="mt-3 text-sm leading-relaxed text-foreground/52">{description}</p>
+    </div>
+
+    <div className="space-y-3">
+      {items.map((item, index) => (
+        <div
+          key={item}
+          className="flex items-center justify-between rounded-lg border border-border bg-background/80 px-3 py-3"
+        >
+          <div className="flex items-center gap-2.5">
+            <span className={`size-2 rounded-full ${featured ? 'bg-(--brand)' : 'bg-foreground/35'}`} />
+            <span className="text-sm font-medium text-foreground/82">{item}</span>
+          </div>
+          <span className="font-mono text-[10px] text-foreground/30">0{index + 1}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const Connector = ({ label }: { label: string }) => (
+  <div className="hidden items-center justify-center xl:flex">
+    <div className="relative flex w-full items-center">
+      <span className="h-px flex-1 bg-border" />
+      <span className="mx-3 whitespace-nowrap rounded-full border border-border bg-background px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest text-foreground/45">
+        {label}
+      </span>
+      <span className="h-px flex-1 bg-border" />
+    </div>
+  </div>
+);
 
 export const ArchitectureDiagram = () => (
-  <svg
-    viewBox="0 0 900 360"
-    role="img"
-    aria-label="Agent on the left, gateway in the middle with manifest, policy engine, route orchestrator, and audit logger, three MCPs on the right labelled Salesforce, Slack, and GitHub."
-    className="w-full h-auto text-foreground"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <defs>
-      <marker
-        id="arrow"
-        viewBox="0 0 10 10"
-        refX="9"
-        refY="5"
-        markerWidth="6"
-        markerHeight="6"
-        orient="auto"
-      >
-        <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" opacity="0.6" />
-      </marker>
-      <linearGradient id="pulse" x1="0%" x2="100%">
-        <stop offset="0%" stopColor="var(--brand)" stopOpacity="0" />
-        <stop offset="50%" stopColor="var(--brand)" stopOpacity="1" />
-        <stop offset="100%" stopColor="var(--brand)" stopOpacity="0" />
-      </linearGradient>
-    </defs>
+  <div className="space-y-6">
+    <div className="grid gap-4 xl:grid-cols-[1fr_120px_1.15fr_120px_1fr]">
+      <LayerCard
+        eyebrow="01 agentic layer"
+        title="Agents stay generic"
+        description="No business-policy redeploy every time operators change a rule."
+        items={AGENTS}
+      />
+      <Connector label="MCP call" />
+      <LayerCard
+        eyebrow="02 Semantic GPS"
+        title="Gateway boundary"
+        description="The shipped control point for route validation, policy decisions, audit, fallback, and rollback."
+        items={GATEWAY}
+        featured
+      />
+      <Connector label="governed call" />
+      <LayerCard
+        eyebrow="03 data access layer"
+        title="Systems stay yours"
+        description="Existing MCP and OpenAPI surfaces keep their own auth, network, and data boundary."
+        items={DATA_LAYER}
+      />
+    </div>
 
-    <g fontFamily="var(--font-sans)" fontSize="13">
-      {/* Agent (zone 1) */}
-      <g transform="translate(30 140)">
-        <rect
-          width="140"
-          height="80"
-          rx="12"
-          fill="currentColor"
-          fillOpacity="0.04"
-          stroke="currentColor"
-          strokeOpacity="0.25"
-        />
-        <text x="70" y="32" textAnchor="middle" fill="currentColor" fontWeight="600">
-          Agent
-        </text>
-        <g transform="translate(26 48)">
-          <rect width="88" height="22" rx="11" fill="var(--brand)" fillOpacity="0.15" stroke="var(--brand)" strokeOpacity="0.5" />
-          <text x="44" y="15" textAnchor="middle" fill="var(--brand)" fontSize="11" fontWeight="500">
-            Opus 4.7
-          </text>
-        </g>
-      </g>
-
-      {/* Gateway (zone 2) */}
-      <g transform="translate(260 60)">
-        <rect
-          width="340"
-          height="240"
-          rx="16"
-          fill="currentColor"
-          fillOpacity="0.03"
-          stroke="var(--brand)"
-          strokeOpacity="0.4"
-          strokeDasharray="0"
-        />
-        <text x="170" y="26" textAnchor="middle" fill="currentColor" fontWeight="600" fontSize="12" letterSpacing="2" opacity="0.65">
-          GATEWAY
-        </text>
-
-        {[
-          { label: 'Manifest cache', y: 48 },
-          { label: 'Policy engine', y: 98 },
-          { label: 'Route orchestrator', y: 148 },
-          { label: 'Audit logger', y: 198 },
-        ].map((pill) => (
-          <g key={pill.label} transform={`translate(30 ${pill.y})`}>
-            <rect
-              width="280"
-              height="36"
-              rx="10"
-              fill="currentColor"
-              fillOpacity="0.06"
-              stroke="currentColor"
-              strokeOpacity="0.2"
-            />
-            <circle cx="18" cy="18" r="4" fill="var(--brand)" />
-            <text x="34" y="22" fill="currentColor" fontSize="13" fontWeight="500">
-              {pill.label}
-            </text>
-          </g>
-        ))}
-      </g>
-
-      {/* Upstreams (zone 3) */}
+    <div className="grid gap-px overflow-hidden rounded-xl border border-border bg-border md:grid-cols-3">
       {[
-        { label: 'Salesforce', y: 60, accent: '#22c55e' },
-        { label: 'Slack', y: 150, accent: '#a855f7' },
-        { label: 'GitHub', y: 240, accent: '#f59e0b' },
-      ].map((up) => (
-        <g key={up.label} transform={`translate(700 ${up.y})`}>
-          <rect
-            width="160"
-            height="60"
-            rx="10"
-            fill="currentColor"
-            fillOpacity="0.04"
-            stroke="currentColor"
-            strokeOpacity="0.25"
-          />
-          <circle cx="24" cy="30" r="6" fill={up.accent} />
-          <text x="44" y="35" fill="currentColor" fontWeight="500">
-            {up.label}
-          </text>
-        </g>
+        ['shadow first', 'Observe violations without blocking traffic.'],
+        ['enforce next', 'Block the next request when a policy is ready.'],
+        ['trace always', 'Every decision lands in the audit log.'],
+      ].map(([title, description]) => (
+        <div key={title} className="bg-background p-5">
+          <p className="font-mono text-[11px] uppercase tracking-widest text-foreground/42">{title}</p>
+          <p className="mt-2 text-sm leading-relaxed text-foreground/58">{description}</p>
+        </div>
       ))}
-
-      {/* Flow arrows */}
-      <g stroke="currentColor" strokeOpacity="0.45" strokeWidth="1.5" fill="none" markerEnd="url(#arrow)">
-        <line x1="170" y1="180" x2="260" y2="180" />
-        <line x1="600" y1="96" x2="700" y2="90" />
-        <line x1="600" y1="180" x2="700" y2="180" />
-        <line x1="600" y1="264" x2="700" y2="270" />
-      </g>
-
-      {/* Animated pulse along agent→gateway */}
-      <line x1="170" y1="180" x2="260" y2="180" stroke="url(#pulse)" strokeWidth="3" strokeLinecap="round">
-        <animate attributeName="x1" values="170;260" dur="3s" repeatCount="indefinite" />
-        <animate attributeName="x2" values="180;270" dur="3s" repeatCount="indefinite" />
-      </line>
-
-      {/* Labels on arrows */}
-      <text x="215" y="172" textAnchor="middle" fill="currentColor" opacity="0.55" fontSize="11">
-        MCP JSON-RPC
-      </text>
-      <text x="650" y="170" textAnchor="middle" fill="currentColor" opacity="0.55" fontSize="11">
-        tools/call
-      </text>
-    </g>
-  </svg>
+    </div>
+  </div>
 );

@@ -15,17 +15,17 @@ const STEPS: readonly Step[] = [
     number: '01',
     title: 'Register your MCPs',
     description:
-      'Point the gateway at any HTTP-Streamable MCP or OpenAPI service. Tool schemas import automatically. Typed relationships wire the graph.',
+      'Point the gateway at any HTTP-Streamable MCP or OpenAPI service. Tool schemas import automatically; your origin stays yours.',
     filename: 'register.http',
     code: `POST /api/servers
 {
-  "name": "salesforce",
+  "name": "customer-ops-mcp",
   "transport": "http-streamable",
-  "origin_url": "https://sf.example.com/mcp",
-  "auth_config": { "kind": "oauth2" }
+  "origin_url": "https://tools.company.com/mcp",
+  "auth_config": { "kind": "bearer" }
 }
 
-// -> 14 tools discovered, 12 edges inferred`,
+// -> tools discovered, schema stored, gateway route ready`,
   },
   {
     number: '02',
@@ -36,7 +36,7 @@ const STEPS: readonly Step[] = [
     code: `{
   "builtin_key": "pii_redaction",
   "mode": "shadow",
-  "target_tool": "get_contact",
+  "target_tool": "read_customer_record",
   "config": {
     "patterns": ["phone", "email"]
   }
@@ -53,12 +53,12 @@ const STEPS: readonly Step[] = [
     code: `{
   "method": "execute_route",
   "params": {
-    "route": "sales_escalation",
-    "inputs": { "query": "Edge" }
+    "route": "production_remediation",
+    "inputs": { "incident_id": "INC-1042" }
   }
 }
 
-// -> 5 steps, saga-honest on halt`,
+// -> validated path, policy decisions, rollback on halt`,
   },
 ];
 
@@ -103,11 +103,11 @@ export const HowItWorksSection = () => {
             How it works
           </p>
           <h2 className="text-[32px] md:text-[40px] lg:text-[44px] font-medium leading-[1.1] tracking-[-0.02em] text-foreground mb-4">
-            From raw MCPs to governed workflows in three steps.
+            From customer MCPs to production-safe agents in three steps.
           </h2>
           <p className="text-lg text-foreground/60 leading-relaxed">
-            Register your servers, apply gateway-native policies, and route agents through a single
-            auditable entry point.
+            Keep your existing tool servers. Add a gateway that validates, observes, and enforces
+            before agent actions hit real systems.
           </p>
         </div>
 
@@ -125,7 +125,7 @@ export const HowItWorksSection = () => {
                   }`}
                 >
                   <div className="flex items-start gap-5">
-                    <span className="text-[11px] font-mono text-foreground/40 tracking-[0.1em] pt-1 shrink-0">
+                    <span className="text-[11px] font-mono text-foreground/40 tracking-widest pt-1 shrink-0">
                       {step.number}
                     </span>
                     <div className="flex-1 min-w-0">

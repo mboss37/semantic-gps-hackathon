@@ -25,7 +25,7 @@ export const CtaSection = () => {
   }, []);
 
   return (
-    <section id="demo" ref={sectionRef} className="relative py-24 lg:py-32 border-t border-border">
+    <section id="final-cta" ref={sectionRef} className="relative py-24 lg:py-32 border-t border-border">
       <div className="max-w-[1200px] mx-auto px-6 lg:px-8">
         <div
           className={`max-w-3xl transition-all duration-500 ${
@@ -33,11 +33,12 @@ export const CtaSection = () => {
           }`}
         >
           <h2 className="text-[32px] md:text-[40px] lg:text-[52px] font-medium leading-[1.08] tracking-[-0.02em] text-foreground mb-6">
-            Run the same agent with and without the gateway.
+            Put a governance layer in front of the MCPs you already trust.
           </h2>
           <p className="text-lg text-foreground/60 leading-relaxed mb-10 max-w-xl">
-            One prompt, two panes, one governance decision. Watch a leak, flip a column, watch it
-            stop. Opus 4.7 with extended thinking on both sides — the only variable is the gateway.
+            Start in sandbox mode, watch policy decisions accumulate, then promote routes to
+            enforcement when the evidence is clean. Your agents keep one MCP endpoint; your
+            operators get control.
           </p>
 
           <div className="flex flex-col sm:flex-row items-start gap-3">
@@ -47,7 +48,7 @@ export const CtaSection = () => {
               className="h-11 px-5 rounded-md bg-foreground text-background hover:bg-foreground/90 text-[14px] font-medium"
             >
               <Link href="/signup">
-                Get started
+                Start governing MCPs
                 <ArrowRightIcon className="w-3.5 h-3.5 ml-1.5" />
               </Link>
             </Button>
@@ -57,7 +58,7 @@ export const CtaSection = () => {
               variant="outline"
               className="h-11 px-5 rounded-md border-foreground/15 bg-transparent hover:bg-foreground/5 text-[14px] font-medium text-foreground"
             >
-              <Link href="#demo-video">Watch the demo</Link>
+              <Link href="#architecture">Inspect the gateway</Link>
             </Button>
             <Button
               asChild
