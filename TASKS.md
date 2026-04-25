@@ -127,7 +127,11 @@
 
 ## Current:
 
-(Awaiting next sprint plan — pull WPs from `BACKLOG.md` when opening.)
+**Sprint 21 — Dashboard polish + Landing v1:**
+- [ ] WP-21.1 Sidebar grouping — flat 10-item list → 3 sections (Overview / Configure / Operate)
+- [ ] WP-21.2 Header brand mark + KPI sparklines + status-color badges on overview cards
+- [ ] WP-21.3 Empty-state polish — faded mock-chart for Gateway Traffic, primary CTA contrast, breadcrumbs on /servers/[id], /policies/[id], /routes/[id]
+- [ ] WP-21.4 Landing v1 — tightened hero copy, real dashboard screenshot, video slot (`NEXT_PUBLIC_DEMO_VIDEO_URL`), architecture diagram, stat strip, drop `landingPageReference/`, responsive audit
 
 ## Session Log
 - 2026-04-25 — Sprint 20 shipped: 4 WPs, 6 commits pushed. Dashboard nav perf collapse — `requireAuth` React `cache()` wrap (3 `getUser()` round-trips → 1 per RSC render) + `loading.tsx` skeletons → perceived nav latency ~1-2s blank → <50ms instant paint. Onboarding JWT-refresh fix unblocks every fresh signup: `auth.updateUser` doesn't refresh tokens, so `refreshSession()` after the flag flip is mandatory for the hook to re-stamp claims. Hosted migrations 220000/220100 backfilled mid-sprint after fresh-signup hit hooked-claim drift (Lesson #32 gate held but human skipped it; memo to self next time). 5 memories + Hard-Won Lessons #35/#36. 341/2/0 tests.
