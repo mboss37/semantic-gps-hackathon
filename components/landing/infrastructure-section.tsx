@@ -1,90 +1,52 @@
-'use client';
-
-import { useEffect, useRef, useState } from 'react';
-
 import { ArchitectureDiagram } from './architecture-diagram';
 
 const STATS = [
-  { value: '12', label: 'Built-in policies' },
-  { value: '8', label: 'Relationship types' },
-  { value: '13', label: 'Tenant tables with RLS' },
+  { value: 'MCP', label: 'discovers tools' },
+  { value: 'TRel', label: 'discovers flows' },
+  { value: 'Agents', label: 'follow safe paths' },
 ] as const;
 
-export const InfrastructureSection = () => {
-  const sectionRef = useRef<HTMLElement>(null);
-  const [visible, setVisible] = useState(false);
+export const InfrastructureSection = () => (
+  <section id="architecture" className="relative overflow-hidden py-24 lg:py-32">
+    <div className="absolute inset-x-0 top-1/2 -z-10 h-96 -translate-y-1/2 bg-blue-500/10 blur-[140px]" />
+    <div className="mx-auto max-w-[1320px] px-5 md:px-8 lg:px-10">
+      <div className="mb-12 grid gap-8 lg:grid-cols-[1fr_0.8fr] lg:items-end">
+        <div>
+          <p className="mb-4 font-mono text-[11px] tracking-[0.22em] text-blue-100/55 uppercase">
+            MCP extension
+          </p>
+          <h2 className="max-w-4xl text-4xl leading-[1.02] font-semibold tracking-[-0.05em] text-balance text-white md:text-6xl">
+            TRel is the MCP extension for workflow discovery.
+          </h2>
+          <p className="mt-6 max-w-2xl text-lg leading-8 text-white/55">
+            Tool Relationship (TRel) tells agents how MCP tools work together: valid execution
+            flows, fallback options, and rollback paths when a multi-step action fails.
+          </p>
+        </div>
 
-  useEffect(() => {
-    const node = sectionRef.current;
-    if (!node) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setVisible(true);
-      },
-      { threshold: 0.1 }
-    );
-    obs.observe(node);
-    return () => obs.disconnect();
-  }, []);
-
-  return (
-    <section id="architecture" ref={sectionRef} className="relative py-20 lg:py-32">
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
-        <div className="grid gap-12">
-          <div
-            className={`max-w-4xl transition-all duration-500 ${
-              visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-            }`}
-          >
-            <p className="text-[12px] text-foreground/50 uppercase tracking-[0.14em] font-medium mb-4">
-              Architecture
-            </p>
-            <h2 className="text-[38px] md:text-[52px] font-medium leading-[1.05] tracking-[-0.03em] text-foreground mb-5">
-              A gateway layer for any MCP stack.
-            </h2>
-            <p className="text-base md:text-lg text-foreground/60 leading-relaxed mb-10 max-w-2xl">
-              The gateway sits between agent loops and customer-owned tool servers. Policies,
-              route validation, audit, and rollback happen before the call crosses into production.
-              Look for the reverse walk of{' '}
-              <code className="font-mono text-[13px] px-1.5 py-0.5 rounded bg-card border border-border text-foreground">
-                compensated_by
-              </code>{' '}
-              edges when a route halts mid-way.
-            </p>
-
-            <div className="grid max-w-2xl grid-cols-3 gap-x-6 gap-y-2 pt-6 border-t border-border">
-              {STATS.map((stat) => (
-                <div key={stat.label}>
-                  <div className="text-4xl font-medium tracking-tight text-foreground mb-1">
-                    {stat.value}
-                  </div>
-                  <div className="text-[12px] text-foreground/55 leading-tight">{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div
-            className={`transition-all duration-500 delay-100 ${
-              visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-            }`}
-          >
-            <div className="relative overflow-hidden rounded-xl border border-border bg-background">
-              <div className="relative z-10 flex items-center justify-between border-b border-border bg-card/30 px-4 py-3 backdrop-blur-sm">
-                <span className="font-mono text-[11px] uppercase tracking-widest text-foreground/45">
-                  governed route boundary
-                </span>
-                <span className="rounded-full border border-(--brand)/25 bg-(--brand)/10 px-2 py-0.5 font-mono text-[10px] text-(--brand)">
-                  MCP in · policy out
-                </span>
+        <div className="grid grid-cols-3 overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/[0.045] backdrop-blur-xl">
+          {STATS.map((stat) => (
+            <div key={stat.label} className="border-r border-white/10 p-4 last:border-r-0">
+              <div className="text-2xl font-semibold tracking-[-0.04em] text-white">
+                {stat.value}
               </div>
-              <div className="relative z-10 p-6 md:p-8">
-                <ArchitectureDiagram />
-              </div>
+              <div className="mt-1 text-[11px] leading-tight text-white/42">{stat.label}</div>
             </div>
-          </div>
+          ))}
         </div>
       </div>
-    </section>
-  );
-};
+
+      <div className="rounded-[2.25rem] border border-white/10 bg-white/[0.04] p-3 shadow-[0_30px_120px_rgba(0,0,0,0.34)] backdrop-blur-2xl md:p-5">
+        <div className="mb-4 flex items-center justify-between rounded-[1.4rem] border border-white/10 bg-black/22 px-4 py-3">
+          <span className="font-mono text-[10px] tracking-[0.22em] text-white/42 uppercase">
+            tool relationship boundary
+          </span>
+          <span className="rounded-full border border-blue-200/20 bg-blue-300/10 px-2.5 py-1 font-mono text-[10px] text-blue-100">
+            discover / fallback / rollback
+          </span>
+        </div>
+        <ArchitectureDiagram />
+      </div>
+    </div>
+  </section>
+);

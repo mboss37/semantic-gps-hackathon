@@ -1,112 +1,91 @@
-'use client';
-
-import { useEffect, useRef, useState } from 'react';
-import { ShieldIcon, LockIcon, EyeIcon, FileCheckIcon } from 'lucide-react';
+import { FileCheckIcon, LifeBuoyIcon, ShieldIcon, ToggleRightIcon } from 'lucide-react';
 
 const FEATURES = [
   {
     icon: ShieldIcon,
-    title: 'Twelve gateway-native policies',
+    title: 'Audit every governed call',
     description:
-      'Hygiene, identity, rate, time, residency, kill-switch, idempotency. Group in a catalog, apply in one click.',
+      'Capture the tool, policy decision, status, latency, and result for every action through the gateway.',
   },
   {
-    icon: LockIcon,
-    title: 'Row-level security on thirteen tables',
+    icon: ToggleRightIcon,
+    title: 'Monitor live operations',
     description:
-      'Postgres RLS plus JWT claim hook. Cross-org UUID guess returns empty at the DB layer, not the app.',
-  },
-  {
-    icon: EyeIcon,
-    title: 'Shadow observes, enforce blocks',
-    description:
-      'Flip any policy from shadow to enforce with a single column change. No restart, no redeploy.',
+      'Track traffic, errors, blocked calls, and policy decisions from the same dashboard.',
   },
   {
     icon: FileCheckIcon,
-    title: 'Seven-day decision timeline',
+    title: 'Validate in Playground',
     description:
-      'Allow, shadow-block, enforce-block counts per policy, rendered as stacked bars on the policy detail page.',
+      'Compare raw agent behavior against the governed gateway path before promoting a workflow.',
+  },
+  {
+    icon: LifeBuoyIcon,
+    title: 'Enforce from policy state',
+    description:
+      'Switch policies from observation to enforcement without redeploying agents or changing tools.',
   },
 ] as const;
 
-const DIMENSIONS = ['Hygiene', 'Identity', 'Rate', 'Time', 'Residency', 'Kill-switch', 'Idempotency'] as const;
+const DIMENSIONS = [
+  'Hygiene',
+  'Identity',
+  'Rate',
+  'Time',
+  'Residency',
+  'Kill-switch',
+  'Idempotency',
+] as const;
 
-export const SecuritySection = () => {
-  const sectionRef = useRef<HTMLElement>(null);
-  const [visible, setVisible] = useState(false);
+export const SecuritySection = () => (
+  <section id="governance" className="relative overflow-hidden py-24 lg:py-32">
+    <div className="mx-auto max-w-[1240px] px-5 md:px-8">
+      <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+        <div className="lg:sticky lg:top-24">
+          <p className="mb-4 font-mono text-[11px] tracking-[0.22em] text-blue-100/55 uppercase">
+            Governance
+          </p>
+          <h2 className="text-4xl leading-[1.02] font-semibold tracking-[-0.05em] text-balance text-white md:text-6xl">
+            Governance with audit, monitoring, and validation.
+          </h2>
+          <p className="mt-6 max-w-md text-lg leading-8 text-white/55">
+            Operators get a Vercel-style operational surface for agent workflows: clear state,
+            searchable records, traffic health, and validation before production.
+          </p>
 
-  useEffect(() => {
-    const node = sectionRef.current;
-    if (!node) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setVisible(true);
-      },
-      { threshold: 0.1 }
-    );
-    obs.observe(node);
-    return () => obs.disconnect();
-  }, []);
-
-  return (
-    <section id="governance" ref={sectionRef} className="relative py-20 lg:py-28">
-      <div className="max-w-[1200px] mx-auto px-6 lg:px-8">
-        <div className="grid lg:grid-cols-12 gap-12 lg:gap-16">
-          <div
-            className={`lg:col-span-5 transition-all duration-500 ${
-              visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-            }`}
-          >
-            <p className="text-[12px] text-foreground/50 uppercase tracking-[0.14em] font-medium mb-4">
-              Governance
-            </p>
-            <h2 className="text-[32px] md:text-[40px] lg:text-[44px] font-medium leading-[1.1] tracking-[-0.02em] text-foreground mb-5">
-              Twelve policies. Seven dimensions.
-            </h2>
-            <p className="text-base text-foreground/60 leading-relaxed mb-8 max-w-md">
-              Shadow mode observes violations without blocking. Enforce mode blocks the call on the
-              next request. Flip one column, the next call obeys.
-            </p>
-
-            <div className="flex flex-wrap gap-1.5">
-              {DIMENSIONS.map((dim) => (
-                <span
-                  key={dim}
-                  className="px-2.5 py-1 rounded-md border border-border bg-card/40 text-[11px] font-mono text-foreground/60"
-                >
-                  {dim}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-px bg-border rounded-lg overflow-hidden border border-border">
-            {FEATURES.map((feature, i) => {
-              const Icon = feature.icon;
-              return (
-                <div
-                  key={feature.title}
-                  className={`bg-background p-6 transition-all duration-500 ${
-                    visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-                  }`}
-                  style={{ transitionDelay: `${i * 50}ms` }}
-                >
-                  <div className="w-9 h-9 rounded-md border border-border flex items-center justify-center text-foreground/70 mb-4">
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <h3 className="text-[15px] font-medium text-foreground mb-1.5 tracking-[-0.01em]">
-                    {feature.title}
-                  </h3>
-                  <p className="text-[13px] text-foreground/55 leading-relaxed">
-                    {feature.description}
-                  </p>
-                </div>
-              );
-            })}
+          <div className="mt-8 flex flex-wrap gap-2">
+            {DIMENSIONS.map((dim) => (
+              <span
+                key={dim}
+                className="rounded-full border border-white/10 bg-white/[0.045] px-3 py-1.5 font-mono text-[10px] text-white/48 backdrop-blur"
+              >
+                {dim}
+              </span>
+            ))}
           </div>
         </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {FEATURES.map((feature) => {
+            const Icon = feature.icon;
+            return (
+              <div
+                key={feature.title}
+                className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-6 shadow-[0_20px_70px_rgba(0,0,0,0.22)] backdrop-blur-xl"
+              >
+                <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-blue-200/32 to-transparent" />
+                <div className="mb-5 flex size-11 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-blue-100">
+                  <Icon className="size-5" />
+                </div>
+                <h3 className="mb-2 text-lg font-semibold tracking-[-0.025em] text-white">
+                  {feature.title}
+                </h3>
+                <p className="text-sm leading-6 text-white/52">{feature.description}</p>
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </section>
-  );
-};
+    </div>
+  </section>
+);

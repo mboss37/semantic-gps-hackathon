@@ -10,8 +10,14 @@ const BrandMark = ({ className }: { className?: string }) => (
     className={className}
     aria-hidden
   >
-    <rect x="3" y="3" width="18" height="18" rx="4" fill="var(--brand)" />
-    <circle cx="12" cy="12" r="3" fill="#ffffff" />
+    <rect x="3" y="3" width="18" height="18" rx="6" fill="url(#footer-brand-gradient)" />
+    <path d="M7 12h10M12 7v10" stroke="white" strokeWidth="1.7" strokeLinecap="round" />
+    <defs>
+      <linearGradient id="footer-brand-gradient" x1="3" x2="21" y1="3" y2="21">
+        <stop stopColor="#7dd3fc" />
+        <stop offset="1" stopColor="#2563eb" />
+      </linearGradient>
+    </defs>
   </svg>
 );
 
@@ -20,9 +26,8 @@ const COLUMNS = [
     title: 'Product',
     links: [
       { label: 'Features', href: '#features' },
-      { label: 'How it works', href: '#how-it-works' },
-      { label: 'Architecture', href: '#architecture' },
-      { label: 'BYO MCPs', href: '#integrations' },
+      { label: 'TRel', href: '#architecture' },
+      { label: 'Playground', href: '#features' },
       { label: 'Governance', href: '#governance' },
     ],
   },
@@ -32,53 +37,48 @@ const COLUMNS = [
       { label: 'Get started', href: '/signup' },
       { label: 'Sign in', href: '/login' },
       { label: 'Dashboard', href: '/dashboard' },
-      { label: 'Audit log', href: '/dashboard/audit' },
     ],
   },
   {
     title: 'Resources',
     links: [
       { label: 'README', href: 'https://github.com/mboss37/semantic-gps-hackathon#readme' },
-      {
-        label: 'Architecture',
-        href: 'https://github.com/mboss37/semantic-gps-hackathon/blob/main/docs/ARCHITECTURE.md',
-      },
-      { label: 'Vision', href: 'https://github.com/mboss37/semantic-gps-hackathon/blob/main/VISION.md' },
+      { label: 'GitHub', href: 'https://github.com/mboss37/semantic-gps-hackathon' },
     ],
   },
 ] as const;
 
 export const FooterSection = () => (
-  <footer className="relative border-t border-border">
-    <div className="max-w-[1200px] mx-auto px-6 lg:px-8">
-      <div className="py-14 grid grid-cols-2 md:grid-cols-5 gap-10 lg:gap-6">
+  <footer className="relative border-t border-white/10 bg-black/20">
+    <div className="mx-auto max-w-[1240px] px-5 md:px-8">
+      <div className="grid grid-cols-2 gap-10 py-14 md:grid-cols-5 lg:gap-6">
         <div className="col-span-2">
-          <Link href="/" className="inline-flex items-center gap-2 mb-4">
-            <BrandMark className="w-5 h-5" />
-            <span className="text-[15px] font-semibold tracking-[-0.01em] text-foreground">
+          <Link href="/" className="mb-4 inline-flex items-center gap-2">
+            <BrandMark className="size-5" />
+            <span className="text-[15px] font-semibold tracking-[-0.01em] text-white">
               Semantic GPS
             </span>
           </Link>
 
-          <p className="text-[13px] text-foreground/55 leading-relaxed mb-6 max-w-xs">
-            Gateway infrastructure for customer-owned MCP stacks. Sandbox routes, enforce policy,
-            audit calls, and roll back broken agent actions.
+          <p className="mb-6 max-w-xs text-[13px] leading-relaxed text-white/48">
+            Gateway infrastructure for customer-owned MCP stacks. TRel extends MCP with Tool
+            Relationships so agents can discover flows, fallback paths, and rollback scenarios.
           </p>
 
           <a
             href="https://github.com/mboss37/semantic-gps-hackathon"
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-2 text-[13px] text-foreground/60 hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-2 text-[13px] text-white/52 transition-colors hover:text-white"
           >
-            <GithubMark className="w-4 h-4" />
+            <GithubMark className="h-4 w-4" />
             View on GitHub
           </a>
         </div>
 
         {COLUMNS.map((column) => (
           <div key={column.title}>
-            <h3 className="text-[12px] font-medium text-foreground mb-4 tracking-[-0.01em]">
+            <h3 className="mb-4 text-[12px] font-medium tracking-[-0.01em] text-white">
               {column.title}
             </h3>
             <ul className="space-y-2.5">
@@ -86,7 +86,7 @@ export const FooterSection = () => (
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className="text-[13px] text-foreground/55 hover:text-foreground transition-colors"
+                    className="text-[13px] text-white/48 transition-colors hover:text-white"
                   >
                     {link.label}
                   </Link>
@@ -97,11 +97,11 @@ export const FooterSection = () => (
         ))}
       </div>
 
-      <div className="py-5 border-t border-border flex flex-col md:flex-row items-center justify-between gap-3 text-[12px] text-foreground/45">
+      <div className="flex flex-col items-center justify-between gap-3 border-t border-white/10 py-5 text-[12px] text-white/38 md:flex-row">
         <p>© 2026 Semantic GPS. Built with Claude Opus 4.7.</p>
         <div className="flex items-center gap-4">
           <span className="inline-flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-(--brand)" />
+            <span className="size-1.5 rounded-full bg-blue-300" />
             Gateway operational
           </span>
         </div>

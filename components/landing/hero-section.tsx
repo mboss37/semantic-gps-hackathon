@@ -1,284 +1,397 @@
-'use client';
-
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRightIcon, BookOpenIcon, RouteIcon } from 'lucide-react';
+import {
+  ActivityIcon,
+  ArrowRightIcon,
+  GitBranchIcon,
+  NetworkIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { GithubMark } from './github-mark';
 
-const SIGNALS = [
-  { label: 'policy mode', value: 'shadow -> enforce' },
-  { label: 'workflow check', value: 'validated before call' },
-  { label: 'failure path', value: 'audit + rollback' },
+const SIDEBAR_SECTIONS = [
+  {
+    title: 'Overview',
+    items: ['Dashboard'],
+  },
+  {
+    title: 'Build',
+    items: ['MCP Servers', 'Relationships', 'Routes', 'Tokens', 'Connect'],
+  },
+  {
+    title: 'Governance',
+    items: ['Policies'],
+  },
+  {
+    title: 'Operate',
+    items: ['Playground', 'Workflow Graph', 'Monitoring', 'Audit'],
+  },
 ] as const;
 
-const AGENT_CLIENTS = ['Claude', 'Cursor', 'Custom agent'] as const;
-const DATA_ACCESS = ['Raw MCPs', 'OpenAPI services', 'Internal systems'] as const;
+const KPI_CARDS = [
+  {
+    label: 'MCP Servers',
+    value: '6',
+    detail: 'Connected endpoints',
+    badge: 'Active',
+    Icon: NetworkIcon,
+  },
+  {
+    label: 'Tools Registered',
+    value: '48',
+    detail: 'Mapped by TRel',
+    badge: '+12',
+    Icon: GitBranchIcon,
+  },
+  {
+    label: 'Active Policies',
+    value: '12',
+    detail: '4 enforcing, 8 observing',
+    badge: 'Live',
+    Icon: ShieldCheckIcon,
+  },
+  {
+    label: 'Events (24h)',
+    value: '1,284',
+    detail: '99.2% completed',
+    badge: '+18%',
+    Icon: ActivityIcon,
+  },
+] as const;
 
-const GatewayHeroVisual = () => (
-  <div className="relative min-h-[520px] overflow-hidden rounded-t-xl border border-b-0 border-border bg-background shadow-[0_-20px_80px_-20px_rgba(0,112,243,0.25),0_40px_80px_-20px_rgba(0,0,0,0.8)]">
-    <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-foreground/25 to-transparent z-10" />
-    <div className="absolute inset-0 grid-lines-bg opacity-[0.08]" aria-hidden />
-    <div
-      className="absolute left-1/2 top-16 h-72 w-72 -translate-x-1/2 rounded-full blur-[110px] opacity-45"
-      style={{ background: 'radial-gradient(circle, var(--brand), transparent 62%)' }}
-      aria-hidden
-    />
+const TRAFFIC_LINES = [
+  {
+    label: 'Allowed',
+    path: 'M0 126 C42 126 84 126 126 126 C146 126 154 22 178 22 C203 22 211 126 232 126 C282 126 308 126 334 126 C352 126 360 78 383 78 C406 78 414 126 432 126',
+  },
+] as const;
 
-    <div className="relative z-10 grid min-h-[520px] grid-cols-1 gap-5 p-6 md:p-8 lg:p-10 xl:grid-cols-[0.95fr_1.15fr_0.95fr]">
-      <div className="flex flex-col justify-center gap-4">
+const AUDIT_LOG_ROWS = [
+  ['09:42:18', 'tools/call', 'salesforce.create_task', 'ok', '184ms'],
+  ['09:41:57', 'policy/check', 'pii_redaction', 'blocked_by_policy', '36ms'],
+  ['09:40:12', 'tools/call', 'slack.post_message', 'ok', '141ms'],
+  ['09:38:44', 'relationships/query', 'find_workflow_path', 'ok', '96ms'],
+  ['09:37:09', 'playground/run', 'raw_vs_governed', 'ok', '2.1s'],
+] as const;
+
+const statusTone = (status: (typeof AUDIT_LOG_ROWS)[number][3]) => {
+  if (status === 'blocked_by_policy') {
+    return 'border-amber-400/30 bg-amber-400/10 text-amber-200';
+  }
+  return 'border-emerald-400/25 bg-emerald-400/10 text-emerald-200';
+};
+
+const KpiCard = ({ card }: { card: (typeof KPI_CARDS)[number] }) => {
+  const Icon = card.Icon;
+  return (
+    <div className="rounded-lg border border-white/10 bg-[#101010] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-foreground/40">
-            01 Agentic layer
-          </p>
-          <p className="mt-2 text-xs leading-relaxed text-foreground/45">
-            Claude, Cursor, and custom agents stay generic. No brittle business rules hardcoded in
-            prompts or agent code.
-          </p>
-        </div>
-        {AGENT_CLIENTS.map((agent) => (
-          <div
-            key={agent}
-            className="rounded-xl border border-border bg-card/35 p-4 text-sm text-foreground/75 backdrop-blur-sm"
-          >
-            <div className="mb-2 flex items-center gap-2">
-              <span className="size-2 rounded-full bg-(--brand)" />
-              <span className="font-medium text-foreground">{agent}</span>
-            </div>
-            <p className="text-xs leading-relaxed text-foreground/45">Calls one governed endpoint.</p>
+          <p className="text-[11px] text-white/42">{card.label}</p>
+          <div className="mt-2 text-3xl font-semibold tracking-tighter text-white tabular-nums">
+            {card.value}
           </div>
-        ))}
+        </div>
+        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-white/52">
+          {card.badge}
+        </span>
       </div>
+      <div className="mt-4 flex items-center gap-2 text-[12px] text-white/46">
+        <Icon className="size-3.5" />
+        {card.detail}
+      </div>
+    </div>
+  );
+};
 
-      <div className="relative flex items-center justify-center">
-        <div className="absolute left-0 right-0 top-1/2 hidden h-px bg-linear-to-r from-foreground/10 via-(--brand)/80 to-foreground/10 xl:block" />
-        <div className="absolute left-1/2 top-0 hidden h-full w-px -translate-x-1/2 bg-linear-to-b from-transparent via-(--brand)/35 to-transparent xl:block" />
-        <div className="relative w-full max-w-md rounded-3xl border border-(--brand)/55 bg-background/90 p-5 shadow-[0_0_90px_rgba(0,112,243,0.24)] backdrop-blur">
-          <div className="mb-5 flex items-center justify-between border-b border-border pb-4">
-            <div>
-              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-foreground/40">
-                02 Semantic GPS
+const DashboardPreview = () => (
+  <div className="relative mx-auto max-h-[640px] w-full max-w-6xl overflow-hidden rounded-xl border border-white/12 bg-[#050505] shadow-[0_40px_160px_rgba(0,0,0,0.58)]">
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.08),transparent_32%)]" />
+    <div className="relative z-10 border-b border-white/10 bg-[#080808]/90 px-4 py-3">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <span className="size-2.5 rounded-full bg-red-400/70" />
+          <span className="size-2.5 rounded-full bg-amber-300/70" />
+          <span className="size-2.5 rounded-full bg-emerald-300/70" />
+        </div>
+        <span className="font-mono text-[10px] tracking-[0.24em] text-white/34 uppercase">
+          semantic-gps / dashboard
+        </span>
+      </div>
+    </div>
+
+    <div className="relative z-10 grid min-h-[780px] lg:grid-cols-[236px_1fr]">
+      <aside className="hidden border-r border-white/10 bg-black/70 p-4 lg:block">
+        <div className="mb-6 flex items-center gap-2 px-2">
+          <span className="flex size-8 items-center justify-center rounded-md bg-white text-black">
+            <NetworkIcon className="size-4" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-white">Semantic GPS</p>
+            <p className="text-[11px] text-white/34">Acme SalesOps</p>
+          </div>
+        </div>
+
+        <div className="space-y-5">
+          {SIDEBAR_SECTIONS.map((section) => (
+            <div key={section.title}>
+              <p className="mb-2 px-2 text-[10px] font-medium tracking-[0.2em] text-white/28 uppercase">
+                {section.title}
               </p>
-              <h3 className="mt-1 text-xl font-medium tracking-[-0.02em] text-foreground">
-                Gateway boundary
+              <div className="space-y-1">
+                {section.items.map((item) => (
+                  <div
+                    key={item}
+                    className={`rounded-md px-3 py-2 text-[12px] ${
+                      item === 'Dashboard'
+                        ? 'border border-white/10 bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                        : 'text-white/42'
+                    }`}
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </aside>
+
+      <div className="min-w-0 bg-[#090909]">
+        <div className="flex h-12 items-center justify-between border-b border-white/10 bg-black px-4 lg:px-6">
+          <div className="flex items-center gap-2">
+            <span className="size-2 rounded-full bg-emerald-300" />
+            <span className="text-[12px] font-medium text-white/62">Dashboard</span>
+          </div>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-400/25 bg-violet-400/10 px-2.5 py-1 text-[11px] text-violet-200">
+            <SparklesIcon className="size-3" />
+            Built with Opus 4.7
+          </span>
+        </div>
+
+        <div className="space-y-4 p-4 lg:p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[11px] tracking-[0.2em] text-white/34 uppercase">
+                Gateway overview
+              </p>
+              <h3 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-white">
+                Gateway traffic and audit activity.
               </h3>
             </div>
-            <span className="rounded-full border border-(--brand)/35 bg-(--brand)/10 px-2.5 py-1 font-mono text-[10px] text-(--brand)">
-              live rules
+            <span className="w-fit rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-[11px] text-emerald-200">
+              All systems operational
             </span>
           </div>
 
-          <div className="grid gap-3">
-            {SIGNALS.map((signal) => (
-              <div
-                key={signal.label}
-                className="flex items-center justify-between rounded-lg border border-border bg-card/35 px-3 py-2.5"
-              >
-                <span className="text-xs text-foreground/50">{signal.label}</span>
-                <span className="font-mono text-[11px] text-foreground/80">{signal.value}</span>
-              </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {KPI_CARDS.map((card) => (
+              <KpiCard key={card.label} card={card} />
             ))}
           </div>
 
-          <div className="mt-5 grid grid-cols-3 gap-2">
-            {['policy', 'sandbox', 'audit'].map((label) => (
-              <div
-                key={label}
-                className="rounded-md border border-border bg-background px-2 py-2 text-center font-mono text-[10px] uppercase tracking-widest text-foreground/45"
-              >
-                {label}
+          <section className="rounded-xl border border-white/10 bg-[#101010] p-5">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] tracking-[0.2em] text-white/34 uppercase">
+                  Gateway traffic
+                </p>
+                <h4 className="mt-1 text-lg font-semibold tracking-tight text-white">
+                  Calls over time, split by outcome
+                </h4>
               </div>
-            ))}
-          </div>
-          <p className="mt-5 text-center text-xs leading-relaxed text-foreground/45">
-            Business rules change here, instantly. Agents and MCPs do not redeploy.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-col justify-center gap-4">
-        <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-foreground/40">
-            03 Data access layer
-          </p>
-          <p className="mt-2 text-xs leading-relaxed text-foreground/45">
-            Existing raw MCPs keep access to customer systems. Semantic GPS governs the call before
-            it reaches them.
-          </p>
-        </div>
-        {DATA_ACCESS.map((target, index) => (
-          <div
-            key={target}
-            className="rounded-xl border border-border bg-card/35 p-4 text-sm text-foreground/75 backdrop-blur-sm"
-          >
-            <div className="mb-2 flex items-center justify-between">
-              <span className="font-medium text-foreground">{target}</span>
-              <span className="font-mono text-[10px] text-foreground/35">0{index + 1}</span>
+              <div className="flex overflow-hidden rounded-md border border-white/10 bg-black text-[10px] text-white/52">
+                {['15m', '30m', '1h', '6h', '24h', '7d'].map((range, index) => (
+                  <span
+                    key={range}
+                    className={`border-r border-white/10 px-3 py-2 last:border-r-0 ${
+                      index === 0 ? 'bg-white/10 text-white' : ''
+                    }`}
+                  >
+                    {range}
+                  </span>
+                ))}
+              </div>
             </div>
-            <p className="text-xs leading-relaxed text-foreground/45">
-              Stays behind your auth, network, and data boundary.
-            </p>
-          </div>
-        ))}
+
+            <div className="relative h-56 overflow-hidden rounded-lg border border-white/8 bg-black/40 px-5 pt-5 pb-8">
+              <div className="absolute top-6 right-5 bottom-9 left-10">
+                {[0, 1, 2, 3, 4].map((tick) => (
+                  <div
+                    key={tick}
+                    className="absolute inset-x-0 border-t border-dashed border-white/5.5"
+                    style={{ top: `${tick * 25}%` }}
+                  />
+                ))}
+              </div>
+              <div className="absolute top-5 bottom-9 left-3 flex flex-col justify-between text-[10px] text-white/28">
+                {['4', '3', '2', '1', '0'].map((tick) => (
+                  <span key={tick}>{tick}</span>
+                ))}
+              </div>
+              <svg
+                viewBox="0 0 432 160"
+                className="relative ml-5 h-[160px] w-[calc(100%-1.25rem)]"
+                aria-hidden
+              >
+                {TRAFFIC_LINES.map((line) => (
+                  <path
+                    key={line.label}
+                    d={line.path}
+                    fill="none"
+                    className="stroke-emerald-400"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                ))}
+              </svg>
+              <div className="absolute inset-x-10 bottom-4 flex justify-between text-[10px] text-white/26">
+                {['21:26', '21:28', '21:30', '21:32', '21:34', '21:36', '21:38', '21:40'].map(
+                  (label) => (
+                    <span key={label}>{label}</span>
+                  ),
+                )}
+              </div>
+              <div className="absolute inset-x-0 bottom-1 flex justify-center text-[10px] text-white/52">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="size-2 rounded-sm bg-emerald-400" />
+                  Allowed
+                </span>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-white/10 bg-[#101010] p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] tracking-[0.2em] text-white/34 uppercase">
+                  Recent events
+                </p>
+                <h4 className="mt-1 text-lg font-semibold tracking-tight text-white">Audit log</h4>
+              </div>
+              <span className="rounded-full border border-white/10 bg-black px-2.5 py-1 text-[10px] text-white/42">
+                50 rows
+              </span>
+            </div>
+
+            <div className="overflow-hidden rounded-lg border border-white/10 bg-black/35">
+              <div className="grid grid-cols-[90px_1.1fr_1.4fr_140px_80px] border-b border-white/10 px-4 py-2 text-[10px] tracking-[0.16em] text-white/30 uppercase">
+                <span>Time</span>
+                <span>Method</span>
+                <span>Tool</span>
+                <span>Status</span>
+                <span className="text-right">Latency</span>
+              </div>
+              {AUDIT_LOG_ROWS.map(([time, method, tool, status, latency]) => (
+                <div
+                  key={`${time}-${method}-${tool}`}
+                  className="grid grid-cols-[90px_1.1fr_1.4fr_140px_80px] items-center border-b border-white/8 px-4 py-3 last:border-b-0"
+                >
+                  <span className="font-mono text-[11px] text-white/40">{time}</span>
+                  <span className="truncate font-mono text-[11px] text-white/72">{method}</span>
+                  <span className="truncate text-[12px] text-white/48">{tool}</span>
+                  <span>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${statusTone(status)}`}
+                    >
+                      {status}
+                    </span>
+                  </span>
+                  <span className="text-right font-mono text-[11px] text-white/36">{latency}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
       </div>
     </div>
+
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-64 bg-linear-to-b from-transparent via-[#050505]/88 to-[#050505]" />
   </div>
 );
 
-export const HeroSection = () => {
-  const [mounted, setMounted] = useState(false);
+const PROOF_CALLOUTS = [
+  [ShieldCheckIcon, 'Policy blocked'],
+  [GitBranchIcon, 'Rollback path found'],
+  [ActivityIcon, 'Audit trail captured'],
+] as const;
 
-  useEffect(() => {
-    const t = window.setTimeout(() => setMounted(true), 20);
-    return () => window.clearTimeout(t);
-  }, []);
+const HeroProofCallouts = () => (
+  <div className="pointer-events-none absolute -top-4 left-1/2 z-20 hidden -translate-x-1/2 items-center gap-2 md:flex">
+    {PROOF_CALLOUTS.map(([Icon, label]) => (
+      <span
+        key={label}
+        className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/70 px-3 py-1.5 text-xs text-white/62 shadow-[0_12px_40px_rgba(0,0,0,0.34)] backdrop-blur-xl"
+      >
+        <Icon className="size-3.5 text-blue-100/80" />
+        {label}
+      </span>
+    ))}
+  </div>
+);
 
-  return (
-    <section className="relative overflow-hidden pt-14">
-      {/* Atmosphere — gradient mesh + grid + noise */}
-      <div className="absolute inset-0 pointer-events-none" aria-hidden>
-        <div className="absolute inset-0 grid-lines-bg opacity-[0.15]" />
-        <div
-          className="absolute -top-40 -right-20 w-[1100px] h-[1100px] rounded-full blur-[160px] opacity-45"
-          style={{
-            background: 'radial-gradient(circle, var(--brand) 0%, transparent 55%)',
-          }}
-        />
-        <div
-          className="absolute top-[20%] -left-40 w-[720px] h-[720px] rounded-full blur-[140px] opacity-25"
-          style={{
-            background:
-              'radial-gradient(circle, oklch(0.6 0.22 254) 0%, transparent 60%)',
-          }}
-        />
-        <div
-          className="absolute inset-x-0 top-[40%] h-px bg-linear-to-r from-transparent via-(--brand)/40 to-transparent opacity-60"
-        />
-        <div
-          className="absolute inset-0 opacity-[0.035] mix-blend-overlay"
-          style={{
-            backgroundImage:
-              "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' /%3E%3C/svg%3E\")",
-          }}
-        />
-      </div>
+export const HeroSection = () => (
+  <section className="relative isolate overflow-hidden pt-14">
+    <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_-10%,rgba(255,255,255,0.12),transparent_34%),linear-gradient(180deg,#000_0%,#050505_54%,#090909_100%)]" />
+    <div className="grid-lines-bg absolute inset-0 -z-10 opacity-[0.08]" />
+    <div className="absolute top-20 left-1/2 -z-10 h-80 w-6xl -translate-x-1/2 rounded-full bg-white/8 blur-[120px]" />
 
-      <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-10">
-        {/* TOP — headline + subhead + CTAs */}
-        <div className="pt-20 lg:pt-28 pb-14 lg:pb-20">
-          <div
-            className={`inline-flex items-center gap-2 rounded-full border border-border bg-card/60 backdrop-blur-sm px-3 py-1 mb-8 transition-all duration-500 ${
-              mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-            }`}
-          >
-            <span className="relative flex w-1.5 h-1.5">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-[oklch(0.72_0.18_150)] opacity-60 animate-ping" />
-              <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-[oklch(0.72_0.18_150)]" />
-            </span>
-            <span className="text-[11px] font-medium text-foreground/75 tracking-[0.02em]">
-              Bring your own MCPs
-            </span>
-            <span className="w-px h-3 bg-border" />
-            <span className="text-[11px] font-mono text-foreground/50">
-              policies · sandbox · audit
-            </span>
-          </div>
-
-          <div className="max-w-6xl">
-            <h1
-              className={`font-medium leading-[1.02] lg:leading-[0.98] tracking-[-0.035em] text-foreground transition-all duration-700 ${
-                mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
-              }`}
-              style={{ fontSize: 'clamp(2.5rem, 6vw, 4.75rem)' }}
-            >
-              Govern any MCP
-              <br />
-              <span className="text-foreground/55">before agents touch production.</span>
-            </h1>
-
-            <div
-              className={`mt-7 max-w-3xl transition-all duration-700 delay-150 ${
-                mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
-              }`}
-            >
-              <p className="text-[15px] md:text-lg text-foreground/65 leading-[1.6]">
-                Semantic GPS sits between your agents and the MCP servers you already run. Sandbox
-                workflows, enforce policy, validate tool paths, audit every call, and roll back
-                broken actions without rewriting a single MCP.
-              </p>
-            </div>
-          </div>
-
-          <div
-            className={`flex flex-wrap items-center gap-3 mt-12 transition-all duration-700 delay-300 ${
-              mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
-            }`}
-          >
-            <Button
-              asChild
-              size="lg"
-              className="h-11 px-5 rounded-md bg-foreground text-background hover:bg-foreground/90 text-[14px] font-medium"
-            >
-              <Link href="/signup">
-                Start sandboxing MCPs
-                <ArrowRightIcon className="w-3.5 h-3.5 ml-1.5" />
-              </Link>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="h-11 px-5 rounded-md border-foreground/15 bg-background/40 backdrop-blur-sm hover:bg-foreground/5 text-[14px] font-medium text-foreground"
-            >
-              <Link href="#how-it-works">
-                <RouteIcon className="w-3.5 h-3.5 mr-1.5" />
-                See how it works
-              </Link>
-            </Button>
-
-            <span className="hidden md:block w-px h-6 bg-border mx-2" />
-
-            <a
-              href="https://github.com/mboss37/semantic-gps-hackathon#readme"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 h-11 px-3 text-[13px] text-foreground/70 hover:text-foreground transition-colors"
-            >
-              <BookOpenIcon className="w-3.5 h-3.5" />
-              View the docs
-            </a>
-            <a
-              href="https://github.com/mboss37/semantic-gps-hackathon"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 h-11 px-3 text-[13px] text-foreground/70 hover:text-foreground transition-colors"
-            >
-              <GithubMark className="w-3.5 h-3.5" />
-              Open source
-            </a>
-          </div>
+    <div className="mx-auto max-w-[1440px] px-5 pt-14 pb-14 md:px-8 md:pt-20 lg:px-10 lg:pb-20">
+      <div className="mx-auto max-w-5xl text-center">
+        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/6 px-3 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
+          <span className="relative flex size-2">
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-300 opacity-60" />
+            <span className="relative inline-flex size-2 rounded-full bg-emerald-300" />
+          </span>
+          <span className="text-xs font-medium text-white/78">Enterprise MCP governance</span>
+          <span className="h-3 w-px bg-white/14" />
+          <span className="font-mono text-[11px] text-white/42">
+            agents {'->'} business systems
+          </span>
         </div>
 
-        {/* Gateway visual — vendor-neutral, so the hero reads as infrastructure. */}
-        <div
-          className={`relative pb-10 transition-all duration-1000 delay-500 ${
-            mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-          }`}
-        >
-          {/* Backlight under the dashboard */}
-          <div
-            className="absolute -top-8 left-1/2 -translate-x-1/2 w-[70%] h-20 rounded-full blur-3xl opacity-70 pointer-events-none"
-            style={{
-              background:
-                'linear-gradient(90deg, transparent, var(--brand) 50%, transparent)',
-            }}
-            aria-hidden
-          />
+        <h1 className="text-[clamp(2.8rem,5.6vw,5.35rem)] leading-[0.94] font-semibold tracking-[-0.065em] text-balance text-white">
+          The governance gateway for
+          <span className="block bg-linear-to-r from-white via-white/72 to-blue-200 bg-clip-text text-transparent">
+            production AI agents.
+          </span>
+        </h1>
 
-          <GatewayHeroVisual />
+        <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-pretty text-white/62 md:text-lg">
+          Semantic GPS sits between agents and MCP-connected business systems, enforcing policies,
+          logging every call, and mapping safe fallback and rollback paths before agents touch
+          production.
+        </p>
+
+        <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <Button
+            asChild
+            size="lg"
+            className="h-12 rounded-full bg-white px-6 text-sm font-semibold text-black shadow-[0_0_40px_rgba(255,255,255,0.16)] hover:bg-white/90"
+          >
+            <Link href="/signup">
+              Start governing agents
+              <ArrowRightIcon className="ml-1.5 size-4" />
+            </Link>
+          </Button>
+          <Button
+            asChild
+            size="lg"
+            variant="outline"
+            className="h-12 rounded-full border-white/14 bg-white/4.5 px-6 text-sm font-semibold text-white backdrop-blur-xl hover:bg-white/8 hover:text-white"
+          >
+            <Link href="#features">Explore features</Link>
+          </Button>
         </div>
       </div>
-    </section>
-  );
-};
+
+      <div className="relative mt-8 md:mt-10">
+        <div className="absolute inset-x-8 top-8 -z-10 h-24 rounded-full bg-white/20 blur-[90px]" />
+        <HeroProofCallouts />
+        <DashboardPreview />
+      </div>
+    </div>
+  </section>
+);
