@@ -1,39 +1,53 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { LibraryIcon } from 'lucide-react';
+
 import { requireAuth, UnauthorizedError } from '@/lib/auth';
-import { Button } from '@/components/ui/button';
+import { PolicyCatalogCard } from '@/components/dashboard/policy-catalog-card';
 import { PolicyCreateDialog } from '@/components/dashboard/policy-create-dialog';
-import { PolicyRow } from '@/components/dashboard/policy-row';
+import {
+  DIMENSION_LABELS,
+  POLICY_CATALOG,
+  type PolicyDimension,
+} from '@/lib/policies/catalog';
+
+// Sprint 28 IA flip: Policies catalog is the only management surface.
+// `?filter=applied` shows only builtins with at least one instance attached.
+// `?builtin=<key>` lands the user on the catalog with the create dialog
+// auto-opened for that builtin (Apply CTA from any catalog card). Each card
+// hosts edit-in-place for its instances via `<PolicyEditDialog>` — no
+// separate active page, no row-management surface.
 
 export const dynamic = 'force-dynamic';
 
-type PolicyRecord = {
+const DIMENSION_ORDER: PolicyDimension[] = [
+  'hygiene',
+  'identity',
+  'rate',
+  'time',
+  'residency',
+  'kill-switch',
+  'idempotency',
+];
+
+type Mode = 'shadow' | 'enforce';
+
+type PolicyRow = {
   id: string;
   name: string;
-  builtin_key:
-    | 'pii_redaction'
-    | 'rate_limit'
-    | 'allowlist'
-    | 'injection_guard'
-    | 'basic_auth'
-    | 'client_id'
-    | 'ip_allowlist'
-    | 'business_hours'
-    | 'write_freeze';
+  builtin_key: string;
   config: Record<string, unknown>;
-  enforcement_mode: 'shadow' | 'enforce';
+  enforcement_mode: Mode;
   created_at: string;
 };
 
-type AssignmentRecord = {
+type AssignmentRow = {
   id: string;
   policy_id: string;
   server_id: string | null;
   tool_id: string | null;
 };
 
-type ServerRecord = { id: string; name: string };
+type ServerRow = { id: string; name: string };
 
 type ToolRowRaw = {
   id: string;
@@ -42,17 +56,15 @@ type ToolRowRaw = {
   servers: { name: string } | null;
 };
 
-type ToolOption = {
-  id: string;
-  name: string;
-  server_id: string;
-  server_name: string;
+type SearchParams = {
+  filter?: string | string[];
+  builtin?: string | string[];
 };
 
 const PoliciesPage = async ({
   searchParams,
 }: {
-  searchParams?: Promise<{ builtin?: string | string[] }>;
+  searchParams?: Promise<SearchParams>;
 }) => {
   let ctx;
   try {
@@ -65,17 +77,12 @@ const PoliciesPage = async ({
   }
   const { supabase, organization_id } = ctx;
 
-  // Sprint 17 WP-17.1: `/dashboard/policies/catalog` deep-links an "Apply to
-  // my org" CTA to `/dashboard/policies?builtin=<key>`. We forward that key
-  // into the create dialog so it auto-opens with the right builtin + default
-  // config preselected — one click from catalog card to configure screen.
-  const resolvedParams = (await searchParams) ?? {};
-  const rawBuiltin = resolvedParams.builtin;
+  const params = (await searchParams) ?? {};
+  const filterParam = typeof params.filter === 'string' ? params.filter : 'all';
+  const filter = filterParam === 'applied' ? 'applied' : 'all';
   const initialBuiltinKey =
-    typeof rawBuiltin === 'string' && rawBuiltin.length > 0 ? rawBuiltin : undefined;
+    typeof params.builtin === 'string' && params.builtin.length > 0 ? params.builtin : undefined;
 
-  // Sprint 15 multi-tenancy: every table here is now org-scoped by its own
-  // `organization_id` column. Tools piggyback via the servers join constraint.
   const [policiesRes, assignmentsRes, serversRes, toolsRes] = await Promise.all([
     supabase
       .from('policies')
@@ -97,68 +104,106 @@ const PoliciesPage = async ({
       .order('name'),
   ]);
 
-  const policies = (policiesRes.data ?? []) as PolicyRecord[];
-  const assignments = (assignmentsRes.data ?? []) as AssignmentRecord[];
-  const servers = (serversRes.data ?? []) as ServerRecord[];
+  const policies = (policiesRes.data ?? []) as PolicyRow[];
+  const assignments = (assignmentsRes.data ?? []) as AssignmentRow[];
+  const servers = (serversRes.data ?? []) as ServerRow[];
   const toolsRaw = (toolsRes.data ?? []) as unknown as ToolRowRaw[];
-  const tools: ToolOption[] = toolsRaw.map((t) => ({
+  const tools = toolsRaw.map((t) => ({
     id: t.id,
     name: t.name,
     server_id: t.server_id,
     server_name: t.servers?.name ?? 'unknown',
   }));
 
-  const assignmentsByPolicy = new Map<string, AssignmentRecord[]>();
+  const instancesByBuiltin = new Map<string, PolicyRow[]>();
+  for (const p of policies) {
+    const bucket = instancesByBuiltin.get(p.builtin_key) ?? [];
+    bucket.push(p);
+    instancesByBuiltin.set(p.builtin_key, bucket);
+  }
+  const assignmentsByPolicy = new Map<string, AssignmentRow[]>();
   for (const a of assignments) {
     const bucket = assignmentsByPolicy.get(a.policy_id) ?? [];
     bucket.push(a);
     assignmentsByPolicy.set(a.policy_id, bucket);
   }
 
+  const totalApplied = policies.length;
+  const totalAvailable = POLICY_CATALOG.length;
+
+  const visibleEntries = POLICY_CATALOG.filter((entry) =>
+    filter === 'applied' ? (instancesByBuiltin.get(entry.builtin_key)?.length ?? 0) > 0 : true,
+  );
+
+  const byDimension = new Map<PolicyDimension, typeof POLICY_CATALOG>();
+  for (const entry of visibleEntries) {
+    const bucket = byDimension.get(entry.dimension) ?? [];
+    bucket.push(entry);
+    byDimension.set(entry.dimension, bucket);
+  }
+
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
       <header className="flex items-start justify-between gap-4">
-        <div>
+        <div className="max-w-2xl">
           <h1 className="text-2xl font-semibold">Policies</h1>
-          <p className="mt-1 text-sm text-zinc-400">
-            Shadow mode logs decisions; enforce mode blocks or redacts. Toggle mid-call — next
-            gateway invocation picks up the change.
+          <p className="mt-1 text-sm text-muted-foreground">
+            Twelve gateway policies across seven governance dimensions. Apply one to your org —
+            shadow mode first, then flip to enforce when the timeline looks clean.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button asChild variant="outline">
-            <Link href="/dashboard/policies/catalog">
-              <LibraryIcon className="size-4" />
-              Browse catalog
-            </Link>
-          </Button>
-          <PolicyCreateDialog servers={servers} initialBuiltinKey={initialBuiltinKey} />
-        </div>
+        <FilterTabs filter={filter} totalAvailable={totalAvailable} totalApplied={totalApplied} />
       </header>
 
-      {policies.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-900/50 px-6 py-10 text-center">
-          <p className="text-sm text-zinc-400">No policies yet.</p>
-          <p className="mt-1 text-sm text-zinc-500">
-            Start with <span className="text-zinc-200">pii_redaction</span> in shadow mode against
-            the demo server.
+      {/* URL-driven create dialog. The "+ New policy" button is gone — apply
+          flow is exclusively from a catalog card's `Apply to my org` /
+          `Apply another` CTA, which deep-links here with `?builtin=<key>`.
+          Dialog auto-opens via initialBuiltinKey, hideTrigger suppresses
+          the standalone trigger button. */}
+      <PolicyCreateDialog
+        servers={servers}
+        initialBuiltinKey={initialBuiltinKey}
+        hideTrigger
+      />
+
+      {visibleEntries.length === 0 ? (
+        <div className="rounded-lg border border-dashed bg-muted/20 px-6 py-10 text-center">
+          <p className="text-sm text-muted-foreground">
+            No policies applied yet. Switch to{' '}
+            <Link
+              href="/dashboard/policies"
+              className="text-foreground underline underline-offset-2 hover:text-foreground/80"
+            >
+              All
+            </Link>{' '}
+            to browse the catalog and apply one.
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-4">
-          {policies.map((p) => (
-            <PolicyRow
-              key={p.id}
-              id={p.id}
-              name={p.name}
-              builtinKey={p.builtin_key}
-              config={p.config}
-              mode={p.enforcement_mode}
-              assignments={assignmentsByPolicy.get(p.id) ?? []}
-              servers={servers}
-              tools={tools}
-            />
-          ))}
+        <div className="flex flex-col gap-8">
+          {DIMENSION_ORDER.map((dim) => {
+            const entries = byDimension.get(dim) ?? [];
+            if (entries.length === 0) return null;
+            return (
+              <section key={dim} className="flex flex-col gap-3">
+                <h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  {DIMENSION_LABELS[dim]}
+                </h2>
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {entries.map((entry) => (
+                    <PolicyCatalogCard
+                      key={entry.builtin_key}
+                      entry={entry}
+                      instances={instancesByBuiltin.get(entry.builtin_key) ?? []}
+                      assignmentsByPolicy={assignmentsByPolicy}
+                      servers={servers}
+                      tools={tools}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
         </div>
       )}
     </div>
@@ -166,3 +211,51 @@ const PoliciesPage = async ({
 };
 
 export default PoliciesPage;
+
+const FilterTabs = ({
+  filter,
+  totalAvailable,
+  totalApplied,
+}: {
+  filter: 'all' | 'applied';
+  totalAvailable: number;
+  totalApplied: number;
+}) => (
+  <div className="inline-flex w-fit items-center gap-1 rounded-lg border bg-muted/30 p-1">
+    <FilterPill href="/dashboard/policies?filter=all" active={filter === 'all'} label="All" count={totalAvailable} />
+    <FilterPill
+      href="/dashboard/policies?filter=applied"
+      active={filter === 'applied'}
+      label="Applied"
+      count={totalApplied}
+    />
+  </div>
+);
+
+const FilterPill = ({
+  href,
+  active,
+  label,
+  count,
+}: {
+  href: string;
+  active: boolean;
+  label: string;
+  count: number;
+}) => (
+  <Link
+    href={href}
+    className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+      active ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+    }`}
+  >
+    {label}
+    <span
+      className={`rounded-full px-1.5 py-0.5 font-mono text-[10px] tabular-nums ${
+        active ? 'bg-muted text-foreground' : 'text-muted-foreground/80'
+      }`}
+    >
+      {count}
+    </span>
+  </Link>
+);

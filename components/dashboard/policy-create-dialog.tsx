@@ -58,11 +58,17 @@ type PolicyCreateDialogProps = {
   // builtin + default config preselected so the user lands directly in
   // "configure this policy" without an extra click.
   initialBuiltinKey?: string;
+  // Sprint 28: when the dialog is driven entirely by `?builtin=<key>` URL
+  // state (no manual "+ New policy" entry point), suppress the trigger
+  // button. Without this the catalog page would show a stray button next
+  // to its filter pills.
+  hideTrigger?: boolean;
 };
 
 export const PolicyCreateDialog = ({
   servers,
   initialBuiltinKey,
+  hideTrigger = false,
 }: PolicyCreateDialogProps) => {
   const router = useRouter();
   const startingBuiltin =
@@ -127,12 +133,14 @@ export const PolicyCreateDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button>
-          <PlusIcon className="size-4" />
-          New policy
-        </Button>
-      </DialogTrigger>
+      {hideTrigger ? null : (
+        <DialogTrigger asChild>
+          <Button>
+            <PlusIcon className="size-4" />
+            New policy
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Create policy</DialogTitle>
