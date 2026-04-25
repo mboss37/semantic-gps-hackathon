@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
 
 export class UnauthorizedError extends Error {
@@ -27,7 +28,12 @@ export const decodeJwtClaims = (accessToken: string): Record<string, unknown> | 
   }
 };
 
-export const requireAuth = async () => {
+// Sprint 20 WP-20.2: React cache() dedupes within a single RSC render request,
+// collapsing the layout + page + helper getUser() round-trips (3+ network hops
+// to Supabase Auth) down to one. Server Actions invoked from the same render
+// share the cache automatically. Cache scope is per-request; isolated requests
+// re-execute as expected.
+export const requireAuth = cache(async () => {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) {
@@ -74,4 +80,4 @@ export const requireAuth = async () => {
     role: membership.role === 'member' ? 'member' : 'admin',
     profile_completed: membership.profile_completed === true,
   };
-};
+});
