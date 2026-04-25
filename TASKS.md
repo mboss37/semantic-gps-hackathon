@@ -125,16 +125,18 @@
 - WP-20.4 Catalog `force-dynamic` removed — annotation cleanup, PPR-ready (layout cookies still envelope-dynamic).
 - 20.5 per-card Suspense skipped (stretch). Lessons #35 + #36. 341/2/0 tests, 6 commits.
 
+**Sprint 21 — Dashboard polish + Landing v1 + auto-refresh (Sat Apr 25):**
+- WP-21.1 Sidebar grouped Overview/Configure/Operate via NavMain `label` prop. WP-21.2 SiteHeader brand cluster (org name + "Built with Opus 4.7" violet pill) + color-coded KPI badges (emerald/sky/indigo); sparklines deferred.
+- WP-21.3 Gateway Traffic faded mock-chart empty state at opacity-25 + overlay caption. WP-21.4 Landing v1: real Playwright dashboard screenshot replaces 288-line DashboardMockup, StatStrip (12/7/3/14), DemoVideoSection at #demo with `NEXT_PUBLIC_DEMO_VIDEO_URL`.
+- WP-21.5 Auto-refresh: `useDashboardRefresh()` hook (`router.refresh()` + `'semgps:dashboard-refresh'` window CustomEvent, 2s debounce), tab-focus listener in SiteHeader, manual `<RefreshButton />`, chart subscribes to event. Realtime → BACKLOG P1.
+- Chrome polish bundled with 21.5: muted main (`--background: oklch(0.10 0 0)`) / pure-black chrome (`--sidebar: oklch(0 0 0)`), SidebarInset `border overflow-hidden` so rounded shape clips the `bg-sidebar` header strip.
+- Hard-Won Lessons #37 (shadcn inset color collapse) + #38 (router.refresh vs client-state). 8 commits, 341/2/0 tests.
+
 ## Current:
 
-**Sprint 21 — Dashboard polish + Landing v1:**
-- [x] WP-21.1 Sidebar grouping — Overview / Configure / Operate. NavMain accepts optional label.
-- [x] WP-21.2 Header brand cluster (org name + "Built with Opus 4.7" violet pill) + color-coded KPI badges (emerald/sky/indigo). Sparklines deferred — flat-line on empty DB low signal.
-- [x] WP-21.3 Gateway Traffic empty state: faded mock-chart at opacity-25 with overlay caption. Breadcrumbs cut — existing back-links functional.
-- [x] WP-21.4 Landing v1: real dashboard screenshot replaces 288-line DashboardMockup, new StatStrip (12/7/3/14), new DemoVideoSection at #demo with `NEXT_PUBLIC_DEMO_VIDEO_URL` env. `/` stays static.
-- [x] WP-21.5 Dashboard auto-refresh — `useDashboardRefresh()` hook (`router.refresh()` + window CustomEvent broadcast, 2s debounce), tab-focus listener in SiteHeader, manual `<RefreshButton />`, chart subscribes to event. Realtime deferred to BACKLOG P1.
+(Awaiting next sprint plan — pull WPs from `BACKLOG.md` when opening.)
 
 ## Session Log
+- 2026-04-25 — Sprint 21 shipped: 5 WPs, 8 commits pushed. Public-face polish — sidebar grouped 3 sections, header brand cluster, KPI badges color-coded, Gateway Traffic faded mock-chart empty state, landing hero swapped 288-line DashboardMockup for a real Playwright screenshot of the seeded dashboard. WP-21.5 auto-refresh: `useDashboardRefresh()` fires `router.refresh()` + `'semgps:dashboard-refresh'` CustomEvent on tab focus or manual button click, 2s debounce. Chrome polish bundled: muted main / pure-black chrome inverts shadcn defaults to favor chrome-as-frame. Caught + fixed shadcn inset color-collapse interactively with the user. Realtime deferred to BACKLOG P1. 5 memories + Hard-Won Lessons #37/#38. 341/2/0 tests.
 - 2026-04-25 — Sprint 20 shipped: 4 WPs, 6 commits pushed. Dashboard nav perf collapse — `requireAuth` React `cache()` wrap (3 `getUser()` round-trips → 1 per RSC render) + `loading.tsx` skeletons → perceived nav latency ~1-2s blank → <50ms instant paint. Onboarding JWT-refresh fix unblocks every fresh signup: `auth.updateUser` doesn't refresh tokens, so `refreshSession()` after the flag flip is mandatory for the hook to re-stamp claims. Hosted migrations 220000/220100 backfilled mid-sprint after fresh-signup hit hooked-claim drift (Lesson #32 gate held but human skipped it; memo to self next time). 5 memories + Hard-Won Lessons #35/#36. 341/2/0 tests.
 - 2026-04-24 — Sprint 19 shipped: 9 WPs, 21 items, 2 commits pushed. MCP envelope unwrap at capture bag unblocks demo story #9 (verified three ways: 7 unit + proven-negative integration + live E2E against real SF/Slack/GH). Reviewer flagged 7 blockers — fixed 5 (circular via route-utils leaf, getSession waivers, `as` cast cleanup), accepted 2 (execute-route.ts 610 lines, executeRollback 155 lines) as pragma. 7 memories + Hard-Won Lessons #33/#34. 337/2/0 tests.
-- 2026-04-24 — Sprint 18 shipped: 3 WPs (specialist prework + landing v0 + end-to-end deploy signup validation). Bonuses mid-WP-3: `/signup/check-email` industry page, `/login` `?error=` surfacing, hosted migration 22 push closing a week-old Sprint 17 drift. New Hard-Won Lesson #32 + `migrations.md § Sprint wrap` gate pin the drift class. Four memories stored. 327/2/0. 6 commits.
