@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRightIcon, BookOpenIcon, PlayIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { DashboardMockup } from './dashboard-mockup';
 import { GithubMark } from './github-mark';
 
 export const HeroSection = () => {
@@ -158,8 +158,19 @@ export const HeroSection = () => {
 
           <div className="relative rounded-t-xl border border-b-0 border-border bg-background overflow-hidden shadow-[0_-20px_80px_-20px_rgba(0,112,243,0.25),0_40px_80px_-20px_rgba(0,0,0,0.8)]">
             {/* Faint top highlight — laptop screen backlight */}
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-foreground/25 to-transparent" />
-            <DashboardMockup />
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-foreground/25 to-transparent z-10" />
+            {/* Sprint 21 WP-21.4: real dashboard screenshot. Captured via
+                Playwright against seeded local data so the layout, polish,
+                and policy counts are all real. Update via:
+                  pnpm playground-screenshot  (or re-shoot manually). */}
+            <Image
+              src="/landing/dashboard-hero.png"
+              alt="Semantic GPS dashboard — 3 MCP servers, 14 tools, 4 active policies"
+              width={1200}
+              height={1169}
+              priority
+              className="block w-full h-auto"
+            />
           </div>
         </div>
       </div>

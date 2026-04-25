@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 
 import { CtaSection } from '@/components/landing/cta-section';
+import { DemoVideoSection } from '@/components/landing/demo-video-section';
 import { FeaturesSection } from '@/components/landing/features-section';
 import { FooterSection } from '@/components/landing/footer-section';
 import { HeroSection } from '@/components/landing/hero-section';
@@ -9,6 +10,7 @@ import { InfrastructureSection } from '@/components/landing/infrastructure-secti
 import { IntegrationsSection } from '@/components/landing/integrations-section';
 import { Navigation } from '@/components/landing/navigation';
 import { SecuritySection } from '@/components/landing/security-section';
+import { StatStrip } from '@/components/landing/stat-strip';
 
 import { VerifiedHandler } from './verified-handler';
 
@@ -25,6 +27,8 @@ const Home = () => (
     </Suspense>
     <Navigation />
     <HeroSection />
+    <StatStrip />
+    <DemoVideoSection />
     <FeaturesSection />
     <HowItWorksSection />
     <InfrastructureSection />
