@@ -21,7 +21,6 @@ High-ROI items that move judging score. Skip if P0 runs late.
 
 - **Managed Agents wrap** ($5K side prize) — port demo agent to Managed Agents API, keep SDK fallback. Only the demo agent, never the gateway.
 - **Gateway token auto-mint on signup** — fresh signup → Playground fails (no bearer). Extend `handle_new_user` trigger or onboarding wizard to mint a default token.
-- **NL policy author** — user types "block PII after 6pm" → Opus returns JSON matching a builtin schema → user reviews before save. Textarea + "Ask Opus" button.
 - **Opus relationship inference on import** — feed OpenAPI spec to Opus 4.7 with cached system prompt, user approves/rejects proposals. 1M-context showcase.
 - **Playground "Refine with Opus"** — ingest traces + policy events + manifest, return structured suggestions as cards.
 - **Email verification decision** — disable "Confirm email" for soft-launch OR configure Resend SMTP.
@@ -35,7 +34,7 @@ Signals ambition to judges who browse deep. Full vision in [`VISION.md`](./VISIO
 
 **Enterprise:** Multi-org invite flow + RLS widening, custom policy DSL, workflow evaluator benchmark, email change, monitoring widget customization.
 
-**Hardening:** `fetchOrgManifest` cross-tenant leak fix, IPv6 CIDR in `runIpAllowlist`, Zod `safeParse` on scoped gateway route params, `x-forwarded-for` trusted-proxy flag, `createStatelessServer` extraction, per-builtin Zod config validation on 7 older policy runners, SSRF DNS-rebinding pin, ReDoS guard on policy regex, `AbortController` on timeline chart fetch, strip internal error text from API responses.
+**Hardening:** `fetchOrgManifest` cross-tenant leak fix, IPv6 CIDR in `runIpAllowlist`, Zod `safeParse` on scoped gateway route params, `x-forwarded-for` trusted-proxy flag, `createStatelessServer` extraction, per-builtin Zod config validation on 7 older policy runners, SSRF DNS-rebinding pin, ReDoS guard on policy regex, `AbortController` on timeline chart fetch, strip internal error text from API responses, realtime `setAuth` on `onAuthStateChange` for long-lived sessions / token rotation (Sprint 22 reviewer finding), `comment on table public.mcp_events` contract noting INSERT-only assumption behind REPLICA IDENTITY FULL (Sprint 22 reviewer finding), tighten realtime-publication contract test to assert `duplicate_object` is inside the `do $$` block (Sprint 22 reviewer finding).
 
 **Product polish:** Periodic MCP re-discovery cron, Zod-validate gateway responses in graph page, SSE multi-event parser, sidebar nav badges, multi-origin per server, graph domain-boundaries toggle, dashboard domain filter, Supabase realtime for audit page, cosmetic cleanup sweep.
 
