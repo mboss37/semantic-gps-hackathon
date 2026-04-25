@@ -28,7 +28,6 @@ High-ROI items that move judging score. Skip if P0 runs late.
 - **Hosted E2E smoke test** — signup → onboard → register MCP → mint token → curl gateway → tools/list returns.
 - **Password reset flow** — request + submit pages.
 - **Settings page** — username + org name edit.
-- **Supabase Realtime on `mcp_events`** — push-based dashboard updates instead of focus-refetch (Sprint 21 WP-21.5 shipped the latter). Migration: `ALTER PUBLICATION supabase_realtime ADD TABLE public.mcp_events;` + hosted dashboard toggle. Verify RLS via `jwt_org_id()` works in the realtime channel context. ~2h, P1 post-hackathon.
 
 ## P2 — After hackathon
 

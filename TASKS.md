@@ -134,7 +134,8 @@
 
 ## Current:
 
-(Awaiting next sprint plan — pull WPs from `BACKLOG.md` when opening.)
+**Sprint 22 — Realtime push (Sat Apr 25 PM):**
+- WP-22.1 — Supabase Realtime subscription on `mcp_events` + `policy_events`: publication migration + `useDashboardRefresh()` hook extension + RLS-in-channel verification. Demo-blocker: live dashboard pulse on every gateway call without manual refresh. ~2h. Hard cap: 2h; if RLS-in-channel fails, fall back to 5s polling and ship.
 
 ## Session Log
 - 2026-04-25 — Sprint 21 shipped: 5 WPs, 8 commits pushed. Public-face polish — sidebar grouped 3 sections, header brand cluster, KPI badges color-coded, Gateway Traffic faded mock-chart empty state, landing hero swapped 288-line DashboardMockup for a real Playwright screenshot of the seeded dashboard. WP-21.5 auto-refresh: `useDashboardRefresh()` fires `router.refresh()` + `'semgps:dashboard-refresh'` CustomEvent on tab focus or manual button click, 2s debounce. Chrome polish bundled: muted main / pure-black chrome inverts shadcn defaults to favor chrome-as-frame. Caught + fixed shadcn inset color-collapse interactively with the user. Realtime deferred to BACKLOG P1. 5 memories + Hard-Won Lessons #37/#38. 341/2/0 tests.
