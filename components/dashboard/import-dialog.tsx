@@ -29,12 +29,12 @@ import { Textarea } from '@/components/ui/textarea';
 
 const DEMO_SPEC_URL = '/demo-openapi.json';
 
-type Tab = 'url' | 'spec' | 'mcp';
+type Tab = 'mcp' | 'url' | 'spec';
 
 export const ImportDialog = () => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<Tab>('url');
+  const [tab, setTab] = useState<Tab>('mcp');
   const [url, setUrl] = useState('');
   const [spec, setSpec] = useState('');
   const [name, setName] = useState('');
@@ -152,15 +152,15 @@ export const ImportDialog = () => {
         <DialogHeader>
           <DialogTitle>Add Server</DialogTitle>
           <DialogDescription>
-            Import an OpenAPI spec to generate MCP tools, or register an MCP server directly.
+            Register an MCP server directly, or import an OpenAPI spec to generate MCP tools.
           </DialogDescription>
         </DialogHeader>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
           <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="mcp">MCP Server</TabsTrigger>
             <TabsTrigger value="url">OpenAPI URL</TabsTrigger>
             <TabsTrigger value="spec">Inline Spec</TabsTrigger>
-            <TabsTrigger value="mcp">MCP Server</TabsTrigger>
           </TabsList>
 
           <TabsContent value="url" className="flex flex-col gap-4 pt-2">

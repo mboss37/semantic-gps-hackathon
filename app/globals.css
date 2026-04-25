@@ -188,4 +188,25 @@
       linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 4%, transparent) 1px, transparent 1px);
     background-size: 80px 80px;
   }
+
+  /* Themed scrollbar for code blocks + scrollable code panes — replaces the
+     bright OS-native scrollbar with one that matches our dark surfaces. */
+  .scrollbar-dark {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--foreground) 18%, transparent) transparent;
+  }
+  .scrollbar-dark::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-dark::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-dark::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklab, var(--foreground) 14%, transparent);
+    border-radius: 4px;
+  }
+  .scrollbar-dark::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in oklab, var(--foreground) 24%, transparent);
+  }
 }

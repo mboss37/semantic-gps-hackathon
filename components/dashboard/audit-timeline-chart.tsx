@@ -42,6 +42,13 @@ export const AuditTimelineChart = ({ series }: Props) => {
     );
   }
 
+  // Drop status keys with zero events across the window — keeps the chart +
+  // legend focused on what actually happened. Wholly-empty windows hit the
+  // total === 0 branch above.
+  const activeKeys = AUDIT_TIMELINE_STATUS_KEYS.filter((k) =>
+    series.some((b) => b[k] > 0),
+  );
+
   return (
     <div className="rounded-lg border bg-muted/30 p-4">
       <ChartContainer config={auditTimelineConfig} className="aspect-auto h-48 w-full">
@@ -58,7 +65,7 @@ export const AuditTimelineChart = ({ series }: Props) => {
           <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={11} width={24} />
           <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
           <ChartLegend content={<ChartLegendContent />} />
-          {AUDIT_TIMELINE_STATUS_KEYS.map((k) => (
+          {activeKeys.map((k) => (
             <Line
               key={k}
               type="monotone"

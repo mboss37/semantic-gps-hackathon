@@ -1,23 +1,55 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeftIcon, BookIcon, LinkIcon, ShieldAlertIcon, WrenchIcon } from 'lucide-react';
+import {
+  ArrowLeftIcon,
+  BookIcon,
+  CheckCircle2Icon,
+  CircleHelpIcon,
+  LinkIcon,
+  TriangleAlertIcon,
+  WrenchIcon,
+  XCircleIcon,
+} from 'lucide-react';
 
 import { requireAuth, UnauthorizedError } from '@/lib/auth';
 import { fetchServerDetail, fetchRemoteCapabilities } from '@/lib/servers/fetch';
-import { fetchMonitoringWindowed } from '@/lib/monitoring/fetch-windowed';
-import { MonitoringKpiStrip } from '@/components/dashboard/monitoring-kpi-strip';
-import { ServerConfigSnippet } from '@/components/dashboard/server-config-snippet';
-import { ServerHealthBadge } from '@/components/dashboard/server-health-badge';
+import { probeServerOrigin, type HealthStatus } from '@/lib/servers/health';
+import { CopyButton } from '@/components/dashboard/copy-button';
 import { ServerRediscoverButton } from '@/components/dashboard/server-rediscover-button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ServerToolsTable } from '@/components/dashboard/server-tools-table';
+
+// Sprint 26 — server detail = REGISTRATION + DRILL-DOWN. The list-page card
+// already shows identity, health, tool count, and chips. The detail page
+// earns its click by exposing what the card cannot:
+//   • per-tool drill — full description, display rewrite, input JSON Schema
+//   • per-tool 24h calls + errors
+//   • configuration block — origin URL, transport, auth, registered date
+//   • remote capabilities (resources/prompts) live from origin
 
 export const dynamic = 'force-dynamic';
 
 type Params = { id: string };
 
-const since24hIso = (): string =>
-  new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+const HEALTH_LABEL: Record<HealthStatus, string> = {
+  ok: 'Healthy',
+  degraded: 'Degraded',
+  down: 'Down',
+  unknown: 'Unprobed',
+};
+
+const HEALTH_BADGE_CLASS: Record<HealthStatus, string> = {
+  ok: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+  degraded: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+  down: 'border-red-500/30 bg-red-500/10 text-red-300',
+  unknown: 'border-zinc-500/30 bg-zinc-500/10 text-zinc-300',
+};
+
+const HealthIcon = ({ status }: { status: HealthStatus }) => {
+  if (status === 'ok') return <CheckCircle2Icon className="size-3.5" />;
+  if (status === 'degraded') return <TriangleAlertIcon className="size-3.5" />;
+  if (status === 'down') return <XCircleIcon className="size-3.5" />;
+  return <CircleHelpIcon className="size-3.5" />;
+};
 
 const ServerDetailPage = async ({ params }: { params: Promise<Params> }) => {
   const { id } = await params;
@@ -40,49 +72,23 @@ const ServerDetailPage = async ({ params }: { params: Promise<Params> }) => {
   const detail = await fetchServerDetail(supabase, organization_id, id);
   if (!detail) notFound();
 
-  const capabilities = await fetchRemoteCapabilities({
-    transport: detail.server.transport,
-    origin_url: detail.server.origin_url,
-    auth_config: detail.authConfig,
-  });
+  const [probe, capabilities] = await Promise.all([
+    probeServerOrigin(detail.server.origin_url),
+    fetchRemoteCapabilities({
+      transport: detail.server.transport,
+      origin_url: detail.server.origin_url,
+      auth_config: detail.authConfig,
+    }),
+  ]);
 
-  // Sprint 25 — server-scoped 24h KPI strip + header stat row. Reuses the
-  // monitoring fetch-windowed pipeline with the new optional serverId filter.
-  // Pass `undefined` for nowMs so the function falls through to its
-  // Date.now() default — react-hooks/purity bans calling Date.now() in
-  // render bodies but a default-arg evaluation isn't render-side.
-  const monitoring = await fetchMonitoringWindowed(
-    supabase,
-    organization_id,
-    '24h',
-    undefined,
-    detail.server.id,
-  );
-
-  const sinceIso = since24hIso();
-  const { data: events24hData } = await supabase
-    .from('mcp_events')
-    .select('status')
-    .eq('organization_id', organization_id)
-    .eq('server_id', detail.server.id)
-    .gte('created_at', sinceIso);
-  const events24h = (events24hData ?? []) as { status: string }[];
-  const calls24h = events24h.length;
-  const errors24h = events24h.filter(
-    (e) => e.status !== 'ok' && e.status !== 'blocked_by_policy',
-  ).length;
-  const errorRate24h = calls24h === 0 ? 0 : (errors24h / calls24h) * 100;
-
-  const createdAt = new Date(detail.server.created_at).toLocaleDateString('en-US', {
+  const registered = new Date(detail.server.created_at).toLocaleDateString('en-US', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
   });
-  const totalViolations = detail.violationsByPolicy.reduce((acc, v) => acc + v.count, 0);
-
-  const hasResources = capabilities.resources && capabilities.resources.length > 0;
-  const hasPrompts = capabilities.prompts && capabilities.prompts.length > 0;
-  const otherSurfaces = hasResources || hasPrompts;
+  const hasResources = !!capabilities.resources && capabilities.resources.length > 0;
+  const hasPrompts = !!capabilities.prompts && capabilities.prompts.length > 0;
+  const showCapabilities = hasResources || hasPrompts;
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -96,199 +102,145 @@ const ServerDetailPage = async ({ params }: { params: Promise<Params> }) => {
         </Link>
       </div>
 
-      <header className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="truncate text-2xl font-semibold">{detail.server.name}</h1>
-              <Badge variant="outline" className="shrink-0">
-                {detail.server.transport}
-              </Badge>
-              {detail.server.has_auth ? (
-                <Badge variant="secondary" className="shrink-0">
-                  auth configured
-                </Badge>
-              ) : null}
-            </div>
-            {detail.server.origin_url ? (
-              <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
-                {detail.server.origin_url}
-              </p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="truncate text-2xl font-semibold tracking-tight">{detail.server.name}</h1>
+          <span
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${HEALTH_BADGE_CLASS[probe.status]}`}
+            title={HEALTH_LABEL[probe.status]}
+          >
+            <HealthIcon status={probe.status} />
+            {HEALTH_LABEL[probe.status]}
+            {probe.status !== 'unknown' ? (
+              <span className="font-mono text-[10px] opacity-80">{probe.latencyMs}ms</span>
             ) : null}
-          </div>
-          <ServerRediscoverButton serverId={detail.server.id} />
+          </span>
         </div>
-
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span>
-            <span className="font-medium text-foreground">{detail.tools.length}</span>{' '}
-            {detail.tools.length === 1 ? 'tool' : 'tools'}
-          </span>
-          <span aria-hidden>·</span>
-          <span>
-            <span className="font-medium text-foreground">{calls24h}</span>{' '}
-            {calls24h === 1 ? 'call' : 'calls'} 24h
-          </span>
-          <span aria-hidden>·</span>
-          <span>
-            <span
-              className={`font-medium ${errors24h > 0 ? 'text-amber-300' : 'text-foreground'}`}
-            >
-              {errorRate24h.toFixed(1)}%
-            </span>{' '}
-            error rate
-          </span>
-          <span aria-hidden>·</span>
-          <span>registered {createdAt}</span>
-        </div>
-
-        <Card>
-          <CardContent className="pt-6">
-            <ServerHealthBadge serverId={detail.server.id} />
-          </CardContent>
-        </Card>
+        <ServerRediscoverButton serverId={detail.server.id} />
       </header>
 
-      <section className="@container/main">
-        <MonitoringKpiStrip {...monitoring.kpis} />
+      <section className="flex flex-col gap-3">
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-sm font-medium tracking-tight">Configuration</h2>
+        </div>
+        <dl className="divide-y divide-border/40 rounded-md border border-border/60 bg-card/30">
+          <ConfigRow label="Origin URL">
+            {detail.server.origin_url ? (
+              <>
+                <span className="min-w-0 truncate font-mono text-xs text-foreground/90">
+                  {detail.server.origin_url}
+                </span>
+                <CopyButton value={detail.server.origin_url} compact />
+              </>
+            ) : (
+              <span className="text-xs text-muted-foreground/70">—</span>
+            )}
+          </ConfigRow>
+          <ConfigRow label="Transport">
+            <span className="font-mono text-xs text-foreground/90">{detail.server.transport}</span>
+          </ConfigRow>
+          <ConfigRow label="Auth">
+            <span className="font-mono text-xs text-foreground/90">
+              {detail.server.has_auth ? 'configured' : 'none'}
+            </span>
+          </ConfigRow>
+          <ConfigRow label="Registered">
+            <span className="text-xs text-foreground/90">{registered}</span>
+          </ConfigRow>
+        </dl>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="flex flex-col gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <WrenchIcon className="size-4" />
-                Tools
-              </CardTitle>
-              <CardDescription>
-                Callable through the gateway at <code>/api/mcp/server/{detail.server.id}</code>.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {detail.tools.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  No tools discovered — origin may be unreachable.
-                </p>
-              ) : (
-                <ul className="flex flex-col divide-y divide-border">
-                  {detail.tools.map((t) => (
-                    <li key={t.id} className="flex flex-col gap-0.5 py-2 first:pt-0 last:pb-0">
-                      <div className="flex items-baseline gap-2">
-                        <code className="font-mono text-xs">{t.name}</code>
-                        {t.display_name && t.display_name !== t.name ? (
-                          <span className="text-xs text-muted-foreground">{t.display_name}</span>
-                        ) : null}
-                      </div>
-                      {t.description ? (
-                        <p className="text-xs text-muted-foreground">{t.description}</p>
+      <section className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div className="flex items-baseline gap-2.5">
+            <WrenchIcon className="size-3.5 translate-y-[1px] text-muted-foreground" />
+            <h2 className="text-sm font-medium tracking-tight">Tools</h2>
+            <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+              {detail.tools.length}
+            </span>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Click a row to inspect the input schema · 24h call counts on the right
+          </p>
+        </div>
+        <ServerToolsTable tools={detail.tools} />
+      </section>
+
+      {showCapabilities ? (
+        <section className="flex flex-col gap-3">
+          <div className="flex items-baseline gap-2">
+            <h2 className="text-sm font-medium tracking-tight">Other surfaces</h2>
+            <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+              {(capabilities.resources?.length ?? 0) + (capabilities.prompts?.length ?? 0)}
+            </span>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {hasResources ? (
+              <CapabilityCard icon={<LinkIcon className="size-3.5" />} label="Resources">
+                <ul className="divide-y divide-border/40">
+                  {capabilities.resources?.map((r) => (
+                    <li key={r.uri} className="flex flex-col gap-0.5 py-2 first:pt-0 last:pb-0">
+                      <code className="font-mono text-xs">{r.name}</code>
+                      <span className="truncate font-mono text-[10px] text-muted-foreground">
+                        {r.uri}
+                      </span>
+                      {r.description ? (
+                        <span className="text-xs text-muted-foreground">{r.description}</span>
                       ) : null}
                     </li>
                   ))}
                 </ul>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <ShieldAlertIcon className="size-4" />
-                Policy blocks · 7d
-              </CardTitle>
-              <CardDescription>
-                Counts of <code>blocked_by_policy</code> events per policy, last 7 days.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {totalViolations === 0 ? (
-                <p className="text-xs text-muted-foreground">No policy blocks in 7d.</p>
-              ) : (
-                <ul className="flex flex-col gap-1.5">
-                  {detail.violationsByPolicy.map((v) => {
-                    const maxCount = detail.violationsByPolicy[0]?.count ?? 1;
-                    const widthPct = Math.max(4, Math.round((v.count / maxCount) * 100));
-                    return (
-                      <li key={v.policy_name} className="flex flex-col gap-0.5">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <span className="truncate text-xs">{v.policy_name}</span>
-                          <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                            {v.count}
-                          </span>
-                        </div>
-                        <div className="h-1.5 rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-destructive/60"
-                            style={{ width: `${widthPct}%` }}
-                          />
-                        </div>
-                      </li>
-                    );
-                  })}
+              </CapabilityCard>
+            ) : null}
+            {hasPrompts ? (
+              <CapabilityCard icon={<BookIcon className="size-3.5" />} label="Prompts">
+                <ul className="divide-y divide-border/40">
+                  {capabilities.prompts?.map((p) => (
+                    <li key={p.name} className="flex flex-col gap-0.5 py-2 first:pt-0 last:pb-0">
+                      <code className="font-mono text-xs">{p.name}</code>
+                      {p.description ? (
+                        <span className="text-xs text-muted-foreground">{p.description}</span>
+                      ) : null}
+                    </li>
+                  ))}
                 </ul>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <ServerConfigSnippet serverId={detail.server.id} serverName={detail.server.name} />
-
-          {otherSurfaces ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Other MCP surfaces</CardTitle>
-                <CardDescription>
-                  Resources + prompts exposed by the origin alongside tools.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4">
-                {hasResources ? (
-                  <div>
-                    <p className="mb-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                      <LinkIcon className="size-3.5" />
-                      Resources
-                    </p>
-                    <ul className="flex flex-col divide-y divide-border">
-                      {capabilities.resources?.map((r) => (
-                        <li key={r.uri} className="flex flex-col gap-0.5 py-2 first:pt-0 last:pb-0">
-                          <code className="font-mono text-xs">{r.name}</code>
-                          <span className="truncate font-mono text-[11px] text-muted-foreground">
-                            {r.uri}
-                          </span>
-                          {r.description ? (
-                            <span className="text-xs text-muted-foreground">{r.description}</span>
-                          ) : null}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-                {hasPrompts ? (
-                  <div>
-                    <p className="mb-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                      <BookIcon className="size-3.5" />
-                      Prompts
-                    </p>
-                    <ul className="flex flex-col divide-y divide-border">
-                      {capabilities.prompts?.map((p) => (
-                        <li key={p.name} className="flex flex-col gap-0.5 py-2 first:pt-0 last:pb-0">
-                          <code className="font-mono text-xs">{p.name}</code>
-                          {p.description ? (
-                            <span className="text-xs text-muted-foreground">{p.description}</span>
-                          ) : null}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-              </CardContent>
-            </Card>
-          ) : null}
-        </div>
-      </div>
+              </CapabilityCard>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 };
+
+type ConfigRowProps = {
+  label: string;
+  children: React.ReactNode;
+};
+
+const ConfigRow = ({ label, children }: ConfigRowProps) => (
+  <div className="grid grid-cols-[120px_1fr] items-center gap-4 px-4 py-2.5">
+    <dt className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+      {label}
+    </dt>
+    <dd className="flex min-w-0 items-center gap-2">{children}</dd>
+  </div>
+);
+
+type CapabilityCardProps = {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+};
+
+const CapabilityCard = ({ icon, label, children }: CapabilityCardProps) => (
+  <div className="rounded-md border border-border/60 bg-card/30 p-4">
+    <div className="mb-2 inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+      {icon}
+      {label}
+    </div>
+    {children}
+  </div>
+);
 
 export default ServerDetailPage;

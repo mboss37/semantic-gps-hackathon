@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import {
   CheckCircle2Icon,
   ChevronDownIcon,
@@ -9,6 +10,7 @@ import {
   ChevronsLeftIcon,
   ChevronsRightIcon,
   ColumnsIcon,
+  ListFilterIcon,
   LoaderIcon,
   MoreVerticalIcon,
   ShieldOffIcon,
@@ -32,7 +34,6 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import { type AuditEvent } from "@/lib/schemas/audit-event"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Drawer,
   DrawerClose,
@@ -233,34 +234,6 @@ function DetailField({
 
 const columns: ColumnDef<AuditEvent>[] = [
   {
-    id: "select",
-    header: ({ table }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) =>
-            table.toggleAllPageRowsSelected(!!value)
-          }
-          aria-label="Select all"
-        />
-      </div>
-    ),
-    cell: ({ row }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      </div>
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
     accessorKey: "created_at",
     header: "Time",
     cell: ({ row }) => {
@@ -315,7 +288,18 @@ const columns: ColumnDef<AuditEvent>[] = [
   },
   {
     id: "actions",
-    cell: ({ row }) => (
+    header: () => <span className="sr-only">Actions</span>,
+    cell: ({ row }) => <RowActions event={row.original} />,
+    enableSorting: false,
+    enableHiding: false,
+    size: 48,
+  },
+]
+
+function RowActions({ event }: { event: AuditEvent }) {
+  const router = useRouter()
+  return (
+    <div className="flex justify-end">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -327,10 +311,20 @@ const columns: ColumnDef<AuditEvent>[] = [
             <span className="sr-only">Open menu</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuContent align="end" className="w-44">
           <DropdownMenuItem
             onClick={() => {
-              void navigator.clipboard.writeText(row.original.trace_id)
+              router.push(
+                `/dashboard/audit?trace_id=${encodeURIComponent(event.trace_id)}`,
+              )
+            }}
+          >
+            <ListFilterIcon className="size-3.5" />
+            View audit trail
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              void navigator.clipboard.writeText(event.trace_id)
             }}
           >
             Copy trace ID
@@ -338,7 +332,7 @@ const columns: ColumnDef<AuditEvent>[] = [
           <DropdownMenuItem
             onClick={() => {
               void navigator.clipboard.writeText(
-                JSON.stringify(row.original, null, 2),
+                JSON.stringify(event, null, 2),
               )
             }}
           >
@@ -346,14 +340,13 @@ const columns: ColumnDef<AuditEvent>[] = [
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    ),
-  },
-]
+    </div>
+  )
+}
 
 type TabValue = "all" | "blocked" | "errors"
 
 export function DataTable({ data }: { data: AuditEvent[] }) {
-  const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -389,13 +382,10 @@ export function DataTable({ data }: { data: AuditEvent[] }) {
     state: {
       sorting,
       columnVisibility,
-      rowSelection,
       columnFilters,
       pagination,
     },
     getRowId: (row) => row.id,
-    enableRowSelection: true,
-    onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
@@ -508,10 +498,7 @@ export function DataTable({ data }: { data: AuditEvent[] }) {
             <TableBody>
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
+                  <TableRow key={row.id}>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
                         {flexRender(
@@ -537,8 +524,8 @@ export function DataTable({ data }: { data: AuditEvent[] }) {
         </div>
         <div className="flex items-center justify-between px-4">
           <div className="hidden flex-1 text-sm text-muted-foreground lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
+            {table.getFilteredRowModel().rows.length} event
+            {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
           </div>
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">

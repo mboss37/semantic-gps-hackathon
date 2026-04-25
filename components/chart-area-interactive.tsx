@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
+import * as React from 'react';
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts';
 
-import { DASHBOARD_REFRESH_EVENT } from "@/hooks/use-dashboard-refresh";
+import { DASHBOARD_REFRESH_EVENT } from '@/hooks/use-dashboard-refresh';
 import {
   Card,
   CardAction,
@@ -11,47 +11,39 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from '@/components/ui/card';
 import {
   ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig,
-} from "@/components/ui/chart";
+} from '@/components/ui/chart';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { STATUS_COLORS, STATUS_LABELS } from '@/lib/charts/palette';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@/components/ui/toggle-group";
+  MONITORING_RANGES,
+  RANGE_LABEL,
+  isMonitoringRange,
+  type MonitoringRange,
+} from '@/lib/monitoring/range';
 
-export const description = "Gateway traffic area chart";
+export const description = 'Gateway traffic line chart';
 
-// Sprint 14 WP-14.1: backed by /api/gateway-traffic. Live aggregation over
-// mcp_events replaces the 2024 fixture this shadcn template shipped with.
-// Palette matches components/dashboard/monitoring-volume-chart.tsx so the
-// dashboard overview and the monitoring page tell the same visual story.
+// Sprint 14 WP-14.1 / Sprint 26 unified: same LineChart shape as the audit
+// timeline (monotone curves so the line never overshoots into the negative
+// half-plane on natural-spline interpolation, integer YAxis ticks, shared
+// palette + range vocabulary). Backed by /api/monitoring volume buckets.
 
 type Bucket = {
   date: string;
+  dateLabel: string;
   ok: number;
   blocked: number;
   error: number;
 };
 
-type Range = "7d" | "30d" | "90d";
-
-const isRange = (value: string): value is Range =>
-  value === "7d" || value === "30d" || value === "90d";
-
-// Sprint 17 WP-17.4: exported for unit-test coverage of the empty-state
-// decision. The chart itself is rendered via Recharts in a jsdom-less repo,
-// so the test exercises this pure function instead of React output.
 export const hasNoGatewayTraffic = (data: readonly Bucket[] | null): boolean => {
   if (data === null) return false;
   let total = 0;
@@ -59,55 +51,48 @@ export const hasNoGatewayTraffic = (data: readonly Bucket[] | null): boolean => 
   return total === 0;
 };
 
-const chartConfig = {
-  events: { label: "Events" },
-  ok: { label: "OK", color: "#22c55e" },
-  blocked: { label: "Blocked", color: "#ef4444" },
-  error: { label: "Error", color: "#f59e0b" },
-} satisfies ChartConfig;
+const chartConfig: ChartConfig = {
+  ok: { label: STATUS_LABELS.ok, color: STATUS_COLORS.ok },
+  blocked: { label: STATUS_LABELS.blocked_by_policy, color: STATUS_COLORS.blocked_by_policy },
+  error: { label: STATUS_LABELS.origin_error, color: STATUS_COLORS.origin_error },
+};
 
-// Sprint 21 WP-21.3: deterministic synthetic series for the empty-state
-// faded mock chart. Pre-computed so Recharts doesn't see a fresh array
-// every render (would force unnecessary chart re-mounts).
-const DAY_MS = 24 * 60 * 60 * 1000;
-const MOCK_EMPTY_SERIES: Bucket[] = Array.from({ length: 30 }, (_, i) => {
-  const ts = new Date(Date.now() - (29 - i) * DAY_MS).toISOString().slice(0, 10);
-  return {
-    date: ts,
-    ok: 8 + Math.round(Math.sin(i / 3) * 4 + 6),
-    blocked: 2 + Math.round(Math.cos(i / 4) * 2 + 1),
-    error: 1 + Math.round(Math.sin(i / 5) * 1),
-  };
-});
+const SERIES_KEYS = ['ok', 'blocked', 'error'] as const;
+
+// Drop series with no events in the window — flat zero-lines just clutter
+// the chart + legend. Empty state covers the "everything zero" case.
+const activeSeries = (data: readonly Bucket[] | null): readonly (typeof SERIES_KEYS)[number][] => {
+  if (!data || data.length === 0) return SERIES_KEYS;
+  return SERIES_KEYS.filter((k) => data.some((b) => b[k] > 0));
+};
 
 export const ChartAreaInteractive = () => {
-  const [userRange, setUserRange] = React.useState<Range | null>(null);
-  // Sprint 25 — default to 7d so the demo dataset shows real bars at first
-  // glance instead of a 95% empty 3-month timeline. Real-time KPIs live on
-  // /dashboard/monitoring; this chart is "last week's call shape".
-  const timeRange: Range = userRange ?? "7d";
+  // null = "let server auto-pick the smallest range that contains data" —
+  // same auto-range UX as Monitoring + Audit.
+  const [range, setRange] = React.useState<MonitoringRange | null>(null);
   const [data, setData] = React.useState<Bucket[] | null>(null);
-  // Sprint 21 WP-21.5: bumped by the dashboard-refresh window event to
-  // re-trigger the fetch effect without changing timeRange.
   const [refreshTick, setRefreshTick] = React.useState(0);
 
   React.useEffect(() => {
     let cancelled = false;
     const load = async () => {
       try {
-        const res = await fetch(`/api/gateway-traffic?range=${timeRange}`);
+        const url = range ? `/api/monitoring?range=${range}` : '/api/monitoring';
+        const res = await fetch(url);
         if (!res.ok) throw new Error(`http_${res.status}`);
-        const body = (await res.json()) as { series: Bucket[] };
-        if (!cancelled) setData(body.series);
+        const body = (await res.json()) as { range: MonitoringRange; volume: Bucket[] };
+        if (cancelled) return;
+        setData(body.volume);
+        if (range === null) setRange(body.range);
       } catch {
-        if (!cancelled) setData([]);
+        if (!cancelled && range !== null) setData([]);
       }
     };
     void load();
     return () => {
       cancelled = true;
     };
-  }, [timeRange, refreshTick]);
+  }, [range, refreshTick]);
 
   React.useEffect(() => {
     const onRefresh = () => setRefreshTick((n) => n + 1);
@@ -116,59 +101,32 @@ export const ChartAreaInteractive = () => {
   }, []);
 
   const handleRangeChange = (value: string) => {
-    if (isRange(value)) setUserRange(value);
+    if (!value) return;
+    if (isMonitoringRange(value)) setRange(value);
   };
 
-  // Sprint 17 WP-17.4: when there are zero events (fresh signup, or a quiet
-  // org), render a Card-sized placeholder instead of a blank AreaChart with
-  // no axes/data. Keeps the range toggle interactive so the user can still
-  // explore once traffic arrives.
   const hasNoTraffic = hasNoGatewayTraffic(data);
+  const series = activeSeries(data);
 
   return (
     <Card className="@container/card">
       <CardHeader>
         <CardTitle>Gateway Traffic</CardTitle>
-        <CardDescription>
-          <span className="hidden @[540px]/card:block">
-            Calls over time, split by outcome
-          </span>
-          <span className="@[540px]/card:hidden">Outcome over time</span>
-        </CardDescription>
+        <CardDescription>Calls over time, split by outcome</CardDescription>
         <CardAction>
           <ToggleGroup
             type="single"
-            value={timeRange}
-            onValueChange={(v) => {
-              if (v) handleRangeChange(v);
-            }}
+            value={range ?? ''}
+            onValueChange={handleRangeChange}
             variant="outline"
-            className="hidden *:data-[slot=toggle-group-item]:px-4! @[767px]/card:flex"
+            size="sm"
           >
-            <ToggleGroupItem value="90d">Last 3 months</ToggleGroupItem>
-            <ToggleGroupItem value="30d">Last 30 days</ToggleGroupItem>
-            <ToggleGroupItem value="7d">Last 7 days</ToggleGroupItem>
+            {MONITORING_RANGES.map((r) => (
+              <ToggleGroupItem key={r} value={r} className="px-3">
+                {RANGE_LABEL[r]}
+              </ToggleGroupItem>
+            ))}
           </ToggleGroup>
-          <Select value={timeRange} onValueChange={handleRangeChange}>
-            <SelectTrigger
-              className="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
-              size="sm"
-              aria-label="Select a range"
-            >
-              <SelectValue placeholder="Last 3 months" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              <SelectItem value="90d" className="rounded-lg">
-                Last 3 months
-              </SelectItem>
-              <SelectItem value="30d" className="rounded-lg">
-                Last 30 days
-              </SelectItem>
-              <SelectItem value="7d" className="rounded-lg">
-                Last 7 days
-              </SelectItem>
-            </SelectContent>
-          </Select>
         </CardAction>
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
@@ -179,71 +137,37 @@ export const ChartAreaInteractive = () => {
               hasNoTraffic ? 'pointer-events-none opacity-25' : ''
             }`}
           >
-            <AreaChart data={hasNoTraffic ? MOCK_EMPTY_SERIES : (data ?? [])}>
-              <defs>
-                <linearGradient id="fillOk" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-ok)" stopOpacity={0.9} />
-                  <stop offset="95%" stopColor="var(--color-ok)" stopOpacity={0.1} />
-                </linearGradient>
-                <linearGradient id="fillBlocked" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-blocked)" stopOpacity={0.9} />
-                  <stop offset="95%" stopColor="var(--color-blocked)" stopOpacity={0.1} />
-                </linearGradient>
-                <linearGradient id="fillError" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-error)" stopOpacity={0.9} />
-                  <stop offset="95%" stopColor="var(--color-error)" stopOpacity={0.1} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid vertical={false} />
+            <LineChart data={data ?? []} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+              <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis
-                dataKey="date"
+                dataKey="dateLabel"
                 tickLine={false}
                 axisLine={false}
+                fontSize={11}
                 tickMargin={8}
                 minTickGap={32}
-                tickFormatter={(value) =>
-                  new Date(value).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                  })
-                }
               />
-              <ChartTooltip
-                cursor={false}
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(value) =>
-                      new Date(value).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                      })
-                    }
-                    indicator="dot"
-                  />
-                }
+              <YAxis
+                allowDecimals={false}
+                tickLine={false}
+                axisLine={false}
+                fontSize={11}
+                width={24}
               />
-              <Area
-                dataKey="ok"
-                type="natural"
-                fill="url(#fillOk)"
-                stroke="var(--color-ok)"
-                stackId="a"
-              />
-              <Area
-                dataKey="blocked"
-                type="natural"
-                fill="url(#fillBlocked)"
-                stroke="var(--color-blocked)"
-                stackId="a"
-              />
-              <Area
-                dataKey="error"
-                type="natural"
-                fill="url(#fillError)"
-                stroke="var(--color-error)"
-                stackId="a"
-              />
-            </AreaChart>
+              <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+              <ChartLegend content={<ChartLegendContent />} />
+              {series.map((k) => (
+                <Line
+                  key={k}
+                  type="monotone"
+                  dataKey={k}
+                  stroke={`var(--color-${k})`}
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls
+                />
+              ))}
+            </LineChart>
           </ChartContainer>
           {hasNoTraffic ? (
             <div

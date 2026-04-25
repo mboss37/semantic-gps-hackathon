@@ -36,6 +36,9 @@ export type ServerDetailTool = {
   description: string | null;
   display_name: string | null;
   display_description: string | null;
+  input_schema: unknown;
+  calls24h: number;
+  errors24h: number;
 };
 
 export type ViolationCount = {
@@ -72,6 +75,12 @@ type ToolRow = {
   description: string | null;
   display_name: string | null;
   display_description: string | null;
+  input_schema: unknown;
+};
+
+type ToolEventRow = {
+  status: string;
+  tool_name: string | null;
 };
 
 type PolicyDecisionEntry = {
@@ -129,10 +138,11 @@ export const fetchServerDetail = async (
   if (!server || server.organization_id !== organizationId) return null;
 
   const since = new Date(Date.now() - WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
-  const [toolsRes, eventsRes] = await Promise.all([
+  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const [toolsRes, eventsRes, toolEventsRes] = await Promise.all([
     supabase
       .from('tools')
-      .select('id, server_id, name, description, display_name, display_description')
+      .select('id, server_id, name, description, display_name, display_description, input_schema')
       .eq('server_id', serverId)
       .order('name'),
     supabase
@@ -140,17 +150,41 @@ export const fetchServerDetail = async (
       .select('status, policy_decisions')
       .eq('server_id', serverId)
       .gte('created_at', since),
+    supabase
+      .from('mcp_events')
+      .select('status, tool_name')
+      .eq('server_id', serverId)
+      .gte('created_at', since24h),
   ]);
   if (toolsRes.error) throw new Error(`tools_fetch_failed: ${toolsRes.error.message}`);
   if (eventsRes.error) throw new Error(`events_fetch_failed: ${eventsRes.error.message}`);
+  if (toolEventsRes.error)
+    throw new Error(`tool_events_fetch_failed: ${toolEventsRes.error.message}`);
 
-  const tools = ((toolsRes.data ?? []) as ToolRow[]).map((t) => ({
-    id: t.id,
-    name: t.name,
-    description: t.description,
-    display_name: t.display_name,
-    display_description: t.display_description,
-  }));
+  // Per-tool 24h aggregation. Bucket by tool_name (events store the tool name,
+  // not its uuid). Errors = anything except 'ok' or 'blocked_by_policy'.
+  const callsByTool = new Map<string, { calls: number; errors: number }>();
+  for (const ev of (toolEventsRes.data ?? []) as ToolEventRow[]) {
+    if (!ev.tool_name) continue;
+    const bucket = callsByTool.get(ev.tool_name) ?? { calls: 0, errors: 0 };
+    bucket.calls += 1;
+    if (ev.status !== 'ok' && ev.status !== 'blocked_by_policy') bucket.errors += 1;
+    callsByTool.set(ev.tool_name, bucket);
+  }
+
+  const tools = ((toolsRes.data ?? []) as ToolRow[]).map((t) => {
+    const stats = callsByTool.get(t.name);
+    return {
+      id: t.id,
+      name: t.name,
+      description: t.description,
+      display_name: t.display_name,
+      display_description: t.display_description,
+      input_schema: t.input_schema,
+      calls24h: stats?.calls ?? 0,
+      errors24h: stats?.errors ?? 0,
+    };
+  });
   const violationsByPolicy = aggregateViolations((eventsRes.data ?? []) as EventRow[]);
 
   return {

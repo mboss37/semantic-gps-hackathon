@@ -67,17 +67,17 @@ describe('/dashboard overview — ChartAreaInteractive empty state', () => {
 
   it('hasNoGatewayTraffic returns true when every bucket is zero (fresh signup)', () => {
     const series = [
-      { date: '2026-04-17', ok: 0, blocked: 0, error: 0 },
-      { date: '2026-04-18', ok: 0, blocked: 0, error: 0 },
-      { date: '2026-04-19', ok: 0, blocked: 0, error: 0 },
+      { date: '2026-04-17', dateLabel: 'Apr 17', ok: 0, blocked: 0, error: 0 },
+      { date: '2026-04-18', dateLabel: 'Apr 18', ok: 0, blocked: 0, error: 0 },
+      { date: '2026-04-19', dateLabel: 'Apr 19', ok: 0, blocked: 0, error: 0 },
     ];
     expect(hasNoGatewayTraffic(series)).toBe(true);
   });
 
   it('hasNoGatewayTraffic returns false as soon as any bucket has any event', () => {
-    const onlyOk = [{ date: '2026-04-19', ok: 1, blocked: 0, error: 0 }];
-    const onlyBlocked = [{ date: '2026-04-19', ok: 0, blocked: 1, error: 0 }];
-    const onlyError = [{ date: '2026-04-19', ok: 0, blocked: 0, error: 1 }];
+    const onlyOk = [{ date: '2026-04-19', dateLabel: 'Apr 19', ok: 1, blocked: 0, error: 0 }];
+    const onlyBlocked = [{ date: '2026-04-19', dateLabel: 'Apr 19', ok: 0, blocked: 1, error: 0 }];
+    const onlyError = [{ date: '2026-04-19', dateLabel: 'Apr 19', ok: 0, blocked: 0, error: 1 }];
     expect(hasNoGatewayTraffic(onlyOk)).toBe(false);
     expect(hasNoGatewayTraffic(onlyBlocked)).toBe(false);
     expect(hasNoGatewayTraffic(onlyError)).toBe(false);

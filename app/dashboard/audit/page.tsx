@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { FilterIcon, RefreshCwIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -58,10 +59,16 @@ const isFilter = (value: string): value is Filter =>
   value === 'rollbacks';
 
 const AuditPage = () => {
+  // Sprint 26 — deep-link from /dashboard recent activity row "View audit
+  // trail" action lands here with ?trace_id=<uuid>. Seed local state from
+  // the URL once at mount so the trace input + filter chip pre-populate.
+  const searchParams = useSearchParams();
+  const initialTraceId = searchParams.get('trace_id') ?? '';
+
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [timeline, setTimeline] = useState<AuditTimelineBucket[]>([]);
   const [total, setTotal] = useState(0);
-  const [traceId, setTraceId] = useState('');
+  const [traceId, setTraceId] = useState(initialTraceId);
   const [paused, setPaused] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);

@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ActivityIcon, ArrowRightIcon } from 'lucide-react';
 
 import { ChartAreaInteractive } from '@/components/chart-area-interactive';
+import { DataTable } from '@/components/data-table';
 import { SectionCards } from '@/components/section-cards';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { requireAuth, UnauthorizedError } from '@/lib/auth';
+import { auditEventSchema, type AuditEvent } from '@/lib/schemas/audit-event';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,33 +48,49 @@ const DashboardPage = async () => {
     .eq('organization_id', organization_id);
   const serverIds = (orgServers ?? []).map((s) => s.id);
 
-  const [serversRes, toolsRes, policiesRes, events24hRes, eventsPrev24hRes] = await Promise.all([
-    supabase
-      .from('servers')
-      .select('id', { count: 'exact', head: true })
-      .eq('organization_id', organization_id),
-    serverIds.length === 0
-      ? Promise.resolve({ count: 0, error: null })
-      : supabase
-          .from('tools')
-          .select('id', { count: 'exact', head: true })
-          .in('server_id', serverIds),
-    supabase
-      .from('policies')
-      .select('id', { count: 'exact', head: true })
-      .eq('organization_id', organization_id),
-    supabase
-      .from('mcp_events')
-      .select('id', { count: 'exact', head: true })
-      .eq('organization_id', organization_id)
-      .gte('created_at', dayAgo),
-    supabase
-      .from('mcp_events')
-      .select('id', { count: 'exact', head: true })
-      .eq('organization_id', organization_id)
-      .gte('created_at', twoDaysAgo)
-      .lt('created_at', dayAgo),
-  ]);
+  const [serversRes, toolsRes, policiesRes, events24hRes, eventsPrev24hRes, recentRes] =
+    await Promise.all([
+      supabase
+        .from('servers')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', organization_id),
+      serverIds.length === 0
+        ? Promise.resolve({ count: 0, error: null })
+        : supabase
+            .from('tools')
+            .select('id', { count: 'exact', head: true })
+            .in('server_id', serverIds),
+      supabase
+        .from('policies')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', organization_id),
+      supabase
+        .from('mcp_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', organization_id)
+        .gte('created_at', dayAgo),
+      supabase
+        .from('mcp_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', organization_id)
+        .gte('created_at', twoDaysAgo)
+        .lt('created_at', dayAgo),
+      supabase
+        .from('mcp_events')
+        .select(
+          'id, trace_id, server_id, tool_name, method, status, latency_ms, created_at, policy_decisions',
+        )
+        .eq('organization_id', organization_id)
+        .order('created_at', { ascending: false })
+        .limit(50),
+    ]);
+
+  const events: AuditEvent[] = (recentRes.data ?? [])
+    .map((row) => {
+      const parsed = auditEventSchema.safeParse(row);
+      return parsed.success ? parsed.data : null;
+    })
+    .filter((e): e is AuditEvent => e !== null);
 
   return (
     <div className="@container/main flex flex-1 flex-col gap-2">
@@ -88,37 +105,31 @@ const DashboardPage = async () => {
         <div className="px-4 lg:px-6">
           <ChartAreaInteractive />
         </div>
-        <div className="px-4 lg:px-6">
-          <Card>
-            <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-              <div>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <ActivityIcon className="size-4" />
-                  Recent activity
-                </CardTitle>
-                <CardDescription>
-                  Every MCP call that passes through the gateway — policy decisions, latency,
-                  trace IDs, full payload context.
-                </CardDescription>
-              </div>
-              <Button asChild variant="secondary">
-                <Link href="/dashboard/audit">
-                  View full audit
-                  <ArrowRightIcon className="size-3.5" />
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                <span>Filter by status, tool, policy.</span>
-                <span aria-hidden>·</span>
-                <span>Drill into the redacted payload + trace via row-click.</span>
-                <span aria-hidden>·</span>
-                <span>Time-range picker (15m → 7d).</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {events.length === 0 ? (
+          <div className="px-4 lg:px-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent events</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-start gap-3">
+                <p className="text-sm text-muted-foreground">
+                  No gateway events yet. Every MCP call that passes through Semantic GPS shows
+                  up here — policy decisions, latency, trace IDs, the lot.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild size="sm">
+                    <Link href="/dashboard/playground">Open Playground</Link>
+                  </Button>
+                  <Button asChild size="sm" variant="outline">
+                    <Link href="/dashboard/servers">Register an MCP server</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <DataTable data={events} />
+        )}
       </div>
     </div>
   );

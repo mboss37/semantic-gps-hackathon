@@ -1,11 +1,8 @@
 import { redirect } from 'next/navigation';
 import { requireAuth, UnauthorizedError } from '@/lib/auth';
 import { ImportDialog } from '@/components/dashboard/import-dialog';
-import {
-  ServerCard,
-  type ServerHealth,
-  type ToolSummary,
-} from '@/components/dashboard/server-card';
+import { ServerCard, type ToolSummary } from '@/components/dashboard/server-card';
+import { probeServerOrigin, type ProbeResult } from '@/lib/servers/health';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,13 +33,6 @@ const since24hIso = (): string =>
   new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
 type Stats = { calls: number; errors: number };
-
-const deriveHealth = (s: Stats | undefined): ServerHealth => {
-  if (!s || s.calls === 0) return 'unknown';
-  if (s.errors === 0) return 'ok';
-  if (s.errors >= s.calls) return 'down';
-  return 'degraded';
-};
 
 const ServersPage = async () => {
   let ctx;
@@ -97,10 +87,6 @@ const ServersPage = async () => {
     toolsByServer.set(t.server_id, bucket);
   }
 
-  // Sprint 25 — derive health + 24h traffic per server from a single
-  // mcp_events sweep. Server-side: cheaper than the per-card live probe
-  // and covers what users actually care about (recent failures vs steady
-  // green) without N HTTP calls on render.
   const statsByServer = new Map<string, Stats>();
   for (const ev of (eventsRes.data ?? []) as EventRow[]) {
     if (!ev.server_id) continue;
@@ -109,6 +95,20 @@ const ServersPage = async () => {
     if (ev.status !== 'ok' && ev.status !== 'blocked_by_policy') s.errors += 1;
     statsByServer.set(ev.server_id, s);
   }
+
+  // Sprint 26 — live origin probe per server, in parallel during render.
+  // 2s timeout per probe means worst case is one extra ~2s wait if every
+  // origin is dead; happy path is sub-100ms total since they run together.
+  // Health is the FIRST thing the user wants to see on the list page —
+  // surfacing it via card badge avoids the "click in to discover dead
+  // origin" anti-pattern.
+  const healthEntries = await Promise.all(
+    servers.map(async (s): Promise<[string, ProbeResult]> => [
+      s.id,
+      await probeServerOrigin(s.origin_url),
+    ]),
+  );
+  const healthByServer = new Map<string, ProbeResult>(healthEntries);
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -134,6 +134,7 @@ const ServersPage = async () => {
         <div className="grid gap-4 md:grid-cols-2">
           {servers.map((s) => {
             const stats = statsByServer.get(s.id);
+            const probe = healthByServer.get(s.id);
             return (
               <ServerCard
                 key={s.id}
@@ -141,11 +142,11 @@ const ServersPage = async () => {
                 name={s.name}
                 transport={s.transport}
                 originUrl={s.origin_url}
-                createdAt={s.created_at}
                 tools={toolsByServer.get(s.id) ?? []}
                 calls24h={stats?.calls ?? 0}
                 errors24h={stats?.errors ?? 0}
-                health={deriveHealth(stats)}
+                health={probe?.status ?? 'unknown'}
+                healthLatencyMs={probe?.latencyMs ?? null}
               />
             );
           })}

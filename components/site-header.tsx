@@ -1,39 +1,22 @@
 'use client';
 
-import { useEffect } from 'react';
 import { SparklesIcon } from 'lucide-react';
 
-import { RefreshButton } from '@/components/dashboard/refresh-button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { useDashboardRefresh } from '@/hooks/use-dashboard-refresh';
 import { useRealtimeDashboardEvents } from '@/hooks/use-realtime-dashboard-events';
 
 // Pure chrome strip — sidebar trigger on the left, brand-presence cluster on
-// the right. Page titles live in the main content (each page owns its own
-// h1 + description). Killed the duplicate title in this strip Sprint 24
-// after the doubled-headline UX review.
+// the right. Realtime channel is mounted once here as a singleton so every
+// dashboard page picks up live mcp_events updates without a manual refresh.
+// Sprint 26: dropped the manual RefreshButton — realtime + RSC re-fetch on
+// nav covers the use cases it was solving.
 
 type Props = {
   orgName?: string;
 };
 
 export function SiteHeader({ orgName }: Props = {}) {
-  const { refresh } = useDashboardRefresh();
-
   useRealtimeDashboardEvents();
-
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') refresh();
-    };
-    const onFocus = () => refresh();
-    document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', onFocus);
-    return () => {
-      document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', onFocus);
-    };
-  }, [refresh]);
 
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b bg-sidebar transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
@@ -49,7 +32,6 @@ export function SiteHeader({ orgName }: Props = {}) {
             <SparklesIcon className="size-3.5" />
             Built with Opus 4.7
           </span>
-          <RefreshButton />
         </div>
       </div>
     </header>
