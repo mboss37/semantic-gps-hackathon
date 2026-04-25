@@ -118,16 +118,18 @@
 - WP-19.8 auth hook: `profile_completed` folded into JWT claim, `active_org_id` metadata + `PUT /api/user/active-org`, `decodeJwtClaims` reused by `proxy.ts`
 - WP-19.9 rollback cascade: `unwrapMcpEnvelope` at capture bag (handles bare-array + wrapped shapes). Lessons #33 + #34. Verified unit + proven-negative integration + local E2E (compensated_count:2, failed_count:0)
 
+**Sprint 20 — Dashboard nav perf + onboarding JWT refresh (Sat Apr 25):**
+- WP-20.1 Onboarding JWT refresh — `auth.refreshSession()` after profile flip so cookie carries fresh `profile_completed:true`. Hosted migrations 220000/220100 backfilled mid-sprint after fresh-signup hit hook drift.
+- WP-20.2 `requireAuth` React `cache()` wrap — 3 duplicate `getUser()` round-trips → 1 per RSC render. Contract tests since `cache()` is no-op in vitest.
+- WP-20.3 `loading.tsx` skeletons — top-level + servers/routes/monitoring. Perceived nav latency: blank-on-previous → <50ms paint.
+- WP-20.4 Catalog `force-dynamic` removed — annotation cleanup, PPR-ready (layout cookies still envelope-dynamic).
+- 20.5 per-card Suspense skipped (stretch). Lessons #35 + #36. 341/2/0 tests, 6 commits.
+
 ## Current:
 
-**Sprint 20 — Dashboard nav perf + onboarding JWT refresh:**
-- [x] WP-20.1 Onboarding JWT refresh — `refreshSession()` in server action so cookie carries fresh `profile_completed:true` claim. Hosted migrations 20260425220000/220100 pushed.
-- [x] WP-20.2 `requireAuth()` React `cache()` wrap — 3 duplicate `getUser()` round-trips → 1 per RSC request. Contract test guards the wrap.
-- [x] WP-20.3 `loading.tsx` skeletons — top-level + servers/routes/monitoring. Perceived latency drops from blank-on-previous-page to <50ms paint.
-- [x] WP-20.4 Catalog `force-dynamic` removed — explicit annotation was misleading; layout cookies still envelope-dynamic, but PPR-ready.
-- [~] WP-20.5 Per-card Suspense — skipped (stretch). Overview's 6 parallel RLS-cheap queries complete within perceived-instant window; splitting only helps if measurement shows otherwise. Re-open if dashboard still feels slow post-deploy.
+(Awaiting next sprint plan — pull WPs from `BACKLOG.md` when opening.)
 
 ## Session Log
+- 2026-04-25 — Sprint 20 shipped: 4 WPs, 6 commits pushed. Dashboard nav perf collapse — `requireAuth` React `cache()` wrap (3 `getUser()` round-trips → 1 per RSC render) + `loading.tsx` skeletons → perceived nav latency ~1-2s blank → <50ms instant paint. Onboarding JWT-refresh fix unblocks every fresh signup: `auth.updateUser` doesn't refresh tokens, so `refreshSession()` after the flag flip is mandatory for the hook to re-stamp claims. Hosted migrations 220000/220100 backfilled mid-sprint after fresh-signup hit hooked-claim drift (Lesson #32 gate held but human skipped it; memo to self next time). 5 memories + Hard-Won Lessons #35/#36. 341/2/0 tests.
 - 2026-04-24 — Sprint 19 shipped: 9 WPs, 21 items, 2 commits pushed. MCP envelope unwrap at capture bag unblocks demo story #9 (verified three ways: 7 unit + proven-negative integration + live E2E against real SF/Slack/GH). Reviewer flagged 7 blockers — fixed 5 (circular via route-utils leaf, getSession waivers, `as` cast cleanup), accepted 2 (execute-route.ts 610 lines, executeRollback 155 lines) as pragma. 7 memories + Hard-Won Lessons #33/#34. 337/2/0 tests.
 - 2026-04-24 — Sprint 18 shipped: 3 WPs (specialist prework + landing v0 + end-to-end deploy signup validation). Bonuses mid-WP-3: `/signup/check-email` industry page, `/login` `?error=` surfacing, hosted migration 22 push closing a week-old Sprint 17 drift. New Hard-Won Lesson #32 + `migrations.md § Sprint wrap` gate pin the drift class. Four memories stored. 327/2/0. 6 commits.
-- 2026-04-24 — Sprint 17 shipped: 4 WPs (catalog gallery + token consent + no-MCP guard + empty-state audit). Parallel subagent `git stash` collision wiped 17.2's work mid-sprint; main thread reconstructed + follow-up commit mandated `isolation: worktree` frontmatter on write-capable subagents. 4 new memories + 2 Hard-Won Lessons pin the fix. 327/2/0. 5 commits.
