@@ -4,7 +4,12 @@ import { Button } from '@/components/ui/button';
 import { PolicyCatalogCard } from '@/components/dashboard/policy-catalog-card';
 import { DIMENSION_LABELS, POLICY_CATALOG, type PolicyDimension } from '@/lib/policies/catalog';
 
-export const dynamic = 'force-dynamic';
+// Sprint 20 WP-20.4: catalog content is pure static data — no auth, no DB,
+// no cookies. The parent layout still reads cookies via requireAuth() so the
+// route ends up dynamic at the envelope, but removing the explicit
+// force-dynamic lets Next.js optimize within that envelope and prepares the
+// page for PPR (deferred — experimental) which would static-render the
+// content while keeping the layout dynamic.
 
 const DIMENSION_ORDER: PolicyDimension[] = [
   'hygiene',
