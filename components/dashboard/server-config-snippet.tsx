@@ -1,18 +1,16 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { CheckIcon, CopyIcon } from 'lucide-react';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
+import { useMemo, useSyncExternalStore } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { CopyButton } from '@/components/dashboard/copy-button';
 
 // Judge-facing copy-paste block. Embeds the gateway URL for this server but
-// NEVER a real token — the placeholder `<YOUR_GATEWAY_TOKEN — …>` is
-// intentional so a screen recording can't leak a bearer. URL resolution:
-//   1. NEXT_PUBLIC_APP_URL if set at build time
-//   2. otherwise fall back to window.location.origin at first render
-// Server-render picks up #1 or renders `""` (no origin) until the client
-// hydrates — the `useMemo` re-computes once `window` exists.
+// NEVER a real token — the `<YOUR_GATEWAY_TOKEN — …>` placeholder is
+// intentional so a screen recording can't leak a bearer.
+// Origin resolution: useSyncExternalStore reads window.location.origin on
+// hydration so the snippet always reflects the host the user is actually on
+// (localhost in dev, Vercel domain on hosted, tunnel only when on the tunnel).
+// Sprint 25 fix — NEXT_PUBLIC_APP_URL was a stale-tunnel footgun.
 
 type Props = {
   serverId: string;
@@ -28,19 +26,21 @@ const slugify = (input: string): string => {
   return base.length > 0 ? base : 'server';
 };
 
-const resolveOrigin = (): string => {
-  const envUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (envUrl && envUrl.length > 0) return envUrl.replace(/\/+$/, '');
-  if (typeof window !== 'undefined') return window.location.origin;
-  return '';
-};
+// useSyncExternalStore needs a subscribe fn even for static browser values.
+// origin doesn't change after mount, so the subscriber is a no-op.
+const subscribeNoop = () => () => {};
 
 export const ServerConfigSnippet = ({ serverId, serverName }: Props) => {
-  const [copied, setCopied] = useState(false);
+  const origin = useSyncExternalStore(
+    subscribeNoop,
+    () => window.location.origin,
+    () => '',
+  );
 
   const snippet = useMemo(() => {
-    const origin = resolveOrigin();
-    const url = origin.length > 0 ? `${origin}/api/mcp/server/${serverId}` : `/api/mcp/server/${serverId}`;
+    const url = origin.length > 0
+      ? `${origin}/api/mcp/server/${serverId}`
+      : `/api/mcp/server/${serverId}`;
     const config = {
       mcpServers: {
         [slugify(serverName)]: {
@@ -53,17 +53,7 @@ export const ServerConfigSnippet = ({ serverId, serverName }: Props) => {
       },
     };
     return JSON.stringify(config, null, 2);
-  }, [serverId, serverName]);
-
-  const onCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(snippet);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      toast.error('Copy failed — select manually');
-    }
-  };
+  }, [serverId, serverName, origin]);
 
   return (
     <Card>
@@ -80,19 +70,7 @@ export const ServerConfigSnippet = ({ serverId, serverName }: Props) => {
               .
             </CardDescription>
           </div>
-          <Button variant="secondary" size="sm" onClick={() => void onCopy()}>
-            {copied ? (
-              <>
-                <CheckIcon className="size-3.5" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <CopyIcon className="size-3.5" />
-                Copy
-              </>
-            )}
-          </Button>
+          <CopyButton value={snippet} />
         </div>
       </CardHeader>
       <CardContent>

@@ -3,7 +3,6 @@
 import * as React from "react";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 
-import { useIsMobile } from "@/hooks/use-mobile";
 import { DASHBOARD_REFRESH_EVENT } from "@/hooks/use-dashboard-refresh";
 import {
   Card,
@@ -82,9 +81,11 @@ const MOCK_EMPTY_SERIES: Bucket[] = Array.from({ length: 30 }, (_, i) => {
 });
 
 export const ChartAreaInteractive = () => {
-  const isMobile = useIsMobile();
   const [userRange, setUserRange] = React.useState<Range | null>(null);
-  const timeRange: Range = userRange ?? (isMobile ? "7d" : "90d");
+  // Sprint 25 — default to 7d so the demo dataset shows real bars at first
+  // glance instead of a 95% empty 3-month timeline. Real-time KPIs live on
+  // /dashboard/monitoring; this chart is "last week's call shape".
+  const timeRange: Range = userRange ?? "7d";
   const [data, setData] = React.useState<Bucket[] | null>(null);
   // Sprint 21 WP-21.5: bumped by the dashboard-refresh window event to
   // re-trigger the fetch effect without changing timeRange.

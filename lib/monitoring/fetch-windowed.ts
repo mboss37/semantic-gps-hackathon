@@ -104,6 +104,7 @@ export const fetchMonitoringWindowed = async (
   organizationId: string,
   range: MonitoringRange,
   nowMs: number = Date.now(),
+  serverId?: string,
 ): Promise<WindowedMonitoring> => {
   const spec = RANGE_SPECS[range];
   const anchor = anchorMs(nowMs, spec);
@@ -114,12 +115,17 @@ export const fetchMonitoringWindowed = async (
 
   // Single query covering BOTH the current window and the prior equal-length
   // window. Splits in JS — half the network cost, same data, simpler than
-  // two parallel selects.
-  const { data, error } = await supabase
+  // two parallel selects. Optional serverId filter lets server-detail pages
+  // reuse the exact same compute path scoped to one MCP server.
+  let query = supabase
     .from('mcp_events')
     .select('created_at, status, policy_decisions, latency_ms')
     .eq('organization_id', organizationId)
     .gte('created_at', priorSince);
+  if (serverId) {
+    query = query.eq('server_id', serverId);
+  }
+  const { data, error } = await query;
   if (error) throw new Error(`mcp_events_fetch_failed: ${error.message}`);
   const allRows = (data ?? []) as unknown as EventRow[];
   const rows: EventRow[] = [];

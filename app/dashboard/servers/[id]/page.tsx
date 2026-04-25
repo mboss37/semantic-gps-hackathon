@@ -1,17 +1,23 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeftIcon, ShieldAlertIcon, WrenchIcon, LinkIcon, BookIcon } from 'lucide-react';
+import { ArrowLeftIcon, BookIcon, LinkIcon, ShieldAlertIcon, WrenchIcon } from 'lucide-react';
+
 import { requireAuth, UnauthorizedError } from '@/lib/auth';
 import { fetchServerDetail, fetchRemoteCapabilities } from '@/lib/servers/fetch';
+import { fetchMonitoringWindowed } from '@/lib/monitoring/fetch-windowed';
+import { MonitoringKpiStrip } from '@/components/dashboard/monitoring-kpi-strip';
 import { ServerConfigSnippet } from '@/components/dashboard/server-config-snippet';
 import { ServerHealthBadge } from '@/components/dashboard/server-health-badge';
 import { ServerRediscoverButton } from '@/components/dashboard/server-rediscover-button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export const dynamic = 'force-dynamic';
 
 type Params = { id: string };
+
+const since24hIso = (): string =>
+  new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
 const ServerDetailPage = async ({ params }: { params: Promise<Params> }) => {
   const { id } = await params;
@@ -34,20 +40,52 @@ const ServerDetailPage = async ({ params }: { params: Promise<Params> }) => {
   const detail = await fetchServerDetail(supabase, organization_id, id);
   if (!detail) notFound();
 
-  // `detail.authConfig` is the raw server-only field exposed by
-  // fetchServerDetail for this capabilities call. It never reaches any
-  // Client Component (see the type's JSDoc in lib/servers/fetch.ts).
   const capabilities = await fetchRemoteCapabilities({
     transport: detail.server.transport,
     origin_url: detail.server.origin_url,
     auth_config: detail.authConfig,
   });
 
-  const createdAt = new Date(detail.server.created_at).toLocaleDateString();
+  // Sprint 25 — server-scoped 24h KPI strip + header stat row. Reuses the
+  // monitoring fetch-windowed pipeline with the new optional serverId filter.
+  // Pass `undefined` for nowMs so the function falls through to its
+  // Date.now() default — react-hooks/purity bans calling Date.now() in
+  // render bodies but a default-arg evaluation isn't render-side.
+  const monitoring = await fetchMonitoringWindowed(
+    supabase,
+    organization_id,
+    '24h',
+    undefined,
+    detail.server.id,
+  );
+
+  const sinceIso = since24hIso();
+  const { data: events24hData } = await supabase
+    .from('mcp_events')
+    .select('status')
+    .eq('organization_id', organization_id)
+    .eq('server_id', detail.server.id)
+    .gte('created_at', sinceIso);
+  const events24h = (events24hData ?? []) as { status: string }[];
+  const calls24h = events24h.length;
+  const errors24h = events24h.filter(
+    (e) => e.status !== 'ok' && e.status !== 'blocked_by_policy',
+  ).length;
+  const errorRate24h = calls24h === 0 ? 0 : (errors24h / calls24h) * 100;
+
+  const createdAt = new Date(detail.server.created_at).toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
   const totalViolations = detail.violationsByPolicy.reduce((acc, v) => acc + v.count, 0);
 
+  const hasResources = capabilities.resources && capabilities.resources.length > 0;
+  const hasPrompts = capabilities.prompts && capabilities.prompts.length > 0;
+  const otherSurfaces = hasResources || hasPrompts;
+
   return (
-    <div className="flex flex-col gap-4 p-4 md:p-6">
+    <div className="flex flex-col gap-6 p-4 md:p-6">
       <div>
         <Link
           href="/dashboard/servers"
@@ -57,31 +95,65 @@ const ServerDetailPage = async ({ params }: { params: Promise<Params> }) => {
           All servers
         </Link>
       </div>
-      <header className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h1 className="truncate text-2xl font-semibold">{detail.server.name}</h1>
-            <Badge variant="outline" className="shrink-0">
-              {detail.server.transport}
-            </Badge>
-            {detail.server.has_auth ? (
-              <Badge variant="secondary" className="shrink-0">auth configured</Badge>
+
+      <header className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="truncate text-2xl font-semibold">{detail.server.name}</h1>
+              <Badge variant="outline" className="shrink-0">
+                {detail.server.transport}
+              </Badge>
+              {detail.server.has_auth ? (
+                <Badge variant="secondary" className="shrink-0">
+                  auth configured
+                </Badge>
+              ) : null}
+            </div>
+            {detail.server.origin_url ? (
+              <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
+                {detail.server.origin_url}
+              </p>
             ) : null}
           </div>
-          {detail.server.origin_url ? (
-            <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
-              {detail.server.origin_url}
-            </p>
-          ) : null}
-          <p className="mt-1 text-xs text-muted-foreground">
-            {detail.tools.length} {detail.tools.length === 1 ? 'tool' : 'tools'} · registered {createdAt}
-          </p>
+          <ServerRediscoverButton serverId={detail.server.id} />
         </div>
-        <ServerRediscoverButton serverId={detail.server.id} />
+
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <span>
+            <span className="font-medium text-foreground">{detail.tools.length}</span>{' '}
+            {detail.tools.length === 1 ? 'tool' : 'tools'}
+          </span>
+          <span aria-hidden>·</span>
+          <span>
+            <span className="font-medium text-foreground">{calls24h}</span>{' '}
+            {calls24h === 1 ? 'call' : 'calls'} 24h
+          </span>
+          <span aria-hidden>·</span>
+          <span>
+            <span
+              className={`font-medium ${errors24h > 0 ? 'text-amber-300' : 'text-foreground'}`}
+            >
+              {errorRate24h.toFixed(1)}%
+            </span>{' '}
+            error rate
+          </span>
+          <span aria-hidden>·</span>
+          <span>registered {createdAt}</span>
+        </div>
+
+        <Card>
+          <CardContent className="pt-6">
+            <ServerHealthBadge serverId={detail.server.id} />
+          </CardContent>
+        </Card>
       </header>
 
+      <section className="@container/main">
+        <MonitoringKpiStrip {...monitoring.kpis} />
+      </section>
+
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Left column: tools + violations */}
         <div className="flex flex-col gap-4">
           <Card>
             <CardHeader>
@@ -105,9 +177,7 @@ const ServerDetailPage = async ({ params }: { params: Promise<Params> }) => {
                       <div className="flex items-baseline gap-2">
                         <code className="font-mono text-xs">{t.name}</code>
                         {t.display_name && t.display_name !== t.name ? (
-                          <span className="text-xs text-muted-foreground">
-                            {t.display_name}
-                          </span>
+                          <span className="text-xs text-muted-foreground">{t.display_name}</span>
                         ) : null}
                       </div>
                       {t.description ? (
@@ -161,77 +231,60 @@ const ServerDetailPage = async ({ params }: { params: Promise<Params> }) => {
           </Card>
         </div>
 
-        {/* Right column: config snippet + remote capabilities + origin health */}
         <div className="flex flex-col gap-4">
           <ServerConfigSnippet serverId={detail.server.id} serverName={detail.server.name} />
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <LinkIcon className="size-4" />
-                Resources
-              </CardTitle>
-              <CardDescription>Origin MCP <code>resources/list</code>.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {capabilities.resources === null ? (
-                <p className="text-xs text-muted-foreground">(not supported by origin)</p>
-              ) : capabilities.resources.length === 0 ? (
-                <p className="text-xs text-muted-foreground">(none)</p>
-              ) : (
-                <ul className="flex flex-col divide-y divide-border">
-                  {capabilities.resources.map((r) => (
-                    <li key={r.uri} className="flex flex-col gap-0.5 py-2 first:pt-0 last:pb-0">
-                      <code className="font-mono text-xs">{r.name}</code>
-                      <span className="truncate font-mono text-[11px] text-muted-foreground">
-                        {r.uri}
-                      </span>
-                      {r.description ? (
-                        <span className="text-xs text-muted-foreground">{r.description}</span>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <BookIcon className="size-4" />
-                Prompts
-              </CardTitle>
-              <CardDescription>Origin MCP <code>prompts/list</code>.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {capabilities.prompts === null ? (
-                <p className="text-xs text-muted-foreground">(not supported by origin)</p>
-              ) : capabilities.prompts.length === 0 ? (
-                <p className="text-xs text-muted-foreground">(none)</p>
-              ) : (
-                <ul className="flex flex-col divide-y divide-border">
-                  {capabilities.prompts.map((p) => (
-                    <li key={p.name} className="flex flex-col gap-0.5 py-2 first:pt-0 last:pb-0">
-                      <code className="font-mono text-xs">{p.name}</code>
-                      {p.description ? (
-                        <span className="text-xs text-muted-foreground">{p.description}</span>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Origin status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ServerHealthBadge serverId={detail.server.id} />
-            </CardContent>
-          </Card>
+          {otherSurfaces ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Other MCP surfaces</CardTitle>
+                <CardDescription>
+                  Resources + prompts exposed by the origin alongside tools.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4">
+                {hasResources ? (
+                  <div>
+                    <p className="mb-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                      <LinkIcon className="size-3.5" />
+                      Resources
+                    </p>
+                    <ul className="flex flex-col divide-y divide-border">
+                      {capabilities.resources?.map((r) => (
+                        <li key={r.uri} className="flex flex-col gap-0.5 py-2 first:pt-0 last:pb-0">
+                          <code className="font-mono text-xs">{r.name}</code>
+                          <span className="truncate font-mono text-[11px] text-muted-foreground">
+                            {r.uri}
+                          </span>
+                          {r.description ? (
+                            <span className="text-xs text-muted-foreground">{r.description}</span>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                {hasPrompts ? (
+                  <div>
+                    <p className="mb-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                      <BookIcon className="size-3.5" />
+                      Prompts
+                    </p>
+                    <ul className="flex flex-col divide-y divide-border">
+                      {capabilities.prompts?.map((p) => (
+                        <li key={p.name} className="flex flex-col gap-0.5 py-2 first:pt-0 last:pb-0">
+                          <code className="font-mono text-xs">{p.name}</code>
+                          {p.description ? (
+                            <span className="text-xs text-muted-foreground">{p.description}</span>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+          ) : null}
         </div>
       </div>
     </div>

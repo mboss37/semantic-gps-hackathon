@@ -14,6 +14,7 @@ export const dynamic = 'force-dynamic';
 
 const querySchema = z.object({
   range: z.enum(MONITORING_RANGES as unknown as [MonitoringRange, ...MonitoringRange[]]).optional(),
+  serverId: z.string().uuid().optional(),
 });
 
 export const GET = async (req: Request) => {
@@ -22,13 +23,20 @@ export const GET = async (req: Request) => {
     const url = new URL(req.url);
     const parsed = querySchema.safeParse({
       range: url.searchParams.get('range') ?? undefined,
+      serverId: url.searchParams.get('serverId') ?? undefined,
     });
     if (!parsed.success) {
-      return NextResponse.json({ error: 'invalid_range' }, { status: 400 });
+      return NextResponse.json({ error: 'invalid_query' }, { status: 400 });
     }
     const range: MonitoringRange =
       parsed.data.range ?? pickAutoRange(await fetchLatestEventMs(supabase, organization_id));
-    const data = await fetchMonitoringWindowed(supabase, organization_id, range);
+    const data = await fetchMonitoringWindowed(
+      supabase,
+      organization_id,
+      range,
+      Date.now(),
+      parsed.data.serverId,
+    );
     return NextResponse.json({ range, ...data });
   } catch (e) {
     if (e instanceof UnauthorizedError) {
