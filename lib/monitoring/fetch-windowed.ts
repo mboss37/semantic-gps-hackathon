@@ -17,6 +17,7 @@ type EventRow = {
   created_at: string;
   status: string;
   policy_decisions: unknown;
+  latency_ms: number | null;
 };
 
 type PolicyDecisionEntry = {
@@ -48,14 +49,55 @@ export type WindowedPiiCount = {
   count: number;
 };
 
+// Headline numbers for the KPI strip. `prior` covers the equal-length window
+// immediately before the current one so deltas reflect like-for-like change.
+export type WindowedKpis = {
+  totalCalls: number;
+  errorRate: number;
+  blockRate: number;
+  p95LatencyMs: number;
+};
+
+export type WindowedKpiBlock = {
+  current: WindowedKpis;
+  prior: WindowedKpis;
+};
+
 export type WindowedMonitoring = {
   volume: WindowedVolumeBucket[];
   blocks: WindowedPolicyBlockBucket[];
   pii: WindowedPiiCount[];
+  kpis: WindowedKpiBlock;
 };
 
 const decisionsOf = (row: EventRow): PolicyDecisionEntry[] =>
   Array.isArray(row.policy_decisions) ? (row.policy_decisions as PolicyDecisionEntry[]) : [];
+
+const computeKpis = (rows: EventRow[]): WindowedKpis => {
+  const total = rows.length;
+  if (total === 0) {
+    return { totalCalls: 0, errorRate: 0, blockRate: 0, p95LatencyMs: 0 };
+  }
+  let blocked = 0;
+  let errored = 0;
+  const latencies: number[] = [];
+  for (const r of rows) {
+    if (r.status === 'blocked_by_policy') blocked += 1;
+    else if (r.status !== 'ok') errored += 1;
+    if (typeof r.latency_ms === 'number' && r.latency_ms >= 0) latencies.push(r.latency_ms);
+  }
+  // p95 via partial-quickselect would be cheaper for huge windows; sort is
+  // fine at hackathon scale (single window of mcp_events, single org).
+  latencies.sort((a, b) => a - b);
+  const p95Index = Math.min(latencies.length - 1, Math.ceil(latencies.length * 0.95) - 1);
+  const p95LatencyMs = latencies.length > 0 ? latencies[Math.max(p95Index, 0)] : 0;
+  return {
+    totalCalls: total,
+    errorRate: errored / total,
+    blockRate: blocked / total,
+    p95LatencyMs,
+  };
+};
 
 export const fetchMonitoringWindowed = async (
   supabase: SupabaseClient,
@@ -66,15 +108,28 @@ export const fetchMonitoringWindowed = async (
   const spec = RANGE_SPECS[range];
   const anchor = anchorMs(nowMs, spec);
   const earliest = anchor - (spec.bucketCount - 1) * spec.bucketMs;
-  const since = new Date(earliest).toISOString();
+  const windowMs = spec.bucketCount * spec.bucketMs;
+  const priorEarliest = earliest - windowMs;
+  const priorSince = new Date(priorEarliest).toISOString();
 
+  // Single query covering BOTH the current window and the prior equal-length
+  // window. Splits in JS — half the network cost, same data, simpler than
+  // two parallel selects.
   const { data, error } = await supabase
     .from('mcp_events')
-    .select('created_at, status, policy_decisions')
+    .select('created_at, status, policy_decisions, latency_ms')
     .eq('organization_id', organizationId)
-    .gte('created_at', since);
+    .gte('created_at', priorSince);
   if (error) throw new Error(`mcp_events_fetch_failed: ${error.message}`);
-  const rows = (data ?? []) as unknown as EventRow[];
+  const allRows = (data ?? []) as unknown as EventRow[];
+  const rows: EventRow[] = [];
+  const priorRows: EventRow[] = [];
+  for (const row of allRows) {
+    const ms = new Date(row.created_at).getTime();
+    if (Number.isNaN(ms)) continue;
+    if (ms >= earliest) rows.push(row);
+    else if (ms >= priorEarliest) priorRows.push(row);
+  }
 
   const orderedVolume: WindowedVolumeBucket[] = [];
   const orderedBlocks: WindowedPolicyBlockBucket[] = [];
@@ -136,5 +191,9 @@ export const fetchMonitoringWindowed = async (
     pii: Array.from(pii.entries())
       .map(([pattern, count]) => ({ pattern, count }))
       .sort((a, b) => b.count - a.count),
+    kpis: {
+      current: computeKpis(rows),
+      prior: computeKpis(priorRows),
+    },
   };
 };

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { MonitoringBlocksChart } from '@/components/dashboard/monitoring-blocks-chart';
+import { MonitoringKpiStrip, type MonitoringKpisProps } from '@/components/dashboard/monitoring-kpi-strip';
 import { MonitoringPiiChart } from '@/components/dashboard/monitoring-pii-chart';
 import { MonitoringVolumeChart } from '@/components/dashboard/monitoring-volume-chart';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -35,6 +36,12 @@ type MonitoringResponse = {
   volume: VolumeBucket[];
   blocks: BlockBucket[];
   pii: PiiCount[];
+  kpis: MonitoringKpisProps;
+};
+
+const ZERO_KPIS: MonitoringKpisProps = {
+  current: { totalCalls: 0, errorRate: 0, blockRate: 0, p95LatencyMs: 0 },
+  prior: { totalCalls: 0, errorRate: 0, blockRate: 0, p95LatencyMs: 0 },
 };
 
 const RANGE_DESCRIPTION: Record<MonitoringRange, string> = {
@@ -74,7 +81,7 @@ export const MonitoringDashboard = () => {
         if (range === null) setRange(body.range);
       } catch {
         if (!cancelled && range !== null) {
-          setData({ range, volume: [], blocks: [], pii: [] });
+          setData({ range, volume: [], blocks: [], pii: [], kpis: ZERO_KPIS });
         }
       }
     };
@@ -119,6 +126,10 @@ export const MonitoringDashboard = () => {
           ))}
         </ToggleGroup>
       </header>
+
+      <section className="@container/main">
+        <MonitoringKpiStrip {...(data?.kpis ?? ZERO_KPIS)} />
+      </section>
 
       <section className="flex flex-col gap-2">
         <div>
