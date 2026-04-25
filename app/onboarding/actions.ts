@@ -92,5 +92,15 @@ export const completeOnboarding = async (
     return { ok: false, error: 'update_failed', detail: 'user_metadata_update_failed' };
   }
 
+  // Force an access-token refresh so the custom_access_token_hook re-runs
+  // and stamps the now-true profile_completed claim into the JWT cookie.
+  // Without this, the browser still holds the signup-era token where the
+  // claim is false, and proxy.ts bounces every /dashboard hit back to
+  // /onboarding until natural expiry (~1h).
+  const refresh = await ctx.supabase.auth.refreshSession();
+  if (refresh.error) {
+    return { ok: false, error: 'update_failed', detail: 'session_refresh_failed' };
+  }
+
   return { ok: true };
 };

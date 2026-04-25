@@ -120,7 +120,12 @@
 
 ## Current:
 
-(Awaiting next sprint plan — pull WPs from `BACKLOG.md` when opening.)
+**Sprint 20 — Dashboard nav perf + onboarding JWT refresh:**
+- [ ] WP-20.1 Onboarding JWT refresh — `refreshSession()` in server action so cookie carries fresh `profile_completed:true` claim. Includes hosted push of migrations 20260425220000/220100 (already done).
+- [ ] WP-20.2 `requireAuth()` React `cache()` wrap — collapse layout + page duplicate `getUser()` round-trips to one per request. New cache-dedup test.
+- [ ] WP-20.3 `loading.tsx` skeleton siblings — `app/dashboard/loading.tsx` + per-route overrides (servers, routes, monitoring) using shadcn Skeleton.
+- [ ] WP-20.4 Policy catalog static render — drop `force-dynamic`, accept ISR if layout cookies bump it.
+- [ ] WP-20.5 (stretch) Per-card Suspense on `/dashboard` overview — measure first; only if 20.2+20.3 don't already feel instant.
 
 ## Session Log
 - 2026-04-24 — Sprint 19 shipped: 9 WPs, 21 items, 2 commits pushed. MCP envelope unwrap at capture bag unblocks demo story #9 (verified three ways: 7 unit + proven-negative integration + live E2E against real SF/Slack/GH). Reviewer flagged 7 blockers — fixed 5 (circular via route-utils leaf, getSession waivers, `as` cast cleanup), accepted 2 (execute-route.ts 610 lines, executeRollback 155 lines) as pragma. 7 memories + Hard-Won Lessons #33/#34. 337/2/0 tests.

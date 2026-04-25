@@ -21,6 +21,7 @@ type StubOptions = {
   orgError?: { message: string };
   membershipError?: { message: string };
   userError?: { message: string };
+  refreshError?: { message: string };
 };
 
 const makeStubSupabase = (opts: StubOptions = {}) => {
@@ -30,6 +31,7 @@ const makeStubSupabase = (opts: StubOptions = {}) => {
     payload: Record<string, unknown>;
   }> = [];
   const userUpdates: Array<Record<string, unknown>> = [];
+  const refreshCalls: number[] = [];
 
   const supabase = {
     from: (table: string) => {
@@ -75,10 +77,14 @@ const makeStubSupabase = (opts: StubOptions = {}) => {
         userUpdates.push(payload);
         return Promise.resolve({ error: opts.userError ?? null });
       },
+      refreshSession: () => {
+        refreshCalls.push(1);
+        return Promise.resolve({ error: opts.refreshError ?? null });
+      },
     },
   };
 
-  return { supabase, orgUpdates, membershipUpdates, userUpdates };
+  return { supabase, orgUpdates, membershipUpdates, userUpdates, refreshCalls };
 };
 
 const { completeOnboarding } = await import('@/app/onboarding/actions');
@@ -191,6 +197,32 @@ describe('completeOnboarding action (Sprint 15 A.7)', () => {
     expect(result.ok).toBe(false);
     if (result.ok === false && result.error === 'update_failed') {
       expect(result.detail).toBe('org_update_failed');
+    } else {
+      throw new Error(`unexpected result: ${JSON.stringify(result)}`);
+    }
+  });
+
+  it('returns session_refresh_failed when refreshSession errors', async () => {
+    // Sprint 20 WP-20.1: locks the new refresh path. Without the cookie
+    // refresh, proxy.ts keeps reading the stale signup-era JWT and bouncing
+    // /dashboard back to /onboarding.
+    const { supabase, refreshCalls } = makeStubSupabase({
+      refreshError: { message: 'refresh denied' },
+    });
+    requireAuthMock.mockResolvedValue({
+      user: { id: 'user-1' },
+      supabase,
+      organization_id: 'org-1',
+      role: 'admin',
+      profile_completed: false,
+    });
+
+    const result = await completeOnboarding(VALID_INPUT);
+
+    expect(refreshCalls).toHaveLength(1);
+    expect(result.ok).toBe(false);
+    if (result.ok === false && result.error === 'update_failed') {
+      expect(result.detail).toBe('session_refresh_failed');
     } else {
       throw new Error(`unexpected result: ${JSON.stringify(result)}`);
     }
