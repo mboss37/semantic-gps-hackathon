@@ -1,18 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { CheckIcon, CopyIcon } from 'lucide-react';
-import { toast } from 'sonner';
-
-import { Button } from '@/components/ui/button';
+import { CopyButton } from '@/components/dashboard/copy-button';
 import type { RouteDetail } from '@/lib/routes/fetch';
 
-// Sprint 28 WP-28.4: Routes detail "Copy as JSON" button. Builds the
-// import-shape payload from a RouteDetail (the same shape the import
-// dialog accepts), copies it to the clipboard. Closes the loop:
+// Sprint 28 WP-28.4 (refactored post design review): "Copy as JSON" button on
+// route detail. Builds the import-shape payload from a RouteDetail (the same
+// shape RouteImportSchema accepts), delegates clipboard + state + toast to
+// the project's canonical CopyButton primitive. Closes the loop:
 // import + export = full clone-and-edit workflow.
 //
-// Domain_id intentionally omitted from export, domain UUIDs are
+// domain_id intentionally omitted from export, domain UUIDs are
 // org-internal and not portable. If the user wants to keep the route in
 // the same domain on re-import, they edit the JSON and add it back.
 
@@ -48,24 +45,6 @@ const buildExportJson = (route: RouteDetail): string => {
   return JSON.stringify(exported, null, 2);
 };
 
-export const RouteExportButton = ({ route }: Props) => {
-  const [copied, setCopied] = useState(false);
-
-  const onCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(buildExportJson(route));
-      setCopied(true);
-      toast.success('Route JSON copied to clipboard');
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error('Copy failed. Open the route detail page and select manually.');
-    }
-  };
-
-  return (
-    <Button variant="outline" size="sm" onClick={() => void onCopy()} className="gap-1.5">
-      {copied ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
-      {copied ? 'Copied' : 'Copy as JSON'}
-    </Button>
-  );
-};
+export const RouteExportButton = ({ route }: Props) => (
+  <CopyButton value={buildExportJson(route)} label="Copy as JSON" variant="outline" />
+);

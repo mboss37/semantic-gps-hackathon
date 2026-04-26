@@ -11,9 +11,16 @@ type Props = {
   label?: string;
   /** Compact variant: ghost icon-only, sized to align inline with body text. */
   compact?: boolean;
+  /** Visual variant for the non-compact form. Default keeps existing call sites. */
+  variant?: 'secondary' | 'outline';
 };
 
-export const CopyButton = ({ value, label = 'Copy', compact = false }: Props) => {
+export const CopyButton = ({
+  value,
+  label = 'Copy',
+  compact = false,
+  variant = 'secondary',
+}: Props) => {
   const [copied, setCopied] = useState(false);
   const onCopy = async () => {
     try {
@@ -38,7 +45,7 @@ export const CopyButton = ({ value, label = 'Copy', compact = false }: Props) =>
     );
   }
   return (
-    <Button variant="secondary" size="sm" onClick={() => void onCopy()}>
+    <Button variant={variant} size="sm" onClick={() => void onCopy()}>
       {copied ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
       {copied ? 'Copied!' : label}
     </Button>

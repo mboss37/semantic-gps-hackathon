@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
 // Sprint 28 WP-28.3: Routes list authoring affordance. JSON-import only;
@@ -148,10 +149,9 @@ export const RouteImportDialog = () => {
 
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <span className="font-mono text-[11px] tracking-[0.18em] text-muted-foreground uppercase">
-              Route JSON
-            </span>
+            <Label htmlFor="route-json">Route JSON</Label>
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               onClick={() => {
@@ -164,6 +164,7 @@ export const RouteImportDialog = () => {
             </Button>
           </div>
           <Textarea
+            id="route-json"
             value={jsonText}
             onChange={(e) => setJsonText(e.target.value)}
             placeholder='{ "name": "...", "description": "...", "steps": [...] }'
@@ -172,7 +173,7 @@ export const RouteImportDialog = () => {
             disabled={submitting}
           />
           {error ? (
-            <p className="rounded-md border border-red-500/30 bg-red-500/5 px-3 py-2 text-sm text-red-200">
+            <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {error}
             </p>
           ) : null}
