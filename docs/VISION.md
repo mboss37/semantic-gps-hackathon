@@ -43,21 +43,25 @@ The agent gap isn't a model problem. It's a governance problem. The model is goo
 
 ## What Semantic GPS solves
 
-One control plane that sits between agents and any MCP-connected business system, with five primitives. The most powerful one first.
+One control plane that sits between agents and any MCP-connected business system, with five primitives. The most powerful one first. Three of them map directly to the EU AI Act's hardest operational obligations (table further down).
 
-### 1. Shadow → enforce live policy mode swap (with audit feedback)
+### 1. Shadow → enforce live policy mode swap (with audit feedback) — Article 14
 
 The canonical observe-before-acting pattern that none of those incidents had. Author a policy in shadow mode. Watch the audit page light up with would-have-blocked entries against real production traffic. Flip to enforce when compliance is comfortable. Hot-swap on a DB column, no agent redeploy, no upstream restart.
 
-This is the production-readiness lever: compliance teams ship policy changes without an engineering handshake. Every gateway-native policy inherits the same observe→enforce lifecycle. Each new policy generates evidence that informs the next one. The flywheel is the unlock.
+This is the production-readiness lever and the EU AI Act's Article 14 human-oversight control in one move. Compliance teams ship policy changes without an engineering handshake. Every gateway-native policy inherits the same observe→enforce lifecycle. Each new policy generates evidence that informs the next one. The flywheel is the unlock.
 
-### 2. Audit trail on every call
+### 2. Audit trail on every call — Article 12
 
-Every gateway call (allowed, blocked, errored, fallback-triggered, rollback-executed) lands in `mcp_events` with policy verdicts, latency, redacted payload, and a `trace_id` that groups multi-step runs. Compliance teams have the receipt they need. Security teams can reconstruct the full chain after an incident — the receipt Yue would have had after her inbox went dark.
+Every gateway call (allowed, blocked, errored, fallback-triggered, rollback-executed) lands in `mcp_events` with policy verdicts, latency, redacted payload, and a `trace_id` that groups multi-step runs. Compliance teams have the receipt they need. Security teams can reconstruct the full chain after an incident, the receipt Yue would have had after her inbox went dark.
 
-### 3. Twelve gateway-native policies across seven governance dimensions
+This is also exactly what EU AI Act Article 12 mandates: automatic lifecycle logs without operator intervention, retained for at least six months. Postgres durability; retention is a customer config flag.
 
-Time gates (`business_hours`, `write_freeze` — the kill-switch Replit lacked), rate limiting, identity (`client_id`, `agent_identity_required`), residency (`ip_allowlist`, `geo_fence`), data hygiene (`pii_redaction` with libphonenumber-js, `injection_guard` — the surface Cursor's agent missed), kill switches, idempotency. Each one a real production guard, configurable per-server, per-tool, per-route.
+### 3. Twelve gateway-native policies across seven governance dimensions — Article 9
+
+Time gates (`business_hours`, `write_freeze`, the kill-switch Replit lacked), rate limiting, identity (`client_id`, `agent_identity_required`, the enforcement edge for IETF Web Bot Auth), residency (`ip_allowlist`, `geo_fence`), data hygiene (`pii_redaction` with libphonenumber-js, `injection_guard`, the surface Cursor's agent missed), kill switches, idempotency. Each one a real production guard, configurable per-server, per-tool, per-route.
+
+The whole catalog is a documented risk-management system in the Article 9 sense: continuous identification, analysis, evaluation, mitigation, configurable per-route across the lifecycle.
 
 ### 4. Saga rollback as a first-class primitive
 

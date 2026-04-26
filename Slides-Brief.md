@@ -2,7 +2,8 @@
 
 > Single-shot prompt for Claude (or any HTML/CSS slide generator) to one-shot
 > the slide deck used during the Problem Statement section of the demo video.
-> Total on-screen time: ~55 seconds. Five slides plus an optional title card.
+> Total on-screen time: ~55 seconds. Six slides: three receipts, the scale,
+> the regulator, the tagline.
 
 ---
 
@@ -136,39 +137,67 @@ A privileged service-role agent processed support tickets containing user-suppli
 
 ---
 
-## Slide 4, The scale (0:36 → 0:48)
+## Slide 4, The scale (0:33 → 0:42)
 
-**Layout:** 2x2 grid of giant numbers, centered. No headline.
+**Layout:** 1x3 row of giant numbers, centered. No headline.
 
-**Top-left cell:**
-- Number (display 220px, primary): `97%`
+**Left cell:**
+- Number (display 220px, primary, with subtle white glow): `97%`
 - Label (mono 22px, red/65%, uppercase): `EXPECT INCIDENT`
 - Caption (20px, white/45%): `enterprises in the next 12 months`
 
-**Top-right cell:**
-- Number: `88%`
+**Center cell:**
+- Number (display 200px, primary): `88%`
 - Label: `ALREADY HAD ONE`
 - Caption: `confirmed or suspected this year`
 
-**Bottom-left cell:**
-- Number: `14%`
+**Right cell:**
+- Number (display 200px, primary): `14%`
 - Label: `WITH FULL REVIEW`
 - Caption: `agents reaching production`
 
-**Bottom-right cell:**
-- Number: `Aug 2 2026` (display 96px, smaller than the percentages)
-- Label: `EU AI ACT`
-- Caption: `high-risk systems must comply`
-- Sub-caption (mono 14px, white/35%, italic): `Art. 9 · Art. 12 · Art. 14`
-
 **Sources caption (bottom-center, mono 16px, white/35%):**
-`Gravitee 2026  ·  Grant Thornton 2026  ·  Foresiet 2026  ·  EU AI Act`
+`Gravitee 2026  ·  Grant Thornton 2026  ·  Foresiet 2026`
 
-**Visual:** the `97%` number should feel loudest. Slightly larger than 88 and 14, ideally with a subtle white drop-shadow / glow.
+**Visual:** the `97%` number should feel loudest. Slightly larger than 88 and 14, with a subtle white drop-shadow / glow.
 
 ---
 
-## Slide 5, Tagline close (0:48 → 0:55)
+## Slide 5, The regulator (0:42 → 0:50)
+
+> This is the regulatory beat. Equal weight to the receipt slides. The Articles
+> are the visual payload. Every one maps to a Semantic GPS primitive shown later
+> in the solution segment, so the deck is internally consistent with the demo.
+
+**Layout:** centered, single block
+
+**Top eyebrow (mono 22px, red/70%, uppercase, 0.2em letter-spacing):**
+`COMPLIANCE DEADLINE`
+
+**Big date (display 180px, primary, mono numerals):**
+`Aug 2 2026`
+
+**Subhead (display 60px, white/85%, semibold):**
+EU AI Act takes hold
+
+**Three Article rows (mono 32px, primary, vertically stacked, 14px gap):**
+```
+ART. 9    Risk management system
+ART. 12   Audit logs, retained 6+ months
+ART. 14   Human oversight
+```
+
+Each Article number `ART. 9` etc. in red `#fca5a5`, the obligation in white. Use a mono font for the article numbers, sans for the obligations. Right-align the obligation text in a tight column so the layout reads as a regulator's checklist, not a marketing list.
+
+**Bottom caption (32px, white/55%):**
+Comply, or stop operating.
+
+**Source pill bottom-right (mono 16px, white/40%):**
+artificialintelligenceact.eu
+
+---
+
+## Slide 6, Tagline close (0:50 → 0:55)
 
 **Layout:** centered, single block
 
@@ -214,10 +243,11 @@ Full reference list (more incidents, MCP-specific CVEs, regulatory): `docs/VISIO
 
 ## Acceptance check after generation
 
-- [ ] 5 receipt slides + 1 optional title card, all 1920x1080, all dark theme
-- [ ] Every receipt slide has its date pill (top-left) AND its source citation (bottom-right or top-right)
-- [ ] Slide 4 has 4 numbers, with 97% the largest
-- [ ] Final slide has the emerald `SEMANTIC GPS IS THAT SURFACE` line
+- [ ] 6 slides + 1 optional title card, all 1920x1080, all dark theme
+- [ ] Every receipt slide (1, 2, 3) has its date pill (top-left) AND its source citation (bottom-right or top-right)
+- [ ] Slide 4 has 3 percentages in a row, with 97% the largest
+- [ ] Slide 5 has `Aug 2 2026` as the largest element, three Article rows below as a regulator's checklist
+- [ ] Slide 6 has the emerald `SEMANTIC GPS IS THAT SURFACE` line
 - [ ] No emoji, no clipart, no decorative icons except an optional thin shield outline
 - [ ] Print-to-PDF gives one slide per page
 - [ ] Standalone HTML file, no external network calls, opens cleanly in any browser

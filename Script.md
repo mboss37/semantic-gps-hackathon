@@ -21,9 +21,9 @@
 
 ---
 
-## 2. Problem statement — 0:20 to 1:15 (~130 words / ~55 seconds)
+## 2. Problem statement — 0:20 to 1:15 (~155 words / ~55 seconds)
 
-> Voice-over begins. Visual: dark slide, then three receipt cards landing one at a time. Optional chyron with the source publication under each name.
+> Voice-over begins. Visual: dark slides, six in sequence (Yue → Replit → Cursor → Stats → Regulator → Tagline). Source chyrons under each receipt name.
 
 February 2026. Meta's Director of AI Alignment told an autonomous agent to ask before deleting anything. It deleted 200 emails anyway. She had to physically run to her Mac and kill the processes.
 
@@ -33,39 +33,39 @@ Mid 2025. Cursor's privileged Supabase agent exfiltrated integration tokens thro
 
 These aren't isolated. 97% of enterprises expect a major AI agent incident in the next twelve months. 88% already had one. Only 14% of agents reach production with full security review.
 
+And the regulator is here. The EU AI Act takes hold August 2nd, 2026. Article 9 risk management. Article 12 audit logs. Article 14 human oversight. Comply, or stop operating.
+
 The agents are working. The safety surface around them isn't.
 
 ---
 
-## 3. Solution — 1:15 to 2:50 (~210 words / ~95 seconds)
+## 3. Solution — 1:15 to 2:50 (~215 words / ~95 seconds)
 
 > Voice-over continues. Visual: dashboard, then policy mode flip in slow motion, then audit log filling, then Playground A/B split-screen, then saga rollback cascade.
 
-Semantic GPS is that safety surface. One control plane that sits between any AI agent and any MCP-connected business system.
+Semantic GPS is that safety surface. One control plane that sits between any AI agent and any MCP-connected business system. Three of the Act's hardest operational requirements, mapped onto primitives we already ship.
 
-Start with the strongest primitive.
+Start with the strongest one.
 
-**Shadow mode.** Author a policy, watch what it would have blocked against real production traffic. *(Audit log fills.)* Every gateway call, every policy verdict, every tool argument, every redacted payload, captured.
+**Shadow mode.** *(Cut to policy console.)* Author a policy, watch what it would have blocked against real production traffic. Every gateway call, every policy verdict, every tool argument, every redacted payload, captured. *That's Article 12.*
 
-Then flip the same policy to **enforce**. No agent restart. No upstream coordination. The compliance handshake that takes weeks today happens with one column flip.
+Then flip the same policy to **enforce**. No agent restart. No upstream coordination. The compliance handshake that takes weeks today happens with one column flip. *That's Article 14.* The human-oversight control the Act mandates, in one click.
 
-Watch what we ship around that flip.
+Twelve gateway-native policies across seven governance dimensions. *That's Article 9.* A documented risk-management system, configurable per-server, per-tool, per-route.
 
 *(Playground A/B split-screen.)* Same Opus 4.7 client, same prompt, two endpoints. Raw MCP on the left, governed gateway on the right. The contrast is visible, honest, reproducible. Variable isolation. Only the URL differs.
 
-*(Saga rollback animation.)* Multi-step agent action halts halfway? Saga rollback fires in reverse with explicit per-step input mapping. The distributed-systems pattern that has been standard for twenty years, finally available to AI agents.
+*(Saga rollback animation.)* Multi-step agent action halts halfway? Saga rollback fires in reverse with explicit per-step input mapping. The distributed-systems pattern standard for twenty years, finally available to AI agents.
 
-*(Back to dashboard.)* Twelve gateway-native policies across seven governance dimensions. Tool Relationship discovery so agents stop guessing which tools chain. Audit trails security teams can point at after an incident.
-
-Replit's code freeze was prose. Yue's "ask first" was prose. Cursor's privilege boundary was implicit. Semantic GPS turns all of that into enforced infrastructure.
+Replit's code freeze was prose. Yue's "ask first" was prose. Cursor's privilege boundary was implicit. Semantic GPS turns all of that into enforced, audited, regulator-ready infrastructure.
 
 ---
 
-## 4. Close — 2:50 to 3:00 (~30 words / ~12 seconds)
+## 4. Close — 2:50 to 3:00 (~25 words / ~10 seconds)
 
 > Back on-camera if you opened on-camera. Otherwise hold on the dashboard.
 
-Article 12 audit. Article 14 human oversight. Article 9 risk management. The EU AI Act takes hold August 2nd. Semantic GPS is the operational layer that's ready. Live now at semantic-gps-hackathon.vercel.app.
+The agents are working. The safety surface around them isn't. Semantic GPS is that surface. Regulator-ready. Live now at semantic-gps-hackathon.vercel.app.
 
 ---
 
