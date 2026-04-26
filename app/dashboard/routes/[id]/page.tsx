@@ -11,6 +11,7 @@ import {
 
 import { requireAuth, UnauthorizedError } from '@/lib/auth';
 import { fetchLatestRouteRun, fetchRouteDetail } from '@/lib/routes/fetch';
+import { RouteExportButton } from '@/components/dashboard/route-export-button';
 import { RouteTimeline } from '@/components/dashboard/route-timeline';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -89,15 +90,18 @@ const RouteDetailPage = async ({ params }: { params: Promise<Params> }) => {
               <p className="max-w-2xl text-sm text-muted-foreground">{route.description}</p>
             ) : null}
           </div>
-          {latestRun ? (
-            <Link
-              href={`/dashboard/audit?trace_id=${latestRun.trace_id}`}
-              className="inline-flex items-center gap-1.5 rounded-md border bg-card px-3 py-1.5 text-xs transition-colors hover:bg-muted/60"
-            >
-              <span className="font-mono uppercase tracking-wider">View latest execution</span>
-              <ArrowRightIcon className="size-3" />
-            </Link>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <RouteExportButton route={route} />
+            {latestRun ? (
+              <Link
+                href={`/dashboard/audit?trace_id=${latestRun.trace_id}`}
+                className="inline-flex items-center gap-1.5 rounded-md border bg-card px-3 py-1.5 text-xs transition-colors hover:bg-muted/60"
+              >
+                <span className="font-mono uppercase tracking-wider">View latest execution</span>
+                <ArrowRightIcon className="size-3" />
+              </Link>
+            ) : null}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
@@ -105,7 +109,7 @@ const RouteDetailPage = async ({ params }: { params: Promise<Params> }) => {
             {route.steps.length} {route.steps.length === 1 ? 'step' : 'steps'}
           </span>
           <span className="text-muted-foreground/60">·</span>
-          <span className="font-mono">read-only · authoring via migrations</span>
+          <span className="font-mono">read-only · clone via Copy as JSON</span>
           {latestRun ? (
             <>
               <span className="text-muted-foreground/60">·</span>
