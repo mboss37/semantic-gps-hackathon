@@ -21,6 +21,10 @@ These aren't isolated failures. They're a class.
 
 The agents are working. The safety surface around them isn't.
 
+## Problem statement (one paragraph)
+
+Enterprises can't ship AI agents into production because there is no governance layer between the agent and the systems it touches. The model is good enough. The protocol (MCP) is converging. The integrations exist. What is missing is policy enforcement, audit, rollback, and a way to observe a control's impact before turning it on. Agent failures in 2025–2026 are not model failures; they are infrastructure failures, and they keep happening at the same seam: agent reaches business system unsupervised. The EU AI Act's general-application date is **August 2, 2026**. High-risk AI systems must comply or stop operating. The window to ship the missing layer is now.
+
 ## Why every one of those incidents happened
 
 They share one root cause: there is no layer between the agent and the business systems it touches. MCP servers ship as "expose every tool, hope for the best." For consumer demos that's fine. For enterprise pilots, it leaks at every seam:
@@ -77,3 +81,39 @@ That's the right wedge. It's not the right shape at scale. The architecture this
 - **Semantic Definition Store.** Decouple "what a Lead is" from "how Salesforce represents a Lead." Agents reason in the customer's domain language; the gateway translates.
 
 Today's wedge is a working slice. Tomorrow's surface is the deploy-anywhere governance plane every enterprise agent platform will need.
+
+## References
+
+### Real incidents (2025–2026)
+
+- [**OpenClaw wipes Meta AI Alignment Director's inbox** — Tom's Hardware, Feb 2026](https://www.tomshardware.com/tech-industry/artificial-intelligence/openclaw-wipes-inbox-of-meta-ai-alignment-director-executive-finds-out-the-hard-way-how-spectacularly-efficient-ai-tool-is-at-maintaining-her-inbox)
+- [**Meta Superintelligence Lab safety director loses control of agent** — Fast Company, Feb 2026](https://www.fastcompany.com/91497841/meta-superintelligence-lab-ai-safety-alignment-director-lost-control-of-agent-deleted-her-emails)
+- [**Meta Director of AI Safety allows agent to delete inbox** — 404 Media, Feb 2026](https://www.404media.co/meta-director-of-ai-safety-allows-ai-agent-to-accidentally-delete-her-inbox/)
+- [**Replit AI deletes production database during code freeze** — Fortune, Jul 2025](https://fortune.com/2025/07/23/ai-coding-tool-replit-wiped-database-called-it-a-catastrophic-failure/)
+- [**Replit deletes production database, then lies about it** — The Register, Jul 2025](https://www.theregister.com/2025/07/21/replit_saastr_vibe_coding_incident/)
+- [**Replit incident report** — AI Incident Database #1152](https://incidentdatabase.ai/cite/1152/)
+- [**Meta AI agent triggers internal data exposure** — ComplexDiscovery, Apr 2026](https://complexdiscovery.com/when-the-agent-goes-off-script-metas-ai-triggered-data-exposure-revives-old-security-fears/)
+- [**Meta AI Director's emails deleted by rogue OpenClaw** — OECD AI Incident Monitor](https://oecd.ai/en/incidents/2026-02-23-d55b)
+
+### MCP-specific vulnerabilities
+
+- [**New Prompt Injection Attack Vectors Through MCP Sampling** — Unit42 / Palo Alto Networks](https://unit42.paloaltonetworks.com/model-context-protocol-attack-vectors/)
+- [**MCP Security 2026: 30 CVEs in 60 Days** — heyuan110](https://www.heyuan110.com/posts/ai/2026-03-10-mcp-security-2026/)
+- [**The Mother of All AI Supply Chains: critical MCP vulnerability** — OX Security](https://www.ox.security/blog/the-mother-of-all-ai-supply-chains-critical-systemic-vulnerability-at-the-core-of-the-mcp/)
+- [**Anthropic quietly fixed flaws in its Git MCP server** — The Register, Jan 2026](https://www.theregister.com/2026/01/20/anthropic_prompt_injection_flaws/)
+- [**MCP Horror Stories: GitHub Prompt Injection Data Heist** — Docker Blog](https://www.docker.com/blog/mcp-horror-stories-github-prompt-injection/)
+- [**Vulnerable MCP Project: comprehensive security database**](https://vulnerablemcp.info/)
+
+### Surveys + statistics
+
+- [**97% of Enterprises Expect a Major AI Agent Security Incident Within the Year** — Security Boulevard / Gravitee 2026](https://securityboulevard.com/2026/04/97-of-enterprises-expect-a-major-ai-agent-security-incident-within-the-year/)
+- [**State of AI Agent Security 2026: When Adoption Outpaces Control** — Gravitee](https://www.gravitee.io/blog/state-of-ai-agent-security-2026-report-when-adoption-outpaces-control)
+- [**2026 AI Impact Survey** — Grant Thornton (78% can't pass governance audit)](https://www.grantthornton.com/insights/survey-reports/technology/2026/technology-2026-ai-impact-survey-report)
+- [**AI Agents Cause Cybersecurity Incidents at Two Thirds of Firms** — Infosecurity Magazine](https://www.infosecurity-magazine.com/news/unchecked-ai-agents-cause/)
+- [**6 AI Security Incidents: Full Attack Path Analysis** — Foresiet, Apr 2026](https://foresiet.com/blog/ai-security-incidents-attack-paths-april-2026/)
+- [**AI Agent Security in 2026: What Enterprises Are Getting Wrong** — AGAT Software](https://agatsoftware.com/blog/ai-agent-security-enterprise-2026/)
+
+### Regulatory
+
+- [**EU AI Act** — high-risk AI systems must comply by August 2, 2026 — RegASK 2026 State of Regulatory Affairs](https://www.businesswire.com/news/home/20260415216185/en/RegASK-Gives-Compliance-Leaders-the-Governance-Traceability-and-Connectivity-to-Scale-Regulatory-AI-Across-the-Enterprise)
+
