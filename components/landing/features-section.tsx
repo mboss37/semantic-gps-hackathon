@@ -95,8 +95,8 @@ const TrelConsole = () => (
     {[
       [68, 110, 'agent'],
       [214, 112, 'TRel'],
-      [360, 96, 'CRM'],
-      [360, 132, 'Slack'],
+      [360, 96, 'tool A'],
+      [360, 132, 'tool B'],
     ].map(([x, y, label]) => (
       <g key={label}>
         <rect

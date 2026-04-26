@@ -2,9 +2,9 @@ const NODES = [
   { x: 76, y: 122, label: 'Claude', tone: 'muted' },
   { x: 84, y: 222, label: 'Cursor', tone: 'muted' },
   { x: 300, y: 170, label: 'MCP TRel', tone: 'hot' },
-  { x: 524, y: 94, label: 'Salesforce', tone: 'muted' },
-  { x: 546, y: 176, label: 'Slack', tone: 'muted' },
-  { x: 524, y: 258, label: 'GitHub', tone: 'muted' },
+  { x: 524, y: 94, label: 'Internal MCP', tone: 'muted' },
+  { x: 546, y: 176, label: 'Vendor MCP', tone: 'muted' },
+  { x: 524, y: 258, label: 'OpenAPI', tone: 'muted' },
 ] as const;
 
 const EDGES = [

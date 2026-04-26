@@ -16,7 +16,7 @@ Built for the Anthropic "Keep Thinking" Hackathon (April 2026). 5-day scope.
 
 ## What shipped
 
-- **3 real MCP integrations:** Salesforce (OAuth Client Credentials), Slack (Bot API), GitHub (PAT). 12 curated tools across the three servers.
+- **Vendor-agnostic MCP gateway.** Customers register their own MCP servers via `POST /api/servers` (HTTP-Streamable or OpenAPI). The gateway has zero hardcoded vendor knowledge. The demo recording happens to use a few real upstreams to prove end-to-end correctness; nothing is bundled.
 - **12 gateway-native policies** across 7 governance dimensions: time/state gates (`business_hours`, `write_freeze`), rate limiting, identity (`client_id`, `agent_identity_required`), residency (`ip_allowlist`, `geo_fence`), data hygiene (`pii_redaction` with libphonenumber-js, `injection_guard`), kill switches, idempotency.
 - **TRel extension methods** on the gateway: `discover_relationships`, `find_workflow_path`, `validate_workflow`, `evaluate_goal`. Same JSON-RPC surface as standard MCP methods.
 - **Saga rollback** with canonical per-step `rollback_input_mapping` DSL. Compensators get mapped args, not raw producer results.
@@ -46,7 +46,7 @@ openssl rand -base64 32   # CREDENTIALS_ENCRYPTION_KEY
 # 4. Apply migrations + seed the demo org
 pnpm supabase db reset
 
-# 5. (Optional) Load the full demo data into local: 3 MCPs, 12 tools, saga route, policies
+# 5. (Optional) Load demo data: sample MCPs, tools, saga route, and policies that exercise the gateway end-to-end
 docker exec -i supabase_db_semantic-gps-hackathon \
   psql -U postgres -d postgres -f /dev/stdin \
   < scripts/bootstrap-local-demo.sql

@@ -2,7 +2,7 @@
 
 ## The agentic moment is real. The safety surface isn't.
 
-AI agents are calling tools in production this year. The Model Context Protocol (MCP) is becoming the standard for how they reach business systems: Salesforce, Slack, GitHub, internal databases. The protocol works. The market understands it. The agents are getting good.
+AI agents are calling tools in production this year. The Model Context Protocol (MCP) is becoming the standard for how they reach business systems: CRMs, communication platforms, source control, internal databases, every API a customer cares about. The protocol works. The market understands it. The agents are getting good.
 
 What's missing is the layer that makes them safe to ship into regulated environments.
 
@@ -40,7 +40,7 @@ One control plane that sits between agents and any MCP-connected business system
 
 ## Where it goes
 
-The current build is one Next.js app doing two jobs: the control plane (UI, policy authoring, audit, manifest cache) AND the data plane (the gateway proxying live tool calls to Salesforce, Slack, GitHub).
+The current build is one Next.js app doing two jobs: the control plane (UI, policy authoring, audit, manifest cache) AND the data plane (the gateway proxying live tool calls to whatever MCP servers a customer registers).
 
 That's the right wedge. It's not the right shape at scale. The architecture this points at:
 
