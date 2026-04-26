@@ -1,10 +1,9 @@
 import Link from 'next/link';
-import { PlusIcon } from 'lucide-react';
 
 import { requireAuth, UnauthorizedError } from '@/lib/auth';
 import { fetchOrgRoutes, type RouteListItem } from '@/lib/routes/fetch';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { RouteImportDialog } from '@/components/dashboard/route-import-dialog';
 
 // Sprint 28 redesign: Routes catalog mirrors the chrome of `/dashboard/servers`
 //, `<Card>` shell, `<CardContent flex flex-col gap-4>` body, identity row +
@@ -41,13 +40,7 @@ const RoutesPage = async () => {
             fixed sequence of steps, with optional fallback and saga-style rollback per step.
           </p>
         </div>
-        <Button disabled variant="outline" className="gap-2">
-          <PlusIcon className="size-4" />
-          Create route
-          <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-medium text-violet-300">
-            Soon
-          </span>
-        </Button>
+        <RouteImportDialog />
       </header>
 
       {routes.length === 0 ? (
