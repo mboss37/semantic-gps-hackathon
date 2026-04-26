@@ -4,7 +4,6 @@ import { CtaSection } from '@/components/landing/cta-section';
 import { FeaturesSection } from '@/components/landing/features-section';
 import { FooterSection } from '@/components/landing/footer-section';
 import { HeroSection } from '@/components/landing/hero-section';
-import { HowItWorksSection } from '@/components/landing/how-it-works-section';
 import { InfrastructureSection } from '@/components/landing/infrastructure-section';
 import { IntegrationsSection } from '@/components/landing/integrations-section';
 import { Navigation } from '@/components/landing/navigation';
@@ -14,13 +13,13 @@ import { StatStrip } from '@/components/landing/stat-strip';
 import { VerifiedHandler } from './verified-handler';
 
 export const metadata = {
-  title: 'Semantic GPS — Govern any MCP before production',
+  title: 'Semantic GPS — Governance gateway for production AI agents',
   description:
-    'A gateway for customer-owned MCP stacks: sandbox workflows, enforce policies, audit every call, and roll back broken agent actions.',
+    'Semantic GPS sits between AI agents and MCP-connected business systems with policy management, audit logs, monitoring, and Tool Relationship mapping.',
 };
 
 const Home = () => (
-  <main className="relative min-h-screen bg-background text-foreground overflow-x-hidden noise-overlay">
+  <main className="noise-overlay relative min-h-screen overflow-x-hidden bg-[#02040a] text-white">
     <Suspense fallback={null}>
       <VerifiedHandler />
     </Suspense>
@@ -28,7 +27,6 @@ const Home = () => (
     <HeroSection />
     <StatStrip />
     <FeaturesSection />
-    <HowItWorksSection />
     <InfrastructureSection />
     <IntegrationsSection />
     <SecuritySection />

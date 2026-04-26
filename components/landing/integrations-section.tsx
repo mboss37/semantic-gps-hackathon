@@ -1,7 +1,3 @@
-'use client';
-
-import { useEffect, useRef, useState } from 'react';
-
 type Integration = {
   name: string;
   kind: string;
@@ -10,89 +6,96 @@ type Integration = {
 };
 
 const INTEGRATIONS: readonly Integration[] = [
-  { name: 'Internal MCPs', kind: 'Customer-hosted tools behind your firewall', status: 'mcp', initial: 'IN' },
-  { name: 'Vendor MCPs', kind: 'Any compliant HTTP-Streamable server', status: 'mcp', initial: 'VD' },
-  { name: 'OpenAPI services', kind: 'Import specs and expose them as MCP tools', status: 'openapi', initial: 'OA' },
-  { name: 'Custom tools', kind: 'Register bespoke operations from the dashboard', status: 'mcp', initial: '+' },
-  { name: 'Local or VPC apps', kind: 'Govern tools without moving data to a SaaS proxy', status: 'mcp', initial: 'VP' },
-  { name: 'Sandbox endpoints', kind: 'Validate routes before promoting to production', status: 'openapi', initial: 'SB' },
+  {
+    name: 'Internal MCPs',
+    kind: 'Customer-hosted tools behind your firewall',
+    status: 'mcp',
+    initial: 'IN',
+  },
+  {
+    name: 'Vendor MCPs',
+    kind: 'Any compliant HTTP-Streamable server',
+    status: 'mcp',
+    initial: 'VD',
+  },
+  {
+    name: 'OpenAPI services',
+    kind: 'Import specs and expose them as MCP tools',
+    status: 'openapi',
+    initial: 'OA',
+  },
+  {
+    name: 'Custom tools',
+    kind: 'Register bespoke operations from the dashboard',
+    status: 'mcp',
+    initial: '+',
+  },
+  {
+    name: 'Local or VPC apps',
+    kind: 'Govern tools without moving data to a SaaS proxy',
+    status: 'mcp',
+    initial: 'VP',
+  },
+  {
+    name: 'Sandbox endpoints',
+    kind: 'Validate workflows before promoting to production',
+    status: 'openapi',
+    initial: 'SB',
+  },
 ];
 
-export const IntegrationsSection = () => {
-  const sectionRef = useRef<HTMLElement>(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const node = sectionRef.current;
-    if (!node) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setVisible(true);
-      },
-      { threshold: 0.1 }
-    );
-    obs.observe(node);
-    return () => obs.disconnect();
-  }, []);
-
-  return (
-    <section
-      id="integrations"
-      ref={sectionRef}
-      className="relative py-20 lg:py-28 border-t border-border bg-card/20"
-    >
-      <div className="max-w-[1200px] mx-auto px-6 lg:px-8">
-        <div
-          className={`max-w-2xl mb-14 transition-all duration-500 ${
-            visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-          }`}
-        >
-          <p className="text-[12px] text-foreground/50 uppercase tracking-[0.14em] font-medium mb-4">
-            MCP-independent
+export const IntegrationsSection = () => (
+  <section
+    id="integrations"
+    className="relative overflow-hidden border-y border-white/10 bg-white/[0.025] py-24 lg:py-32"
+  >
+    <div className="mx-auto max-w-[1240px] px-5 md:px-8">
+      <div className="mb-14 grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+        <div>
+          <p className="mb-4 font-mono text-[11px] tracking-[0.22em] text-blue-100/55 uppercase">
+            Existing stack
           </p>
-          <h2 className="text-[32px] md:text-[40px] lg:text-[44px] font-medium leading-[1.1] tracking-[-0.02em] text-foreground mb-4">
-            Bring your own MCP stack.
+          <h2 className="text-4xl leading-[1.02] font-semibold tracking-[-0.05em] text-balance text-white md:text-6xl">
+            Works with the MCP stack you already have.
           </h2>
-          <p className="text-lg text-foreground/60 leading-relaxed">
-            Semantic GPS is not a vendor-specific integration bundle. It is the governance layer in
-            front of whatever MCP servers your company already trusts.
-          </p>
         </div>
+        <p className="max-w-2xl text-lg leading-8 text-white/55">
+          Semantic GPS adds relationships, policies, governance, and validation in front of existing
+          MCP servers, OpenAPI services, and internal tools.
+        </p>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-border rounded-lg overflow-hidden border border-border">
-          {INTEGRATIONS.map((integration, i) => (
-            <div
-              key={integration.name}
-              className={`bg-background p-6 transition-all duration-500 ${
-                visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-              }`}
-              style={{ transitionDelay: `${i * 40}ms` }}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-10 h-10 rounded-md bg-card border border-border flex items-center justify-center">
-                  <span className="text-[11px] font-mono font-medium text-foreground/70 tracking-wider">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {INTEGRATIONS.map((integration) => (
+          <div
+            key={integration.name}
+            className="group relative overflow-hidden rounded-3xl border border-white/10 bg-black/35 p-5 backdrop-blur-xl transition duration-300 hover:border-white/24"
+          >
+            <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/24 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            <div className="relative z-10">
+              <div className="mb-5 flex items-start justify-between">
+                <div className="flex size-11 items-center justify-center rounded-2xl border border-white/10 bg-black/20">
+                  <span className="font-mono text-[11px] font-medium tracking-wider text-white/70">
                     {integration.initial}
                   </span>
                 </div>
                 {integration.status === 'mcp' ? (
-                  <span className="inline-flex items-center gap-1.5 text-[11px] text-foreground/60 font-mono">
-                    <span className="w-1.5 h-1.5 rounded-full bg-(--brand)" />
+                  <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-blue-100/70">
+                    <span className="size-1.5 rounded-full bg-blue-300" />
                     MCP
                   </span>
                 ) : (
-                  <span className="text-[11px] text-foreground/40 font-mono">OpenAPI</span>
+                  <span className="font-mono text-[11px] text-white/40">OpenAPI</span>
                 )}
               </div>
-              <div className="text-[15px] font-medium text-foreground mb-1 tracking-[-0.01em]">
+              <div className="mb-1 text-base font-semibold tracking-[-0.02em] text-white">
                 {integration.name}
               </div>
-              <div className="text-[13px] text-foreground/55 leading-relaxed">
-                {integration.kind}
-              </div>
+              <div className="text-sm leading-6 text-white/52">{integration.kind}</div>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
-    </section>
-  );
-};
+    </div>
+  </section>
+);

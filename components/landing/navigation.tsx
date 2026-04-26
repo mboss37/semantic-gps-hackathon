@@ -8,9 +8,8 @@ import { Button } from '@/components/ui/button';
 
 const NAV_LINKS = [
   { name: 'Features', href: '#features' },
-  { name: 'How it works', href: '#how-it-works' },
-  { name: 'Architecture', href: '#architecture' },
-  { name: 'BYO MCPs', href: '#integrations' },
+  { name: 'TRel', href: '#architecture' },
+  { name: 'Playground', href: '#features' },
   { name: 'Governance', href: '#governance' },
 ] as const;
 
@@ -22,8 +21,14 @@ const BrandMark = ({ className }: { className?: string }) => (
     className={className}
     aria-hidden
   >
-    <rect x="3" y="3" width="18" height="18" rx="4" fill="var(--brand)" />
-    <circle cx="12" cy="12" r="3" fill="#ffffff" />
+    <rect x="3" y="3" width="18" height="18" rx="6" fill="url(#brand-gradient)" />
+    <path d="M7 12h10M12 7v10" stroke="white" strokeWidth="1.7" strokeLinecap="round" />
+    <defs>
+      <linearGradient id="brand-gradient" x1="3" x2="21" y1="3" y2="21">
+        <stop stopColor="#7dd3fc" />
+        <stop offset="1" stopColor="#2563eb" />
+      </linearGradient>
+    </defs>
   </svg>
 );
 
@@ -39,28 +44,28 @@ export const Navigation = () => {
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-50 transition-colors duration-200 ${
+      className={`fixed inset-x-0 top-0 z-50 transition-all duration-200 ${
         isScrolled || isMobileOpen
-          ? 'bg-background/80 backdrop-blur-md border-b border-border'
-          : 'bg-transparent border-b border-transparent'
+          ? 'border-b border-white/10 bg-[#03050c]/78 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl'
+          : 'border-b border-transparent bg-transparent'
       }`}
     >
       <nav className="mx-auto max-w-[1400px]">
-        <div className="flex items-center justify-between h-14 px-6 lg:px-8">
+        <div className="flex h-14 items-center justify-between px-6 lg:px-8">
           <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2 group">
-              <BrandMark className="w-5 h-5 text-foreground" />
-              <span className="text-[15px] font-semibold tracking-[-0.01em] text-foreground">
+            <Link href="/" className="group flex items-center gap-2">
+              <BrandMark className="size-5" />
+              <span className="text-[15px] font-semibold tracking-[-0.01em] text-white">
                 Semantic GPS
               </span>
             </Link>
 
-            <div className="hidden md:flex items-center gap-7">
+            <div className="hidden items-center gap-7 md:flex">
               {NAV_LINKS.map((link) => (
                 <a
                   key={link.name}
                   href={link.href}
-                  className="text-[13px] text-foreground/60 hover:text-foreground transition-colors"
+                  className="text-[13px] text-white/52 transition-colors hover:text-white"
                 >
                   {link.name}
                 </a>
@@ -68,17 +73,17 @@ export const Navigation = () => {
             </div>
           </div>
 
-          <div className="hidden md:flex items-center gap-5">
+          <div className="hidden items-center gap-5 md:flex">
             <Link
               href="/login"
-              className="text-[13px] text-foreground/60 hover:text-foreground transition-colors"
+              className="text-[13px] text-white/52 transition-colors hover:text-white"
             >
               Sign in
             </Link>
             <Button
               asChild
               size="sm"
-              className="h-8 px-4 rounded-full bg-foreground text-background hover:bg-foreground/90 text-[13px] font-medium"
+              className="h-8 rounded-full bg-white px-4 text-[13px] font-semibold text-black hover:bg-white/90"
             >
               <Link href="/signup">Get started</Link>
             </Button>
@@ -87,42 +92,46 @@ export const Navigation = () => {
           <button
             type="button"
             onClick={() => setIsMobileOpen((v) => !v)}
-            className="md:hidden p-2 -mr-2"
+            className="-mr-2 p-2 text-white md:hidden"
             aria-label="Toggle menu"
           >
-            {isMobileOpen ? <XIcon className="w-5 h-5" /> : <MenuIcon className="w-5 h-5" />}
+            {isMobileOpen ? <XIcon className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
           </button>
         </div>
       </nav>
 
       <div
-        className={`md:hidden fixed inset-0 top-14 bg-background z-40 transition-opacity duration-200 ${
-          isMobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        className={`fixed inset-0 top-14 z-40 bg-[#03050c]/96 backdrop-blur-xl transition-opacity duration-200 md:hidden ${
+          isMobileOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
         }`}
       >
-        <div className="flex flex-col h-full px-6 pt-8 pb-8">
-          <div className="flex-1 flex flex-col gap-6">
+        <div className="flex h-full flex-col px-6 pt-8 pb-8">
+          <div className="flex flex-1 flex-col gap-6">
             {NAV_LINKS.map((link) => (
               <a
                 key={link.name}
                 href={link.href}
                 onClick={() => setIsMobileOpen(false)}
-                className="text-2xl font-medium text-foreground hover:text-foreground/70 transition-colors"
+                className="text-2xl font-medium text-white transition-colors hover:text-white/70"
               >
                 {link.name}
               </a>
             ))}
           </div>
-          <div className="flex flex-col gap-3 pt-6 border-t border-border">
+          <div className="flex flex-col gap-3 border-t border-white/10 pt-6">
             <Button
               asChild
-              className="h-11 rounded-full bg-foreground text-background hover:bg-foreground/90 text-[14px]"
+              className="h-11 rounded-full bg-white text-[14px] text-black hover:bg-white/90"
             >
               <Link href="/signup" onClick={() => setIsMobileOpen(false)}>
                 Get started
               </Link>
             </Button>
-            <Button asChild variant="outline" className="h-11 rounded-full border-foreground/20">
+            <Button
+              asChild
+              variant="outline"
+              className="h-11 rounded-full border-white/14 bg-white/[0.045] text-white hover:bg-white/[0.08] hover:text-white"
+            >
               <Link href="/login" onClick={() => setIsMobileOpen(false)}>
                 Sign in
               </Link>
