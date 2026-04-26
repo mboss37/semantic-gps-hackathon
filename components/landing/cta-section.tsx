@@ -19,8 +19,8 @@ export const CtaSection = () => (
               Put Semantic GPS between agents and business systems.
             </h2>
             <p className="mt-6 max-w-xl text-lg leading-8 text-white/58">
-              Govern every MCP call with live policies, audit, logging, monitoring, TRel workflow
-              discovery, and Playground validation before agents act for real.
+              Shadow &rarr; enforce live policy swap. Audit on every call. Saga rollback. The
+              governance layer the recent Replit, Meta, and Cursor incidents would have needed.
             </p>
           </div>
 
@@ -31,7 +31,7 @@ export const CtaSection = () => (
               className="h-12 rounded-full bg-white px-6 text-sm font-semibold text-black hover:bg-white/90"
             >
               <Link href="/signup">
-                Start governing agents
+                Start free
                 <ArrowRightIcon className="ml-1.5 size-4" />
               </Link>
             </Button>
@@ -41,9 +41,9 @@ export const CtaSection = () => (
               variant="outline"
               className="h-12 rounded-full border-white/14 bg-white/4.5 px-6 text-sm font-semibold text-white backdrop-blur-xl hover:bg-white/8 hover:text-white"
             >
-              <Link href="#features">
+              <Link href="#incidents">
                 <SparklesIcon className="mr-2 size-4" />
-                See features
+                See the receipts
               </Link>
             </Button>
             <Button

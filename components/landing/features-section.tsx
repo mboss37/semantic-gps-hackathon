@@ -10,6 +10,20 @@ type Feature = {
 
 const FEATURES: readonly Feature[] = [
   {
+    eyebrow: 'The strongest primitive',
+    title: 'Flip shadow → enforce without redeploys.',
+    lede: 'Author a policy in shadow mode. Watch what it would have blocked against real production traffic. Flip to enforce when compliance is comfortable. The observe-before-acting pattern Replit, Meta, and Cursor all lacked.',
+    metric: 'shadow / enforce',
+    visual: 'policy',
+  },
+  {
+    eyebrow: 'Audit',
+    title: 'See every agent action, with a receipt.',
+    lede: 'Every gateway call (allowed, blocked, errored, fallback, rollback) lands in mcp_events with policy verdicts, latency, redacted payload, and a trace_id that groups multi-step runs. The receipt security teams need.',
+    metric: 'live ops',
+    visual: 'governance',
+  },
+  {
     eyebrow: 'Unique MCP extension',
     title: 'Give agents a map of safe tool flows.',
     lede: 'MCP tells agents what tools exist. TRel shows which tools are safe to chain, validate, fall back, and roll back.',
@@ -17,23 +31,9 @@ const FEATURES: readonly Feature[] = [
     visual: 'trel',
   },
   {
-    eyebrow: 'Policy Management',
-    title: 'Define the rules agents must follow.',
-    lede: 'Apply out-of-the-box policies for identity, PII, rate limits, time windows, residency, and kill switches without redeploying agents.',
-    metric: 'ready rules',
-    visual: 'policy',
-  },
-  {
-    eyebrow: 'Governance',
-    title: 'See every agent action.',
-    lede: 'Track who called what, which policy decided, what failed, and how agent traffic changes across audit and monitoring views.',
-    metric: 'live ops',
-    visual: 'governance',
-  },
-  {
     eyebrow: 'Playground',
     title: 'Prove governance before shipping.',
-    lede: 'Compare raw and governed execution so teams can see exactly what Semantic GPS changes before production rollout.',
+    lede: 'Same Opus 4.7 client, same prompt, two endpoints. Raw MCP vs the governed gateway. Variable isolation: only the URL differs. The contrast is visible, honest, reproducible.',
     metric: 'A/B validate',
     visual: 'playground',
   },

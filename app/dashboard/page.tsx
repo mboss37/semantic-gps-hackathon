@@ -113,8 +113,9 @@ const DashboardPage = async () => {
               </CardHeader>
               <CardContent className="flex flex-col items-start gap-3">
                 <p className="text-sm text-muted-foreground">
-                  No gateway events yet. Every MCP call that passes through Semantic GPS shows
-                  up here, policy decisions, latency, trace IDs, the lot.
+                  No gateway events yet. Once your agents call tools through Semantic GPS, every
+                  action lands here with policy verdicts, latency, trace IDs, and redacted
+                  payloads. The audit trail security teams need after an incident.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button asChild size="sm">

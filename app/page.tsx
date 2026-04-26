@@ -4,6 +4,7 @@ import { CtaSection } from '@/components/landing/cta-section';
 import { FeaturesSection } from '@/components/landing/features-section';
 import { FooterSection } from '@/components/landing/footer-section';
 import { HeroSection } from '@/components/landing/hero-section';
+import { IncidentsSection } from '@/components/landing/incidents-section';
 import { InfrastructureSection } from '@/components/landing/infrastructure-section';
 import { IntegrationsSection } from '@/components/landing/integrations-section';
 import { Navigation } from '@/components/landing/navigation';
@@ -24,6 +25,7 @@ const Home = () => (
     <Navigation />
     <HeroSection />
     <StatStrip />
+    <IncidentsSection />
     <FeaturesSection />
     <InfrastructureSection />
     <IntegrationsSection />

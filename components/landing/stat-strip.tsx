@@ -1,23 +1,29 @@
+// Market-fear stat strip. Replaces the legacy product-feature counts.
+// These four numbers anchor the urgency that the hero subhead opens with
+// (Gravitee 2026 + Grant Thornton 2026 + EU AI Act). Sourced inline in
+// docs/VISION.md § References. Keep tabular-nums on the values so the
+// 97% / 88% / 14% line up cleanly across the strip.
+
 const STATS = [
   {
-    value: 'Gateway',
-    label: 'agent to system',
-    detail: 'Govern calls between agents and MCP-connected systems',
+    value: '97%',
+    label: 'Expect incident',
+    detail: 'of enterprises expect a major AI agent security incident in the next 12 months',
   },
   {
-    value: 'TRel',
-    label: 'Tool Relationship',
-    detail: 'A new MCP extension for tool relationship mapping',
+    value: '88%',
+    label: 'Already had one',
+    detail: 'reported a confirmed or suspected AI agent security incident this year',
   },
   {
-    value: 'Policy',
-    label: 'management',
-    detail: 'Turn ready-made rules on or off without redeploys',
+    value: '14%',
+    label: 'With full review',
+    detail: 'of agents reach production with full security or IT approval',
   },
   {
-    value: 'Audit',
-    label: '+ monitoring',
-    detail: 'Track decisions, traffic, errors, and blocked calls',
+    value: 'Aug 2 2026',
+    label: 'EU AI Act',
+    detail: 'high-risk AI systems must comply or stop operating',
   },
 ];
 
@@ -31,10 +37,10 @@ export const StatStrip = () => (
             <div className="text-4xl font-semibold tracking-[-0.055em] text-white tabular-nums md:text-5xl lg:text-4xl xl:text-5xl">
               {s.value}
             </div>
-            <div className="mt-2 text-[11px] tracking-[0.18em] text-blue-100/55 uppercase">
+            <div className="mt-2 font-mono text-[11px] tracking-[0.18em] text-red-100/65 uppercase">
               {s.label}
             </div>
-            <p className="mt-3 text-sm leading-6 text-white/42">{s.detail}</p>
+            <p className="mt-3 text-sm leading-6 text-white/52">{s.detail}</p>
           </div>
         ))}
       </div>

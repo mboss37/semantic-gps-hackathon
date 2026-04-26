@@ -353,16 +353,20 @@ export const HeroSection = () => (
         </div>
 
         <h1 className="text-[clamp(2.8rem,5.6vw,5.35rem)] leading-[0.94] font-semibold tracking-[-0.065em] text-balance text-white">
-          The governance gateway for
+          Mission control
           <span className="block bg-linear-to-r from-white via-white/72 to-blue-200 bg-clip-text text-transparent">
-            production AI agents.
+            for AI agents.
           </span>
         </h1>
 
-        <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-pretty text-white/62 md:text-lg">
-          Semantic GPS sits between agents and MCP-connected business systems, enforcing policies,
-          logging every call, and mapping safe fallback and rollback paths before agents touch
-          production.
+        <p className="mx-auto mt-6 max-w-3xl text-pretty text-white/72">
+          <span className="block text-xl leading-8 font-medium text-white/85 md:text-2xl md:leading-9">
+            The agents are working. The safety surface around them isn&apos;t.
+          </span>
+          <span className="mt-3 block text-base leading-7 text-white/58 md:text-lg">
+            Shadow &rarr; enforce policy mode swap, audit on every call, saga rollback. The
+            governance layer your AI agents reach business systems through.
+          </span>
         </p>
 
         <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -371,8 +375,8 @@ export const HeroSection = () => (
             size="lg"
             className="h-12 rounded-full bg-white px-6 text-sm font-semibold text-black shadow-[0_0_40px_rgba(255,255,255,0.16)] hover:bg-white/90"
           >
-            <Link href="/signup">
-              Start governing agents
+            <Link href="#incidents">
+              See it block a real call
               <ArrowRightIcon className="ml-1.5 size-4" />
             </Link>
           </Button>
@@ -382,7 +386,7 @@ export const HeroSection = () => (
             variant="outline"
             className="h-12 rounded-full border-white/14 bg-white/4.5 px-6 text-sm font-semibold text-white backdrop-blur-xl hover:bg-white/8 hover:text-white"
           >
-            <Link href="#features">Explore features</Link>
+            <Link href="/signup">Start free</Link>
           </Button>
         </div>
       </div>
