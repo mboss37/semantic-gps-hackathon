@@ -178,7 +178,56 @@
 
 ## Current:
 
-_(empty: pull next sprint from `BACKLOG.md`)_
+**Sprint 28: Route authoring MVP — de-risk on `feat/route-authoring`**
+
+> Status: feature branch only. Submission day. **Main stays clean regardless.**
+> Merge into main only if WP-28.1, WP-28.2, WP-28.3 all green before recording
+> cutoff (~6 hours pre-deadline). Otherwise the branch carries to a v2 sprint
+> post-hackathon.
+
+**The gap.** Today routes only land via `scripts/bootstrap-local-demo.sql`
+(idempotent seed). There is no `app/api/routes/` directory and no Create/Edit
+UI. `/dashboard/routes` is read-only. We need a defensible "you can author
+your own routes" path.
+
+**The de-risk shape.** JSON-import path, not a visual editor. Same JSON the
+seed produces. Skips DSL form UI, drag-drop reordering, edit/PATCH endpoints,
+compensator coverage validation. Lands real CRUD value with ~5h of work
+instead of 12+.
+
+- [ ] **WP-28.1 — POST /api/routes (JSON import).** Accepts a route + steps
+      payload matching the seed schema. Zod-validated, org-scoped via
+      `requireAuth`, manifest cache invalidation, idempotent on slug-keyed
+      name uniqueness. ~90 min. Files: `app/api/routes/route.ts` (new),
+      `lib/routes/import.ts` (new), `__tests__/route-import.vitest.ts` (new).
+- [ ] **WP-28.2 — DELETE /api/routes/[id].** Hard delete since seeds are
+      idempotent. RLS-scoped, manifest invalidation. ~30 min. Files:
+      `app/api/routes/[id]/route.ts` (new).
+- [ ] **WP-28.3 — Routes list "Import" affordance.** Modal with JSON
+      textarea + "Load sample" button (loads `bootstrap-local-demo.sql`
+      route shape as starting point). ~90 min. Files:
+      `components/dashboard/route-import-dialog.tsx` (new),
+      `app/dashboard/routes/page.tsx` (edit).
+- [ ] **WP-28.4 — Routes detail "Copy as JSON" button.** Lets users clone
+      the seeded route as a starting template. ~30 min. Files:
+      `components/dashboard/route-export-button.tsx` (new),
+      `app/dashboard/routes/[id]/page.tsx` (edit).
+- [ ] **WP-28.5 — Tests + reviewer sweep + visual QA via playwright.** ~60 min.
+- [ ] **WP-28.6 — BACKLOG entry for "Route Author UI v2".** Captures the
+      deferred visual-editor scope so it survives. ~10 min.
+
+**Cuts (NOT in this sprint):**
+- ✂ Visual step editor with form per step
+- ✂ DSL autocomplete / `$inputs.x` / `$steps.foo.result.bar` helper UI
+- ✂ Step reordering (DnD or up/down)
+- ✂ PATCH endpoint (delete + re-import is the user pattern)
+- ✂ Compensator coverage validation
+- ✂ Import format documentation page (link to seed file is enough)
+
+**Merge decision point:** if WP-28.1/2/3 all shipped + tests green +
+reviewer approved + visual QA passes on `/dashboard/routes` before recording
+cutoff → merge to main. Otherwise: branch carries to v2; main submits without
+this work; BACKLOG records the scope.
 
 ## Session Log
 - 2026-04-26: Sprints 26+27 wrapped together. Sprint 26 = 11-commit dashboard UI refactor (servers + relationships + routes + connect + policies + tokens + chrome) over Sat night → Sun early AM, originally tagged 26-28 in commits, consolidated as one bulk TASKS.md entry. Sprint 27 = this session's audit work: per-Run trace_id refactor + audit Server column + audit detail visual hierarchy + WP-26.1 polling→DASHBOARD_REFRESH_EVENT listener (Monitoring pattern reuse). Key lesson: don't reinvent neighbor patterns. First WP-26.1 draft built generalized `useRealtimeMcpEvents` hook + Datadog Live Tail UX (Pause button, buffered count, auto-pause on scroll); user redirected to existing pattern → ~50 lines deleted, zero new chrome. PostgREST to-one-FK-as-array TS-types-lie gotcha caught when Server column rendered empty. 3 memories. 344/2/0 tests.
