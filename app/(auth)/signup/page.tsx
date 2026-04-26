@@ -48,7 +48,7 @@ const SignupPage = () => {
       <CardHeader>
         <CardTitle>Create account</CardTitle>
         <CardDescription>
-          Your workspace spins up automatically — one admin per account.
+          Email + password. Your gateway, policies, and audit dashboard are ready immediately.
         </CardDescription>
       </CardHeader>
       <CardContent>
