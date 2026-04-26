@@ -70,11 +70,18 @@ pnpm dev
 | `EVALUATE_GOAL_MODEL` | TRel `evaluate_goal` ranker (`claude-opus-4-7`) |
 | `NEXT_PUBLIC_APP_URL` | Absolute app URL. Set to your Cloudflare tunnel URL when testing the Playground agent against local. |
 | `CREDENTIALS_ENCRYPTION_KEY` | AES-256-GCM key for `servers.auth_config` ciphertext. Generate with `openssl rand -base64 32` |
-| `SF_LOGIN_URL` | Salesforce org base URL for the co-deployed SF MCP route |
-| `SF_CLIENT_ID` | SF Connected App client id (Client Credentials flow) |
-| `SF_CLIENT_SECRET` | SF Connected App client secret |
-| `SLACK_BOT_TOKEN` | Slack bot token (`xoxb-…`); scopes: `chat:write`, `users:read.email`, `channels:read` |
-| `GITHUB_PAT` | GitHub classic PAT with `repo` scope (owner/repo come from each tool call, not env) |
+
+### Demo MCP credentials (optional, illustrative)
+
+The gateway is vendor-agnostic; nothing below is required to boot. The three demo upstreams (Salesforce / Slack / GitHub) are co-deployed at `app/api/mcps/<vendor>/route.ts` so the demo recording can govern real third-party traffic end-to-end. Bring your own MCPs (HTTP-Streamable or OpenAPI) and skip these entirely.
+
+| Var | Purpose |
+|---|---|
+| `SF_LOGIN_URL` | Salesforce demo MCP, org base URL |
+| `SF_CLIENT_ID` | Salesforce demo MCP, Connected App client id (Client Credentials flow) |
+| `SF_CLIENT_SECRET` | Salesforce demo MCP, Connected App client secret |
+| `SLACK_BOT_TOKEN` | Slack demo MCP, bot token (`xoxb-…`); scopes: `chat:write`, `users:read.email`, `channels:read` |
+| `GITHUB_PAT` | GitHub demo MCP, classic PAT with `repo` scope (owner/repo come from each tool call, not env) |
 
 ### Local-only
 
