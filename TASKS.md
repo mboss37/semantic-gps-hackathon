@@ -176,42 +176,20 @@
 - WP-26.1 retire audit page 1Hz polling: replaced 50-line `setInterval` + Pause/Resume button with the same `DASHBOARD_REFRESH_EVENT` listener pattern Monitoring uses (`refreshTick` retrigger). One websocket per tab via shell-mounted `useRealtimeDashboardEvents`; many readers. ~50 lines deleted, zero new hooks.
 - VISION.md → `docs/VISION.md` + 5 caller links updated. 1 commit (`b4fef47`). 344/2/0 tests, lint + typecheck + build clean.
 
+**Sprint 28: Route authoring MVP — feature-branch de-risk (Sun Apr 26 PM):**
+- Whole sprint executed on `feat/route-authoring`, merged to main with `--no-ff` at `fb3778c` after meeting all merge criteria. 942 insertions / 13 files / 356/2/0 tests.
+- WP-28.1 POST /api/routes JSON import (`dd13a57`): name-based tool resolution, batched org-scoped lookup, sequential insert + manual rollback. 12 unit tests on the pure import function. Sprint 27 PostgREST single-object embed pattern reused.
+- WP-28.2 DELETE /api/routes/[id] (`ff1fd40`) + WP-28.3 import dialog UI (`b71c4db`) + WP-28.4 Copy as JSON button on detail (`3b4fc7c`): full clone-and-edit loop. fetchRouteDetail extended with `fallback_input_mapping` + `fallback_rollback_input_mapping` for round-trip-complete export.
+- WP-28.5 visual QA via Playwright + WP-28.6 BACKLOG v2 entry (`ddbc7b8`): import + Load sample + Import + detail + Copy as JSON + bad-JSON + duplicate-name all pass; v2 visual editor scope captured (DSL autocomplete, step reordering, PATCH endpoint, compensator coverage validation, `(org, name)` UNIQUE).
+- Frontend designer review post-WPs (`59ebde8`): 3 fixes — RouteExportButton delegates to CopyButton (extended with `variant` prop), error pill uses `text-destructive` tokens, eyebrow `<span>` swapped for shadcn `<Label htmlFor>`. Per-WP reviewer missed pattern drift; design pass caught it. ~50 lines deleted.
+- Regression PASS via 4 gateway curl stories: tools/list (15 tools), discover_relationships (14n/13e), tools/call (correctly blocked by business_hours), execute_route (saga halt at step 1 with structured response). Audit log writes verified.
+
 ## Current:
 
-**Sprint 28: Route authoring MVP — de-risk on `feat/route-authoring` (READY TO MERGE)**
-
-All six WPs shipped on `feat/route-authoring`. 970 insertions, 11 files,
-356/2/0 tests, typecheck + lint + next build all clean, visual QA passed
-end-to-end via Playwright (login → list → import dialog → load sample →
-import → success → detail → copy as JSON → import error paths).
-
-- [x] **WP-28.1** POST /api/routes (JSON import) — `dd13a57`. 4 files,
-      lib/schemas/route-import.ts + lib/routes/import.ts + handler + 12 unit
-      tests on the pure import function with mocked Supabase client. Sprint
-      27 PostgREST single-object embed lesson reused.
-- [x] **WP-28.2** DELETE /api/routes/[id] — `ff1fd40`. Mirrors relationships
-      DELETE pattern. 404 (not 403) on cross-org/missing routes to avoid
-      leaking existence. route_steps cascade via FK.
-- [x] **WP-28.3** Routes list import dialog UI — `b71c4db`. shadcn Dialog +
-      Textarea + Load sample button + Cancel/Import. Replaces the disabled
-      "Create route Soon" placeholder. formatApiError special-cases
-      duplicate, tool-not-found, and invalid-body with user-actionable hints.
-- [x] **WP-28.4** Routes detail Copy as JSON button — `3b4fc7c`. Extended
-      fetchRouteDetail with fallback_input_mapping +
-      fallback_rollback_input_mapping (round-trip-complete). Export omits
-      empty optionals + domain_id. Closes the import/export loop.
-- [x] **WP-28.5** Tests + reviewer + Playwright QA. Each WP individually
-      reviewed and Approved by `code-reviewer`. Visual QA captured 8
-      screenshots through the full happy + error paths.
-- [x] **WP-28.6** BACKLOG entry for v2 — Route Author UI v2 spec landed in
-      BACKLOG.md P1 with full scope (visual editor, DSL autocomplete, step
-      reordering, PATCH endpoint, compensator coverage validation,
-      `(org, name)` UNIQUE constraint, docs page).
-
-**Merge readiness:** all conditions met. Branch is `origin/feat/route-authoring`
-at `3b4fc7c`. Main at `1963101`. Awaiting merge decision.
+_(empty: pull next sprint from `BACKLOG.md`)_
 
 ## Session Log
+- 2026-04-26: Sprint 28 shipped on `feat/route-authoring` then merged to main (--no-ff at `fb3778c`). 6 WPs in ~4h: POST/DELETE /api/routes + import dialog + Copy as JSON + design-review fixes. JSON-import path (not visual editor) chosen as MVP de-risk; v2 scope in BACKLOG. Frontend designer review caught CopyButton-duplication + raw-red-tokens + eyebrow-vs-Label drift that per-WP reviewers missed. 4 gateway-curl regression stories all PASS (tools/list, discover_relationships, tools/call+policy block, execute_route saga halt). Net: 942 insertions, 356/2/0 tests, full clone-and-edit loop now works in dashboard. 3 memories captured (JSON-import recipe, "extend primitive don't duplicate", feature-branch de-risk pattern).
 - 2026-04-26: Sprints 26+27 wrapped together. Sprint 26 = 11-commit dashboard UI refactor (servers + relationships + routes + connect + policies + tokens + chrome) over Sat night → Sun early AM, originally tagged 26-28 in commits, consolidated as one bulk TASKS.md entry. Sprint 27 = this session's audit work: per-Run trace_id refactor + audit Server column + audit detail visual hierarchy + WP-26.1 polling→DASHBOARD_REFRESH_EVENT listener (Monitoring pattern reuse). Key lesson: don't reinvent neighbor patterns. First WP-26.1 draft built generalized `useRealtimeMcpEvents` hook + Datadog Live Tail UX (Pause button, buffered count, auto-pause on scroll); user redirected to existing pattern → ~50 lines deleted, zero new chrome. PostgREST to-one-FK-as-array TS-types-lie gotcha caught when Server column rendered empty. 3 memories. 344/2/0 tests.
 - 2026-04-25: Sprints 24+25 shipped: 4 commits unpushed. Sprint 24: Connect page (3-tier scope tabs, 4 client snippets, live Test connection) + Monitoring KPI hero strip + dropped hardcoded SalesOps domain from signup trigger + SiteHeader duplicate `<h1>` killed across all 11 pages. Sprint 25: server-config-snippet origin fix (same pattern as Connect), server cards rebuilt (health dot + traffic stat + ⋯ menu), server detail reflow (Origin status to top, scoped KPI strip, collapsed empty cards), overview cleanup (DataTable dropped, chart 7d default). Hard-Won Lessons #45/#46/#47. 6 memories. 344/2/0 tests on every commit.
 - 2026-04-25: Sprint 23 shipped: 1 commit. Mid-sprint scope pivot: original plan was Connect page + charts + KPI strip; actual ship was charts unification + audit DataTable + audit timeline LineChart + range pickers (Monitoring + Audit) + auto-range pick. Datadog-grade polish: `lib/charts/palette.ts` single palette source, `lib/monitoring/range.ts` shared time-range vocabulary, `lib/audit/timeline.ts` server-side bucketing. Caught react-19 purity rule bouncing `Date.now()` in render → bucket on server. Caught barCategoryGap numeric collapse to 0.04px via Playwright SVG inspection. Connect page + KPI strip back to BACKLOG. 6 memories + Hard-Won Lessons #42/#43/#44. 344/2/0 tests.
