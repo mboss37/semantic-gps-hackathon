@@ -12,7 +12,7 @@ Hard code freeze: **Sun Apr 26 12:00 CET**. Everything below lands Sat or doesn'
 - **Demo narrative** — pick positioning angle (SF-complements / AI-security / DevOps-first), write ≤15-word pitch, Playground A/B script, PII target tool, README paragraph.
 - **Playground preset validation** — drive each preset through the actual UI via cloudflared tunnel, confirm tool picks + pane contrast, rewrite prompts if agent picks wrong tool order.
 - **Vercel env vars** — add `SF_LOGIN_URL`, `SF_CLIENT_ID`, `SF_CLIENT_SECRET`, `SLACK_BOT_TOKEN`, `GITHUB_PAT` to Vercel project + redeploy. Blocks demo recording.
-- **Demo recording + submission** — record, edit, upload, finalize `SUBMISSION.md` + `README.md` + LICENSE, repo public, submit. Full checklist in `docs/DEMO.md`.
+- **Demo recording + submission** — record, edit, upload, finalize `README.md` + LICENSE, repo public, submit.
 
 ## P1 — Nice-to-have if P0 done by Saturday lunch
 

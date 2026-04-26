@@ -2,7 +2,7 @@
 
 This document is the operating manual for the 5-day hackathon build. Everything here is decided. Deviations need a reason.
 
-Companion to `PROJECT.md` (scope, features, demo plan).
+Companion to [`VISION.md`](./VISION.md) (problem framing + post-hackathon shape).
 
 ---
 

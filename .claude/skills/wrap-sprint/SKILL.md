@@ -31,7 +31,7 @@ Gather full context before proposing anything. No edits in this phase.
 4. **Read current truth:**
    - `CLAUDE.md` (full)
    - `docs/ARCHITECTURE.md` (sections: Stack, Project Folder Structure, API Surface, Conventions, Hard-Won Lessons, What Not To Touch)
-   - `docs/PROJECT.md` (Key Features, Technical Approach)
+   - `docs/VISION.md` (problem framing, what Semantic GPS solves, post-hackathon shape)
    - All files under `.claude/rules/`
    - `package.json` (dependencies / devDependencies)
 5. **Search memory** — `memory_search` for:
@@ -74,7 +74,7 @@ Check each section for drift:
 - New banned patterns that should be enforced
 - Updates to existing rules based on what was learned
 
-### 2d. Docs drift (`docs/ARCHITECTURE.md`, `docs/PROJECT.md`)
+### 2d. Docs drift (`docs/ARCHITECTURE.md`, `docs/VISION.md`)
 
 - **Folder Structure** section — new dirs/files
 - **Stack** table — new deps + versions

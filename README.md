@@ -1,12 +1,16 @@
 # Semantic GPS
 
-**The control plane for MCP agents: live policy enforcement, typed workflow discovery, and audit — all through one gateway.**
+**The governance gateway between AI agents and the business systems they were never supposed to touch unsupervised.**
 
-Built for the Anthropic "Keep Thinking" Hackathon (April 2026) — 5-day scope, production-grade wedge.
+AI agents are calling tools in production. MCP is the standard for the connection. But MCP servers ship as "expose every tool, hope for the best" — no policies, no audit, no rollback, no workflow discovery. Compliance won't let agents touch production they can't govern. Pilots stay pilots.
+
+Semantic GPS sits between agents and any MCP-connected system as one control plane: 12 hot-swappable policies across 7 governance dimensions, saga rollback with explicit per-step input mapping, audit on every call, a Tool Relationship (TRel) MCP extension for workflow discovery, and a side-by-side Playground proving raw-MCP vs governed contrast under identical Opus 4.7 prompts.
+
+Built for the Anthropic "Keep Thinking" Hackathon (April 2026) — 5-day scope.
 
 - **Live demo:** https://semantic-gps-hackathon.vercel.app/
 - **Demo video:** _(link added on submission)_
-- **Vision beyond the wedge:** [`docs/VISION.md`](./docs/VISION.md) — split control/data plane, Rust data plane deploy-anywhere, multi-region Next.js control plane.
+- **Full story:** [`docs/VISION.md`](./docs/VISION.md)
 
 ---
 
@@ -108,7 +112,7 @@ All runtime env helpers throw loudly on missing values — no silent production 
 ## Commands
 
 - `pnpm dev` — Next.js on :3000 (Turbopack)
-- `pnpm test` — Vitest suite (`__tests__/*.vitest.ts`), 256 pass / 5 skip
+- `pnpm test` — Vitest suite (`__tests__/*.vitest.ts`), 344 pass / 2 skip
 - `pnpm typecheck` — `tsc --noEmit`
 - `pnpm lint` — ESLint
 - `pnpm supabase start` — local Docker Postgres + Auth
@@ -132,20 +136,7 @@ Demo-day recording aides:
 
 Full stack reference in [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
 Sprint-by-sprint build log in [`TASKS.md`](./TASKS.md).
-Recording-day playbook in [`docs/DEMO.md`](./docs/DEMO.md).
-
----
-
-## Where this goes next
-
-The current build is one Next.js app doing two jobs. The architecture it points at is a split control plane + data plane:
-
-- **Rust data plane** — deploys anywhere (Cloudflare Workers, K8s sidecar, customer VPC, air-gapped). Tool calls never leave the customer's network.
-- **Multi-region Next.js control plane** — runs where the customer's admins sit; compiles signed Navigation Bundles for the data plane to pull.
-- **Protocol-agnostic surface** — MCP today, A2A tomorrow. Routes are the abstraction; transports plug in.
-- **Semantic layer** — decouple "what a Lead _is_" from "how Salesforce represents a Lead" via a shared Semantic Definition Store.
-
-Full vision + roadmap in [`docs/VISION.md`](./docs/VISION.md).
+Roadmap and post-hackathon vision in [`docs/VISION.md`](./docs/VISION.md).
 
 ---
 

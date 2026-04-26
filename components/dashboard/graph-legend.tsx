@@ -12,7 +12,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-// Canonical 8 TRel edge types (docs/USER-STORIES.md §Relationships & Graph).
+// Canonical 8 TRel edge types — see `relationships.relationship_type` CHECK
+// constraint in `docs/ARCHITECTURE.md` for the canonical enum.
 // Colors are also consumed by the React Flow edge styling in the graph page —
 // keep the two in sync. Sprint 27: each type has a Lucide icon + a short
 // label so the relationships row renders a single colored icon-with-caption

@@ -9,7 +9,6 @@ Semantic GPS — MCP control plane for agentic workflows. 5-day hackathon build.
 - **Judging weights:** Impact 30 / Demo 25 / Opus 4.7 Use 25 / Depth & Execution 20
 - **Side prize to consider:** $5K "Best use of Claude Managed Agents" — worth a look for the demo agent
 - **Binding constraints are review bandwidth + regression risk, NOT Claude dev-hours.** A sprint's worth of WPs ships in wall-clock minutes; each WP still takes one human review + subagent review + approval cycle. Plan against "max 2 big stretches Fri+Sat," not "how long to code it."
-- Full schedule, reverse-planned build calendar, resources, and Day-5 submission checklist in `docs/HACKATHON.md`
 
 ## Competition Mindset (hard rules during the hackathon window)
 
@@ -68,8 +67,7 @@ When proposing a sprint, a WP, or a change, name the ranking slot it moves. "Thi
 These are the source of truth for the build — read them before writing code, and consult them whenever a decision feels ambiguous.
 
 - **`docs/ARCHITECTURE.md`** — operating manual. Stack choices, folder layout, DB schema, API surface, MCP gateway design, security baseline, non-negotiable conventions, hard-won lessons, day-1 checklist, explicit "what not to touch" list.
-- **`docs/PROJECT.md`** — pitch & scope. Problem, features, demo scenarios, day-by-day build plan, success criteria, out-of-scope list.
-- **`docs/USER-STORIES.md`** — locked user-story spec. Canonical relationship taxonomy, V2 cut-lines, Playground A/B hero narrative. Sprint scope must trace back to a story here.
+- **`docs/VISION.md`** — narrative for judges + post-hackathon shape. Problem statement, what Semantic GPS solves, split-plane future architecture.
 - **`BACKLOG.md`** — deferred features. Add here immediately when something is discussed but not in this sprint.
 - **`TASKS.md`** — current sprint + session log. Update as work lands.
 
@@ -98,7 +96,7 @@ If `docs/ARCHITECTURE.md` and this file ever disagree, architecture wins — ope
 Every WP starts with a plan, NOT with code. No exceptions, even for "obviously small" WPs. Plans take 2–3 minutes and catch demo-killing bugs before they land (see the CC-regex UUID false-positive in WP-3.4 — the kind of thing a plan review surfaces for free).
 
 On WP kickoff, before any `Write`/`Edit`:
-1. Read the relevant spec: `docs/ARCHITECTURE.md`, `docs/PROJECT.md`, active rules in `.claude/rules/*.md`, the WP line in `TASKS.md`.
+1. Read the relevant spec: `docs/ARCHITECTURE.md`, active rules in `.claude/rules/*.md`, the WP line in `TASKS.md`.
 2. Sanity-check SDK / API assumptions — skim installed type defs, `context7` for framework docs, grep the existing codebase for the pattern.
 3. Present the plan via `ExitPlanMode` (or a clearly-framed plan message when plan mode isn't available). Must include:
    - Files to create/modify (with one-line intent each)
