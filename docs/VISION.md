@@ -69,6 +69,35 @@ A new MCP method set on top of `tools/list`: `discover_relationships`, `find_wor
 
 Plus a side-by-side Playground (same Opus 4.7 client, same prompt, two endpoints: raw MCP vs the governed gateway) that proves the contrast under controlled, reproducible conditions.
 
+## Regulatory fit (EU AI Act, August 2 2026)
+
+Three of the Act's hardest operational obligations for high-risk AI systems map directly onto primitives Semantic GPS already ships. The Act takes general application on August 2, 2026; high-risk system requirements harden across 2026 and 2027. Penalties run to **€35M or 7% of global turnover**.
+
+| Article | Obligation | Semantic GPS coverage |
+|---|---|---|
+| **Art. 9** Risk management system | Continuous risk identification + mitigation across lifecycle | The 12-policy engine across 7 governance dimensions IS a documented risk-management catalog. Shadow → enforce is controlled risk introduction. |
+| **Art. 12** Record-keeping (logs) | Auto-generated lifecycle logs, retain ≥6 months | `mcp_events` table captures every gateway call (status, policy verdict, latency, redacted payload, trace_id) automatically without operator intervention. Postgres durability; retention is a customer config. |
+| **Art. 13** Transparency to deployers | Inform on capabilities / limitations / intended purpose | Tool descriptions, TRel relationship metadata, and policy verdicts surface deployer-readable behavior. |
+| **Art. 14** Human oversight | Effective stop / interpret / authorize controls | Shadow → enforce mode swap is the canonical observe-before-acting control. `write_freeze` kill-switch is the stop button. Dashboard is the operator interface. |
+| **Art. 15** Accuracy / robustness / cybersecurity | Resilience, error rates, attack resistance | SSRF guard, AES-256-GCM credential encryption, `injection_guard` policy, rate limiting harden the call surface. |
+| **Art. 26** Deployer obligations | Monitor, halt, log incidents | Audit page + policy timeline + monitoring dashboard ARE the deployer's monitoring + stop interface. |
+| **Art. 73** Serious incident reporting | Report to authorities | We produce the evidence (full audit trail with trace_id and policy decisions); customer files the report. |
+
+### Adjacent standard: Web Bot Auth
+
+The Act doesn't mandate HTTP-level agent identification, but Articles 12 and 14 both require knowing *which* agent did *what*. The emerging answer is the IETF [Web Bot Auth draft](https://datatracker.ietf.org/doc/draft-meunier-web-bot-auth-architecture/) (HTTP Message Signatures per RFC 9421), already implemented by OpenAI Operator and Cloudflare, with adoption from Visa, Mastercard, Amex, and Amazon Bedrock AgentCore. The IETF working group was chartered in early 2026; Best Current Practice is due August 2026.
+
+The `agent_identity_required` policy is the enforcement edge for this pattern: v1 verifies header presence (shipped); v2 adds Ed25519 signature verification against published JWKS (config surface is forward-compatible).
+
+### What we don't claim
+
+- **Art. 10 Data governance** (training data lineage, bias mitigation): the model provider's responsibility, not ours.
+- **Art. 11 Technical documentation** of the AI model: same.
+- **Art. 50 End-user transparency** ("you are interacting with AI"): app-layer UI concern, not infrastructure.
+- **Conformity assessment / CE marking**: customer regulatory process, not a tool we provide.
+
+The honest framing: Semantic GPS is operational infrastructure that makes the Act's record-keeping, human-oversight, and risk-management obligations achievable for the AI provider and deployer. Compliance ownership stays with the operator; we make the operational layer not-impossible.
+
 ## Where it goes
 
 The current build is one Next.js app doing two jobs: the control plane (UI, policy authoring, audit, manifest cache) AND the data plane (the gateway proxying live tool calls to whatever MCP servers a customer registers).

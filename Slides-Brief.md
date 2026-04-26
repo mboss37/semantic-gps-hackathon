@@ -159,6 +159,7 @@ A privileged service-role agent processed support tickets containing user-suppli
 - Number: `Aug 2 2026` (display 96px, smaller than the percentages)
 - Label: `EU AI ACT`
 - Caption: `high-risk systems must comply`
+- Sub-caption (mono 14px, white/35%, italic): `Art. 9 · Art. 12 · Art. 14`
 
 **Sources caption (bottom-center, mono 16px, white/35%):**
 `Gravitee 2026  ·  Grant Thornton 2026  ·  Foresiet 2026  ·  EU AI Act`

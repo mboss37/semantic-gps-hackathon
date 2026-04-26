@@ -61,11 +61,11 @@ Replit's code freeze was prose. Yue's "ask first" was prose. Cursor's privilege 
 
 ---
 
-## 4. Close — 2:50 to 3:00 (~25 words / ~10 seconds)
+## 4. Close — 2:50 to 3:00 (~30 words / ~12 seconds)
 
 > Back on-camera if you opened on-camera. Otherwise hold on the dashboard.
 
-The agents are working. The safety surface around them isn't. Semantic GPS is that surface. Live now at semantic-gps-hackathon.vercel.app.
+Article 12 audit. Article 14 human oversight. Article 9 risk management. The EU AI Act takes hold August 2nd. Semantic GPS is the operational layer that's ready. Live now at semantic-gps-hackathon.vercel.app.
 
 ---
 
