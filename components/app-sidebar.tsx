@@ -15,6 +15,7 @@ import {
   SparklesIcon,
 } from 'lucide-react';
 
+import { BrandMark } from '@/components/brand-mark';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { WorkspaceBadge } from '@/components/workspace-badge';
@@ -76,7 +77,7 @@ export function AppSidebar({ user, workspace, ...props }: AppSidebarProps) {
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
               <a href="/dashboard">
-                <NetworkIcon className="size-5!" />
+                <BrandMark className="size-5" />
                 <span className="text-base font-semibold">Semantic GPS</span>
               </a>
             </SidebarMenuButton>

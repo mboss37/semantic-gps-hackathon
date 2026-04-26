@@ -1,25 +1,8 @@
 import Link from 'next/link';
 
-import { GithubMark } from './github-mark';
+import { BrandMark } from '@/components/brand-mark';
 
-const BrandMark = ({ className }: { className?: string }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-    aria-hidden
-  >
-    <rect x="3" y="3" width="18" height="18" rx="6" fill="url(#footer-brand-gradient)" />
-    <path d="M7 12h10M12 7v10" stroke="white" strokeWidth="1.7" strokeLinecap="round" />
-    <defs>
-      <linearGradient id="footer-brand-gradient" x1="3" x2="21" y1="3" y2="21">
-        <stop stopColor="#7dd3fc" />
-        <stop offset="1" stopColor="#2563eb" />
-      </linearGradient>
-    </defs>
-  </svg>
-);
+import { GithubMark } from './github-mark';
 
 const COLUMNS = [
   {

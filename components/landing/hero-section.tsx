@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { BrandMark } from '@/components/brand-mark';
 
 const SIDEBAR_SECTIONS = [
   {
@@ -124,9 +125,7 @@ const DashboardPreview = () => (
     <div className="relative z-10 grid min-h-[780px] lg:grid-cols-[236px_1fr]">
       <aside className="hidden border-r border-white/10 bg-black/70 p-4 lg:block">
         <div className="mb-6 flex items-center gap-2 px-2">
-          <span className="flex size-8 items-center justify-center rounded-md bg-white text-black">
-            <NetworkIcon className="size-4" />
-          </span>
+          <BrandMark className="size-8" />
           <div>
             <p className="text-sm font-semibold text-white">Semantic GPS</p>
             <p className="text-[11px] text-white/34">Acme SalesOps</p>
@@ -334,9 +333,14 @@ const HeroProofCallouts = () => (
 
 export const HeroSection = () => (
   <section className="relative isolate overflow-hidden pt-14">
-    <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_-10%,rgba(255,255,255,0.12),transparent_34%),linear-gradient(180deg,#000_0%,#050505_54%,#090909_100%)]" />
+    {/* Layered ambient: cyan primary bloom (matches BrandMark + incidents
+        section radial), soft white off-center spotlight for depth, indigo
+        accent on the right (matches BrandMark gradient endpoint), on a
+        cooler-tinted black base. Ties the hero into the rest of the page
+        palette without sacrificing the "above-the-fold spotlight" feel. */}
+    <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_-8%,rgba(125,211,252,0.14),transparent_38%),radial-gradient(circle_at_22%_22%,rgba(255,255,255,0.06),transparent_32%),radial-gradient(circle_at_82%_28%,rgba(99,102,241,0.07),transparent_34%),linear-gradient(180deg,#02050b_0%,#04060c_54%,#06080d_100%)]" />
     <div className="grid-lines-bg absolute inset-0 -z-10 opacity-[0.08]" />
-    <div className="absolute top-20 left-1/2 -z-10 h-80 w-6xl -translate-x-1/2 rounded-full bg-white/8 blur-[120px]" />
+    <div className="absolute top-20 left-1/2 -z-10 h-80 w-6xl -translate-x-1/2 rounded-full bg-sky-300/6 blur-[120px]" />
 
     <div className="mx-auto max-w-[1440px] px-5 pt-14 pb-14 md:px-8 md:pt-20 lg:px-10 lg:pb-20">
       <div className="mx-auto max-w-5xl text-center">
@@ -353,8 +357,8 @@ export const HeroSection = () => (
         </div>
 
         <h1 className="text-[clamp(2.8rem,5.6vw,5.35rem)] leading-[0.94] font-semibold tracking-[-0.065em] text-balance text-white">
-          Mission control
-          <span className="block bg-linear-to-r from-white via-white/72 to-blue-200 bg-clip-text text-transparent">
+          Mission Control
+          <span className="block bg-linear-to-r from-white via-blue-100 to-blue-300 bg-clip-text pb-2 leading-[1.05] text-transparent">
             for AI agents.
           </span>
         </h1>
@@ -376,7 +380,7 @@ export const HeroSection = () => (
             className="h-12 rounded-full bg-white px-6 text-sm font-semibold text-black shadow-[0_0_40px_rgba(255,255,255,0.16)] hover:bg-white/90"
           >
             <Link href="#incidents">
-              See it block a real call
+              Why it matters
               <ArrowRightIcon className="ml-1.5 size-4" />
             </Link>
           </Button>
@@ -392,7 +396,7 @@ export const HeroSection = () => (
       </div>
 
       <div className="relative mt-8 md:mt-10">
-        <div className="absolute inset-x-8 top-8 -z-10 h-24 rounded-full bg-white/20 blur-[90px]" />
+        <div className="absolute inset-x-8 top-8 -z-10 h-24 rounded-full bg-white/14 blur-[90px]" />
         <HeroProofCallouts />
         <DashboardPreview />
       </div>

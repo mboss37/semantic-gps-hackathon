@@ -43,7 +43,7 @@ export const CtaSection = () => (
             >
               <Link href="#incidents">
                 <SparklesIcon className="mr-2 size-4" />
-                See the receipts
+                Read the incidents
               </Link>
             </Button>
             <Button

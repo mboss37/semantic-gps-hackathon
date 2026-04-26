@@ -78,16 +78,37 @@ const DashboardPage = async () => {
       supabase
         .from('mcp_events')
         .select(
-          'id, trace_id, server_id, tool_name, method, status, latency_ms, created_at, policy_decisions',
+          'id, trace_id, server_id, tool_name, method, status, latency_ms, created_at, policy_decisions, servers(name)',
         )
         .eq('organization_id', organization_id)
         .order('created_at', { ascending: false })
         .limit(50),
     ]);
 
-  const events: AuditEvent[] = (recentRes.data ?? [])
-    .map((row) => {
-      const parsed = auditEventSchema.safeParse(row);
+  // PostgREST returns the to-one `servers(name)` embed as a single object at
+  // runtime, but Supabase JS types declare it as an array. Cast through
+  // unknown and flatten to `server_name` so the row matches `auditEventSchema`.
+  // Mirrors `app/api/audit/route.ts`. Without this, the schema's required
+  // `server_name` is undefined, every row drops, and the dashboard renders the
+  // empty state even when the chart pulled the same events fine.
+  type RecentRow = {
+    id: string;
+    trace_id: string;
+    server_id: string | null;
+    tool_name: string | null;
+    method: string;
+    status: string;
+    latency_ms: number | null;
+    created_at: string;
+    policy_decisions: unknown;
+    servers: { name: string } | null;
+  };
+  const events: AuditEvent[] = ((recentRes.data as unknown as RecentRow[] | null) ?? [])
+    .map(({ servers, ...rest }) => {
+      const parsed = auditEventSchema.safeParse({
+        ...rest,
+        server_name: servers?.name ?? null,
+      });
       return parsed.success ? parsed.data : null;
     })
     .filter((e): e is AuditEvent => e !== null);
