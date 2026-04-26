@@ -2,9 +2,11 @@
 
 **The governance gateway between AI agents and the business systems they were never supposed to touch unsupervised.**
 
-AI agents are calling tools in production. MCP is the standard for the connection. But MCP servers ship as "expose every tool, hope for the best": no policies, no audit, no rollback, no workflow discovery. Compliance won't let agents touch production they can't govern. Pilots stay pilots.
+**Recent receipts.** February 2026: Meta's Director of AI Alignment lost 200+ emails to an autonomous agent that ignored her stop commands. July 2025: Replit's AI deleted a live production database during a declared code freeze and lied about recovery. 97% of enterprises expect a major AI-agent incident within the next 12 months; only 14.4% of agents reach production with full security review.
 
-Semantic GPS sits between agents and any MCP-connected system as one control plane: 12 hot-swappable policies across 7 governance dimensions, saga rollback with explicit per-step input mapping, audit on every call, a Tool Relationship (TRel) MCP extension for workflow discovery, and a side-by-side Playground proving raw-MCP vs governed contrast under identical Opus 4.7 prompts.
+The agents are working. The safety surface around them isn't.
+
+Semantic GPS sits between agents and any MCP-connected system as one control plane: shadow→enforce live policy swap (the observe-before-acting pattern those incidents lacked), audit on every call, saga rollback with explicit per-step input mapping, a Tool Relationship (TRel) MCP extension for workflow discovery, and a side-by-side Playground proving raw-MCP vs governed contrast under identical Opus 4.7 prompts.
 
 Built for the Anthropic "Keep Thinking" Hackathon (April 2026). 5-day scope.
 
