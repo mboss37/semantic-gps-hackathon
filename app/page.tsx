@@ -12,11 +12,9 @@ import { StatStrip } from '@/components/landing/stat-strip';
 
 import { VerifiedHandler } from './verified-handler';
 
-export const metadata = {
-  title: 'Semantic GPS · Mission control for AI agents',
-  description:
-    'Semantic GPS sits between AI agents and MCP-connected business systems with policy management, audit logs, monitoring, and Tool Relationship mapping.',
-};
+// Landing inherits the title + description + openGraph + twitter card
+// from app/layout.tsx (default branch of the title.template). No
+// per-route override needed, the layout default IS the landing's brand.
 
 const Home = () => (
   <main className="noise-overlay relative min-h-screen overflow-x-hidden bg-[#02040a] text-white">

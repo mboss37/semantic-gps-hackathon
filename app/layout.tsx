@@ -13,13 +13,80 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+const SITE_URL = 'https://semantic-gps-hackathon.vercel.app';
+const TITLE = 'Semantic GPS · Mission control for AI agents';
+const DESCRIPTION =
+  'The governance gateway between AI agents and the business systems they were never supposed to touch unsupervised. Live policies, saga rollback, audit on every call. Built with Opus 4.7.';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Semantic GPS · Mission control for AI agents',
+    default: TITLE,
     template: '%s · Semantic GPS',
   },
-  description:
-    'Semantic GPS sits between AI agents and MCP-connected business systems with policy management, audit logs, monitoring, and Tool Relationship mapping.',
+  description: DESCRIPTION,
+  applicationName: 'Semantic GPS',
+  authors: [{ name: 'Mihael Bosnjak', url: 'https://github.com/mboss37' }],
+  creator: 'Mihael Bosnjak',
+  publisher: 'Mihael Bosnjak',
+  keywords: [
+    'MCP',
+    'Model Context Protocol',
+    'AI agents',
+    'agent governance',
+    'control plane',
+    'gateway',
+    'observability',
+    'audit',
+    'saga rollback',
+    'shadow enforce',
+    'policy engine',
+    'Anthropic',
+    'Claude',
+    'Opus 4.7',
+    'Tool Relationship',
+    'TRel',
+    'agentic workflows',
+    'Salesforce',
+    'Slack',
+    'GitHub',
+  ],
+  category: 'developer tools',
+  openGraph: {
+    type: 'website',
+    siteName: 'Semantic GPS',
+    title: TITLE,
+    description: DESCRIPTION,
+    url: SITE_URL,
+    locale: 'en_US',
+    images: [
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'Semantic GPS, mission control for AI agents',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description:
+      'Live policies, saga rollback, audit on every call. Built with Opus 4.7.',
+    images: ['/opengraph-image'],
+    creator: '@mboss37',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
+  },
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
