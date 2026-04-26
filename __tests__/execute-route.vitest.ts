@@ -26,7 +26,7 @@ vi.mock('@/lib/audit/logger', async () => {
 });
 
 // Unit tests for F.1 executeRoute. Hand-rolled Manifest fixtures keep this
-// deterministic — real proxies are disabled so mockExecuteTool canned data
+// deterministic, real proxies are disabled so mockExecuteTool canned data
 // runs. Covers: ordered execution, output capture + $steps.* resolution,
 // halt-on-error with halted_at_step, and policy block path.
 
@@ -111,7 +111,7 @@ const routeSteps: RouteStepRow[] = [
     route_id: ROUTE_ID,
     step_order: 2,
     tool_id: T.getCustomer,
-    // Pull the first customer id from the searchCustomer mock result —
+    // Pull the first customer id from the searchCustomer mock result -
     // mockExecuteTool returns `.customers[0].id`.
     input_mapping: { customerId: '$steps.search.customers.0.id' },
     rollback_input_mapping: null,
@@ -179,7 +179,7 @@ describe('executeRoute', () => {
 
     // Step 2 should have received the first searchCustomer customer's id.
     // The literal "Escalation for $inputs.query" is passed through because
-    // it doesn't start with a $-prefix — only "$steps." / "$inputs." at the
+    // it doesn't start with a $-prefix, only "$steps." / "$inputs." at the
     // head are resolved.
     const ticketStep = result.steps.find((s) => s.step_order === 3);
     const ticketResult = ticketStep?.result as { customerId: string; opened_by: string };
@@ -192,7 +192,7 @@ describe('executeRoute', () => {
     // surfaced as origin_error with input_mapping prefix.
     const manifest = baseManifest();
     // Clone the fixture steps, override only step 2's input_mapping to a bad
-    // path — `.map` keeps the array dense so no non-null assertions needed.
+    // path, `.map` keeps the array dense so no non-null assertions needed.
     manifest.route_steps = routeSteps.map((s) =>
       s.step_order === 2
         ? { ...s, input_mapping: { customerId: '$steps.search.nonexistent.path' } }

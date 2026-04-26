@@ -5,7 +5,7 @@ import { invalidateManifest } from '@/lib/manifest/cache';
 
 // Sprint 6 WP-G.2: per-relationship PATCH + DELETE. Cross-org edges surface
 // as 404 (never leak that they exist). Sprint 27: PATCH now accepts
-// `relationship_type` in addition to `description` — at least one of the
+// `relationship_type` in addition to `description`, at least one of the
 // two must be present.
 
 export const runtime = 'nodejs';

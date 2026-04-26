@@ -1,7 +1,7 @@
 import type { Manifest, RelationshipRow, ToolRow } from '@/lib/manifest/cache';
 
 // TRel (Typed Relationships) handlers. Pure functions that read the compiled
-// manifest — no DB calls here so they stay testable with hand-rolled fixtures.
+// manifest, no DB calls here so they stay testable with hand-rolled fixtures.
 
 export type TrelNode = {
   id: string;
@@ -35,7 +35,7 @@ export type FindWorkflowPathResult = {
   rationale: string;
 };
 
-// Edge types that flow "forward" in a workflow — the ones BFS should follow.
+// Edge types that flow "forward" in a workflow, the ones BFS should follow.
 // `produces_input_for` is the data-flow spine; `suggests_after` is the soft
 // recommendation; `alternative_to` lets BFS hop to equivalent substitutes.
 const FORWARD_EDGE_TYPES = new Set<RelationshipRow['relationship_type']>([

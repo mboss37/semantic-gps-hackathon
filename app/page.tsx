@@ -13,7 +13,7 @@ import { StatStrip } from '@/components/landing/stat-strip';
 import { VerifiedHandler } from './verified-handler';
 
 export const metadata = {
-  title: 'Semantic GPS — Governance gateway for production AI agents',
+  title: 'Semantic GPS · Mission control for AI agents',
   description:
     'Semantic GPS sits between AI agents and MCP-connected business systems with policy management, audit logs, monitoring, and Tool Relationship mapping.',
 };

@@ -81,7 +81,7 @@ export const validateUrl = async (input: string): Promise<URL> => {
 
   // Dev + test escape hatch. Two legitimate uses:
   //   1. Vitest proxy tests spin `http.createServer` on ephemeral localhost.
-  //   2. Sprint 15 C.6 — in-process vendor MCPs at `app/api/mcps/<vendor>/`
+  //   2. Sprint 15 C.6, in-process vendor MCPs at `app/api/mcps/<vendor>/`
   //      register with `origin_url=http://localhost:3000/...` on dev. The
   //      gateway's `proxyHttp` call roundtrips through HTTP to maintain the
   //      same-contract-as-external property, so it needs localhost here.

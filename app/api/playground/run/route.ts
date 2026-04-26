@@ -6,21 +6,21 @@ import { modelPlayground } from '@/lib/config/models';
 import { mintPlaygroundToken } from '@/lib/mcp/playground-token';
 
 // Playground A/B run endpoint. Both panes use Anthropic's beta `mcp_servers`
-// connector so the only variable between them is the URL — `raw` hits the
+// connector so the only variable between them is the URL, `raw` hits the
 // ungoverned surface, `gateway` hits the full Semantic GPS control plane.
 // Output is newline-delimited JSON streamed live: thinking + text + tool calls
 // + tool results + per-tool latency arrive incrementally as the model
 // generates them.
 //
 // Body params:
-//   prompt   — user prompt
-//   mode     — 'raw' | 'gateway' (which surface to hit)
-//   scope    — 'org' | 'server' (default 'org'); 'domain' will land once
+//   prompt  , user prompt
+//   mode    , 'raw' | 'gateway' (which surface to hit)
+//   scope   , 'org' | 'server' (default 'org'); 'domain' will land once
 //              domain CRUD ships
-//   serverId — uuid, required when scope='server'
+//   serverId, uuid, required when scope='server'
 //
 // The bearer is always the auto-managed system token (`mintPlaygroundToken`).
-// The Playground is plumbing — token management lives on `/dashboard/tokens`.
+// The Playground is plumbing, token management lives on `/dashboard/tokens`.
 //
 // trace_id model: the route mints one uuid per Run and threads it to the
 // gateway via `?trace_id=<uuid>`. Every internal MCP call from this Run
@@ -30,7 +30,7 @@ import { mintPlaygroundToken } from '@/lib/mcp/playground-token';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Extended duration — Opus + multi-step MCP roundtrips can run 20–60s.
+// Extended duration, Opus + multi-step MCP roundtrips can run 20–60s.
 export const maxDuration = 120;
 
 const RunBody = z.object({
@@ -142,7 +142,7 @@ const runWithMcp = async (
 
   // Per-tool latency: timestamp on mcp_tool_use start, elapsed on the matching
   // mcp_tool_result. Captures wall-clock time the model perceives the tool
-  // taking — Anthropic dispatch + our gateway + upstream + round-trip.
+  // taking, Anthropic dispatch + our gateway + upstream + round-trip.
   const toolStartedAt = new Map<string, number>();
   const emittedToolResultIds = new Set<string>();
 
@@ -174,7 +174,7 @@ const runWithMcp = async (
         if (block.is_error) {
           emit({
             type: 'policy_event',
-            detail: 'tool_result marked error — likely policy enforce or upstream guard',
+            detail: 'tool_result marked error, likely policy enforce or upstream guard',
           });
         }
       }
@@ -192,7 +192,7 @@ const runWithMcp = async (
     }
   }
 
-  // Defensive sweep — if any mcp_tool_result blocks did NOT flow through the
+  // Defensive sweep, if any mcp_tool_result blocks did NOT flow through the
   // streaming events (older SDK paths or beta quirks), pick them up from the
   // final message and emit any we haven't emitted yet. Idempotent via the
   // seen-id set.
@@ -214,7 +214,7 @@ const runWithMcp = async (
       if (block.is_error) {
         emit({
           type: 'policy_event',
-          detail: 'tool_result marked error — likely policy enforce or upstream guard',
+          detail: 'tool_result marked error, likely policy enforce or upstream guard',
         });
       }
     }
@@ -264,7 +264,7 @@ export const POST = async (request: Request): Promise<Response> => {
         try {
           controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
         } catch {
-          // controller closed (client aborted) — stop emitting
+          // controller closed (client aborted), stop emitting
         }
       };
 

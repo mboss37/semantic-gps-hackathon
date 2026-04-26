@@ -145,7 +145,7 @@ export const PolicyCreateDialog = ({
         <DialogHeader>
           <DialogTitle>Create policy</DialogTitle>
           <DialogDescription>
-            Policies start in <span className="text-zinc-200">shadow</span> — flip to enforce once
+            Policies start in <span className="text-zinc-200">shadow</span>, flip to enforce once
             the audit looks clean.
           </DialogDescription>
         </DialogHeader>

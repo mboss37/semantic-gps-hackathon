@@ -35,9 +35,9 @@ const DashboardPage = async () => {
   // Sprint 15 smoke-test finding: every card query used to fetch cross-org.
   // Now all queries filter by the caller's org. The old `.eq('is_active', true)`
   // on policies was dead (no such column); "Active Policies" now counts every
-  // policy assigned in the org — that's the operational definition the card
+  // policy assigned in the org, that's the operational definition the card
   // title implies.
-  // Sprint 25 cleanup — dropped the bottom event DataTable. /dashboard/audit
+  // Sprint 25 cleanup, dropped the bottom event DataTable. /dashboard/audit
   // owns the full-fidelity table; overview is for at-a-glance only.
   const { supabase, organization_id } = ctx;
   const { dayAgo, twoDaysAgo } = timeWindow();
@@ -114,7 +114,7 @@ const DashboardPage = async () => {
               <CardContent className="flex flex-col items-start gap-3">
                 <p className="text-sm text-muted-foreground">
                   No gateway events yet. Every MCP call that passes through Semantic GPS shows
-                  up here — policy decisions, latency, trace IDs, the lot.
+                  up here, policy decisions, latency, trace IDs, the lot.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button asChild size="sm">

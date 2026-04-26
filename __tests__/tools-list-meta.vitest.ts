@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Manifest } from '@/lib/manifest/cache';
 
-// Stub service client on CI — loadManifest is mocked below, but the route
+// Stub service client on CI, loadManifest is mocked below, but the route
 // also fires logMCPEvent through the service client.
 vi.mock('@/lib/supabase/service', async () => {
   const { stubServiceClientFactory } = await import('./_helpers/supabase-stub');
@@ -82,7 +82,7 @@ vi.mock('@/lib/manifest/cache', async () => {
 });
 
 // Bearer-auth stub so the route gets a resolved org without a live DB.
-// Service client stays real — logMCPEvent's insert is fire-and-forget.
+// Service client stays real, logMCPEvent's insert is fire-and-forget.
 vi.mock('@/lib/mcp/auth-token', async () => {
   const actual =
     await vi.importActual<typeof import('@/lib/mcp/auth-token')>(
@@ -153,15 +153,15 @@ describe('tools/list _meta.relationships (WP-C.5)', () => {
     const body = await readJson(res);
     const tools = body.result?.tools as ToolEntry[] | undefined;
 
-    // `getCustomer` has an *incoming* edge but no outgoing edge — _meta stays off.
+    // `getCustomer` has an *incoming* edge but no outgoing edge, _meta stays off.
     const getCustomer = tools?.find((t) => t.name === 'getCustomer');
     expect(getCustomer?._meta).toBeUndefined();
 
-    // `orphanTool` has neither in nor out — _meta stays off.
+    // `orphanTool` has neither in nor out, _meta stays off.
     const orphan = tools?.find((t) => t.name === 'orphanTool');
     expect(orphan?._meta).toBeUndefined();
 
-    // `echo` is the builtin — no manifest row, so no edges. _meta stays off.
+    // `echo` is the builtin, no manifest row, so no edges. _meta stays off.
     const echo = tools?.find((t) => t.name === 'echo');
     expect(echo?._meta).toBeUndefined();
   });

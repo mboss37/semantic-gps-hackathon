@@ -5,9 +5,9 @@ paths: ["supabase/migrations/**"]
 # Supabase Migration Rules
 
 ## Filename format
-- **14-digit `YYYYMMDDHHMMSS_descriptive_name.sql`** — Supabase CLI's only recognized format
+- **14-digit `YYYYMMDDHHMMSS_descriptive_name.sql`**, Supabase CLI's only recognized format
 - Descriptive name is kebab-case or snake_case (`add_org_scope`, not `AddOrgScope`)
-- Hyphenated prefixes like `20260424-02_foo.sql` are **silently skipped** by the CLI — they never apply to local or hosted, and `supabase db reset` won't warn
+- Hyphenated prefixes like `20260424-02_foo.sql` are **silently skipped** by the CLI, they never apply to local or hosted, and `supabase db reset` won't warn
 - One migration per file, idempotent where possible (`drop constraint if exists`, `insert ... where not exists`)
 
 ## Hosted migrations
@@ -23,7 +23,7 @@ paths: ["supabase/migrations/**"]
 
 ## Canonical flow
 1. Write migration file under `supabase/migrations/` with 14-digit timestamp prefix
-2. `pnpm supabase db reset` — re-applies everything cleanly against local
+2. `pnpm supabase db reset`, re-applies everything cleanly against local
 3. Test locally: run affected routes, policies, seeds
 4. Only when local is green: `pnpm supabase db push` to hosted
 
@@ -38,5 +38,5 @@ paths: ["supabase/migrations/**"]
 - Rule of thumb: if the sprint added a `YYYYMMDDHHMMSS_*.sql` file, `db push` is part of the wrap, not a later deploy task.
 
 ## Related
-- `CLAUDE.md` § Off-Limits — banned operations at a glance
-- `docs/ARCHITECTURE.md` § Migration workflow — narrative version with the drift mechanism explained
+- `CLAUDE.md` § Off-Limits, banned operations at a glance
+- `docs/ARCHITECTURE.md` § Migration workflow, narrative version with the drift mechanism explained

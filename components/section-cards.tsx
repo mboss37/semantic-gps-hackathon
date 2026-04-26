@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/card';
 
 // Sprint 21 WP-21.2: status badges color-coded by signal type. Generic
-// "outline" Badge variant looked uniform — judges couldn't tell at-a-glance
+// "outline" Badge variant looked uniform, judges couldn't tell at-a-glance
 // which numbers were healthy, governed, or trending. Each kind now has its
 // own tint: emerald for live infra, sky for discoverable surface, indigo
 // for governance, neutral for steady, and trend-direction colors for the

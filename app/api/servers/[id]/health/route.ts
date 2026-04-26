@@ -5,7 +5,7 @@ import { probeServerOrigin } from '@/lib/servers/health';
 
 // Sprint 14 WP-14.2 / Sprint 26 refactor: live origin health probe for
 // /dashboard/servers/[id]. Probe logic moved to lib/servers/health.ts so
-// the servers list page can run probes in parallel during render — see
+// the servers list page can run probes in parallel during render, see
 // app/dashboard/servers/page.tsx. This route stays as the on-demand
 // "refresh probe" endpoint when manually triggered.
 

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ChevronsUpDownIcon } from 'lucide-react';
 
 // Sprint 22 WP-22.5 follow-on: workspace identity badge between the brand
-// header and the nav groups. Slack/Linear/Vercel pattern — gives the user a
+// header and the nav groups. Slack/Linear/Vercel pattern, gives the user a
 // clear "you are here" workspace indicator and previews the V2 multi-org
 // switcher shape (the chevron + clickable card hints at it). For MVP the
 // click jumps to /dashboard/settings so it's functional, not decorative.

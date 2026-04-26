@@ -4,7 +4,7 @@ import { requireAuth, UnauthorizedError } from '@/lib/auth';
 
 // Sprint 7 WP-A.6: single-token revoke. Cross-org IDs return 404 (not 403)
 // so existence can't be probed from another org. The eq().eq() pair does the
-// scope enforcement — a missing row or a row in another org both map to the
+// scope enforcement, a missing row or a row in another org both map to the
 // same "no rows affected" state.
 
 export const runtime = 'nodejs';

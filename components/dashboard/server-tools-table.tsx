@@ -42,7 +42,7 @@ export const ServerToolsTable = ({ tools }: Props) => {
     return (
       <div className="rounded-md border border-dashed border-border/60 bg-card/30 px-4 py-8 text-center">
         <p className="font-mono text-[11px] text-muted-foreground">
-          No tools discovered — origin may be unreachable
+          No tools discovered, origin may be unreachable
         </p>
       </div>
     );
@@ -80,7 +80,7 @@ export const ServerToolsTable = ({ tools }: Props) => {
                 />
                 <code className="truncate font-mono text-xs text-foreground/90">{t.name}</code>
                 <p className="truncate text-xs text-muted-foreground">
-                  {description ?? <span className="opacity-50">—</span>}
+                  {description ?? <span className="opacity-50">-</span>}
                 </p>
                 <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
                   <span className="text-foreground">{t.calls24h}</span>
@@ -107,7 +107,7 @@ export const ServerToolsTable = ({ tools }: Props) => {
                       <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                         Origin description
                       </span>
-                      <p className="text-xs text-muted-foreground">{t.description ?? '—'}</p>
+                      <p className="text-xs text-muted-foreground">{t.description ?? '-'}</p>
                     </div>
                   ) : null}
                   <div className="flex flex-col gap-1">

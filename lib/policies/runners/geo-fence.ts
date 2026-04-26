@@ -1,4 +1,4 @@
-// geo_fence — network / data residency gate. v1 reads a single header;
+// geo_fence, network / data residency gate. v1 reads a single header;
 // `source: 'org_setting'` is reserved in the config shape but not implemented
 // (runner rejects with config_invalid). Fail-closed on missing header so orgs
 // opt out by NOT assigning the policy, never by omitting the header.

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { requireAuth, UnauthorizedError } from '@/lib/auth';
 
 // Sprint 22 WP-22.2: per-event detail for the audit Sheet drawer.
-// Same org-scoping contract as the list route — `requireAuth` returns the
+// Same org-scoping contract as the list route, `requireAuth` returns the
 // scoped supabase client + organization_id, then `.eq('organization_id', ...)`
 // belt-and-braces in case RLS gets disabled in the future. `payload_redacted`
 // is included here (deliberately omitted from the list query for payload
@@ -56,7 +56,7 @@ export const GET = async (
   }
   // Flatten the embedded `servers(name)` (PostgREST returns a single object
   // at runtime for the to-one FK; Supabase JS's generated types lie and call
-  // it an array — cast through unknown). Same shape as the list route.
+  // it an array, cast through unknown). Same shape as the list route.
   const row = data as unknown as typeof data & { servers: { name: string } | null };
   const { servers, ...rest } = row;
   const event = { ...rest, server_name: servers?.name ?? null };

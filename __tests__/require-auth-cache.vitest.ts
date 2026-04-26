@@ -3,13 +3,13 @@ import { cache } from 'react';
 
 // Sprint 20 WP-20.2: pin the React cache() wrap on requireAuth.
 //
-// React's cache() only dedupes inside an RSC render request — outside that
+// React's cache() only dedupes inside an RSC render request, outside that
 // context (vitest, route handlers without a render scope) it falls through
 // and re-executes. We can't unit-test the per-request dedup itself.
 //
 // What we CAN lock:
 //   1. cache() is importable + callable in this env (no peer-dep regression)
-//   2. lib/auth.ts exports `requireAuth` as a cache-wrapped function — a
+//   2. lib/auth.ts exports `requireAuth` as a cache-wrapped function, a
 //      contract test that fails if a future refactor strips the wrap.
 //
 // Production verification = manual: dev tools network panel, observe a
@@ -26,7 +26,7 @@ describe('React cache() availability', () => {
 describe('requireAuth cache wrap (Sprint 20 WP-20.2)', () => {
   it('exports a function whose source references the React cache wrapper', async () => {
     // Read the module source via dynamic import + introspection of the file.
-    // We assert the cache() call site is in place — fails if a refactor
+    // We assert the cache() call site is in place, fails if a refactor
     // removes the wrap and drops requireAuth back to a bare async function.
     const fs = await import('node:fs/promises');
     const path = await import('node:path');
@@ -40,7 +40,7 @@ describe('requireAuth cache wrap (Sprint 20 WP-20.2)', () => {
 
   it('exported requireAuth is invocable (no immediate breakage from the wrap)', async () => {
     // Import the module behind a mocked supabase client and confirm the
-    // wrapped function still calls through. Don't assert dedup — that's an
+    // wrapped function still calls through. Don't assert dedup, that's an
     // RSC-render contract, not a vitest one.
     vi.resetModules();
     vi.doMock('@/lib/supabase/server', () => ({

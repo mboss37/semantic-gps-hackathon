@@ -3,7 +3,7 @@
   "info": {
     "title": "CustomerCloud CRM",
     "version": "2026.1.0",
-    "description": "Branded demo API used by the Semantic GPS hackathon build. Exposes customer records, orders, and outbound communication endpoints — PII by design so the hero policy-swap demo has something to redact."
+    "description": "Branded demo API used by the Semantic GPS hackathon build. Exposes customer records, orders, and outbound communication endpoints, PII by design so the hero policy-swap demo has something to redact."
   },
   "servers": [
     { "url": "https://api.customercloud.demo.semantic-gps.dev/v1" }
@@ -34,7 +34,7 @@
         "summary": "List recent orders for a customer.",
         "parameters": [
           { "name": "customerId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
-          { "name": "since", "in": "query", "required": false, "description": "ISO 8601 timestamp — orders placed on or after this moment.", "schema": { "type": "string", "format": "date-time" } }
+          { "name": "since", "in": "query", "required": false, "description": "ISO 8601 timestamp, orders placed on or after this moment.", "schema": { "type": "string", "format": "date-time" } }
         ]
       }
     },

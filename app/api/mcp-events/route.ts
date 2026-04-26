@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 // Focused feed for the graph cascade visualization (Sprint 8 WP-I.2).
 // Sprint 15: `mcp_events.organization_id` now exists, so we filter directly
 // instead of joining through servers. This also includes auth-level events
-// (pre-scope failures) for the caller's org — the old server-join approach
+// (pre-scope failures) for the caller's org, the old server-join approach
 // silently dropped them.
 
 const QuerySchema = z.object({

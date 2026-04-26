@@ -97,12 +97,12 @@ export const findCatalogEntry = (
   catalog.find((c) => c.tool_id === tool.id && c.source === 'manifest');
 
 // Sprint 19: in-process HTTP-Streamable MCPs (SF/Slack/GitHub) return MCP
-// content arrays [{type:"text", text:"<JSON>"}] — proxy-http.ts::extractResult
+// content arrays [{type:"text", text:"<JSON>"}], proxy-http.ts::extractResult
 // already strips the outer {content:...} wrapper, so what reaches the capture
 // bag is a bare array of content parts (or, defensively, the wrapped form).
 // Unwrap at capture time so input_mapping / rollback_input_mapping path
 // traversal sees the logical object, not the envelope. OpenAPI proxies
-// already return unwrapped bodies — those pass through untouched.
+// already return unwrapped bodies, those pass through untouched.
 const tryParseTextPart = (part: unknown): unknown | undefined => {
   if (
     typeof part !== 'object' ||

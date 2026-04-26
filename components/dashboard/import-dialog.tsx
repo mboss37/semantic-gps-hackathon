@@ -51,7 +51,7 @@ export const ImportDialog = () => {
       const json = await res.json();
       setSpec(JSON.stringify(json, null, 2));
       setName('CustomerCloud CRM (demo)');
-      toast.success('Demo spec loaded — review and Import');
+      toast.success('Demo spec loaded, review and Import');
     } catch {
       toast.error('Could not load demo spec');
     }
@@ -182,7 +182,7 @@ export const ImportDialog = () => {
                 onChange={(e) => setUrl(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Routed through the SSRF guard — private IPs and loopback are rejected.
+                Routed through the SSRF guard, private IPs and loopback are rejected.
               </p>
             </div>
           </TabsContent>

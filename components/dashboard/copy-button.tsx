@@ -21,7 +21,7 @@ export const CopyButton = ({ value, label = 'Copy', compact = false }: Props) =>
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.error('Copy failed — select manually');
+      toast.error('Copy failed, select manually');
     }
   };
   if (compact) {

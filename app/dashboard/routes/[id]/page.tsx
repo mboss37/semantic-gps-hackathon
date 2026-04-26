@@ -16,7 +16,7 @@ import { Card, CardContent } from '@/components/ui/card';
 
 // Sprint 28 redesign: detail view drops the React Flow canvas entirely.
 // Routes are linear procedures, so they're presented as a vertical
-// timeline (CI/CD shape — Vercel deployments, GitHub Actions). The
+// timeline (CI/CD shape, Vercel deployments, GitHub Actions). The
 // graph viz at /dashboard/graph stays the home for relationship topology.
 
 export const dynamic = 'force-dynamic';

@@ -29,7 +29,7 @@ const DashboardLayout = async ({ children }: { children: React.ReactNode }) => {
 
   // Name comes from onboarding metadata (first_name + last_name); fall back to
   // the email local-part when metadata is missing so the sidebar never renders
-  // blank. The sidebar is a client component — we can't call requireAuth from
+  // blank. The sidebar is a client component, we can't call requireAuth from
   // inside it, so thread the minimal identity here.
   const metadata = (ctx.user.user_metadata ?? {}) as Record<string, unknown>;
   const firstName = typeof metadata.first_name === 'string' ? metadata.first_name : '';

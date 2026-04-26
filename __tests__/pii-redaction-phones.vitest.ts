@@ -5,7 +5,7 @@ import { runPiiRedaction } from '@/lib/policies/built-in';
 // libphonenumber-js so we can match real CRM data across regions without
 // hand-rolled regex false-positives on dates, IPs, zips, or IDs.
 
-describe('runPiiRedaction — international phones', () => {
+describe('runPiiRedaction, international phones', () => {
   const expectRedacted = (input: unknown, expected: { min?: number } = {}) => {
     const out = runPiiRedaction(input);
     const serialized = JSON.stringify(out.redacted);

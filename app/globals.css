@@ -45,7 +45,7 @@
 }
 
 :root {
-  /* Vercel geist — dark, pure contrast, blue accent */
+  /* Vercel geist, dark, pure contrast, blue accent */
   /* Sprint 21: main content card lifted off pure black so the muted card
      sits on a Vercel-black chrome (sidebar + rail + header). Inverts the
      classic shadcn dark theme to favor pure-black chrome over content. */
@@ -189,7 +189,7 @@
     background-size: 80px 80px;
   }
 
-  /* Themed scrollbar for code blocks + scrollable code panes — replaces the
+  /* Themed scrollbar for code blocks + scrollable code panes, replaces the
      bright OS-native scrollbar with one that matches our dark surfaces. */
   .scrollbar-dark {
     scrollbar-width: thin;

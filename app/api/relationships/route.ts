@@ -51,7 +51,7 @@ export const GET = async (): Promise<Response> => {
 
   // Pull org-scoped tools first so we can intersect edges to only those with
   // BOTH endpoints inside the caller's org. A single query with two joins
-  // would work but Supabase's nested join filter syntax gets hairy — two
+  // would work but Supabase's nested join filter syntax gets hairy, two
   // round trips is simpler and still O(n).
   const { data: toolsData, error: toolsErr } = await supabase
     .from('tools')

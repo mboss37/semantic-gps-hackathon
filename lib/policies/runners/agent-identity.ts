@@ -1,4 +1,4 @@
-// agent_identity_required — layered identity gate (paired with the client_id
+// agent_identity_required, layered identity gate (paired with the client_id
 // builtin for defense-in-depth). v1 implements header-presence only.
 // verify_signature:true returns a not-implemented block so the config surface
 // is forward-compatible without premature KMS/JWK plumbing.

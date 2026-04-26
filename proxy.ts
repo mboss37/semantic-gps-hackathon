@@ -47,7 +47,7 @@ export const proxy = async (request: NextRequest) => {
   // Sprint 19: read profile_completed from JWT claims instead of a DB query.
   // The custom_access_token_hook stamps profile_completed into the JWT on
   // every token issuance (login + refresh). getSession() here is safe
-  // because we already validated the user via getUser() above — we're only
+  // because we already validated the user via getUser() above, we're only
   // reading a claim from the already-authenticated, Supabase-signed JWT,
   // not using getSession() as an authentication substitute.
   if (user) {

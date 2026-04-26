@@ -3,13 +3,13 @@ import { VendorError } from '@/lib/mcp/vendors/errors';
 
 // Minimal JSON-RPC over HTTP adapter shared by the three vendor MCP routes.
 // Every route bootstraps on this module and supplies its tool catalog +
-// `dispatch(name, args)` callback. Intentionally light — no manifest, no
+// `dispatch(name, args)` callback. Intentionally light, no manifest, no
 // policy engine, no audit: these routes are pure vendor-to-REST adapters
 // registered INTO the gateway via `POST /api/servers`. Governance runs at
 // the gateway tier upstream, never here.
 //
 // Supported methods: `initialize`, `tools/list`, `tools/call`. Anything else
-// returns JSON-RPC -32601 method_not_found — mirrors the main gateway's
+// returns JSON-RPC -32601 method_not_found, mirrors the main gateway's
 // unknown-method behavior. The response shape matches the MCP HTTP-streamable
 // contract so `proxyHttp` in `lib/mcp/proxy-http.ts` can reach these routes
 // with no special casing.
@@ -69,7 +69,7 @@ export const handleVendorRpcRequest = async (
 ): Promise<Response> => {
   // Only POST carries a JSON-RPC body. GET on these routes returns an empty
   // 200 so curl-based smoke tests can confirm the route exists without
-  // tripping method-not-allowed — analogous to the main gateway's behavior.
+  // tripping method-not-allowed, analogous to the main gateway's behavior.
   if (request.method !== 'POST') {
     return jsonResponse({ ok: true, server: config.serverInfo });
   }

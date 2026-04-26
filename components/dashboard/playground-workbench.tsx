@@ -28,7 +28,7 @@ import type { PaneState } from './playground-event-reducer';
 import { PaneView } from './playground-pane-view';
 
 // Playground workbench. One prompt drives two panes (Raw vs Gateway), each
-// with its own Run button — never parallel. Dense terminal-style controls
+// with its own Run button, never parallel. Dense terminal-style controls
 // in a single block: scope toggles + server picker + example shortcuts +
 // prompt textarea, no internal cards or dividers competing for visual
 // weight. Token is always the auto-managed system token; the playground
@@ -50,7 +50,7 @@ export const PlaygroundWorkbench = ({ servers }: Props) => {
   const [serverId, setServerId] = useState<string | undefined>(undefined);
 
   // Collapse the sidebar on the first Run so the panes get the full width
-  // for tool calls, reasoning, and streamed markdown — every pixel counts.
+  // for tool calls, reasoning, and streamed markdown, every pixel counts.
   const { setOpen } = useSidebar();
 
   const hasServers = servers.length > 0;
@@ -124,7 +124,7 @@ export const PlaygroundWorkbench = ({ servers }: Props) => {
       {!hasServers ? <NoServersNotice /> : null}
 
       <Card className="flex flex-col gap-0 overflow-hidden p-0">
-        {/* Single dense control strip — scope · server · examples — replaces
+        {/* Single dense control strip, scope · server · examples, replaces
             the three stacked rows the old design used. Mono labels keep the
             weight light; ToggleGroup + Select carry the actual interaction. */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border/50 px-3 py-2">
@@ -207,7 +207,7 @@ export const PlaygroundWorkbench = ({ servers }: Props) => {
             onChange={(e) => setPrompt(e.target.value)}
             disabled={busy}
             rows={3}
-            placeholder="Describe a multi-step agent task — what should the model attempt against your MCPs?"
+            placeholder="Describe a multi-step agent task, what should the model attempt against your MCPs?"
             className="resize-y text-sm"
           />
         </div>
@@ -253,7 +253,7 @@ const NoServersNotice = () => (
     <div className="flex items-center gap-2">
       <ServerIcon className="size-4 shrink-0 text-amber-300" />
       <span className="text-amber-200">
-        No MCP servers registered — the gateway pane will return an empty manifest.
+        No MCP servers registered, the gateway pane will return an empty manifest.
       </span>
     </div>
     <Button asChild size="sm" variant="outline" className="h-7 text-xs">
@@ -263,7 +263,7 @@ const NoServersNotice = () => (
 );
 
 // Pure decision function exported for `__tests__/playground-no-mcp-guard.vitest.ts`.
-// Stays a 1:1 contract with the test suite — the workbench drives Run from
+// Stays a 1:1 contract with the test suite, the workbench drives Run from
 // per-pane state directly, but this gate is the canonical predicate for
 // "can this org run anything?".
 export const computePlaygroundGate = (input: {

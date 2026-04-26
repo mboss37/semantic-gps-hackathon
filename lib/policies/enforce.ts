@@ -26,7 +26,7 @@ const DAY_ENUM = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 
 // WP-13.4: multi-window + overnight-wrap shape is canonical. Legacy single-
 // window rows (`{timezone, days, start_hour, end_hour}`) still parse via the
-// transform below — no DB migration needed, runner only sees the new shape.
+// transform below, no DB migration needed, runner only sees the new shape.
 const BusinessHoursWindowSchema = z.object({
   timezone: z.string().min(1).optional(),
   days: z.array(z.enum(DAY_ENUM)).min(1),
@@ -82,8 +82,8 @@ const IdempotencyConfigSchema = z.object({
 });
 
 // The gateway hot-path adapter for policies. Turns an assignment-graph plus
-// a call context into a list of decisions (for audit) and — when mode is
-// enforce — a concrete side effect (block a call, or swap in a redacted
+// a call context into a list of decisions (for audit) and, when mode is
+// enforce, a concrete side effect (block a call, or swap in a redacted
 // result). Every `enforcement_mode` flip is a DB column change, never code.
 
 export type PolicyDecisionKind = 'allow' | 'block' | 'redact';
@@ -104,7 +104,7 @@ export type PreCallContext = {
   tool_name: string;
   args: unknown;
   // Populated by the MCP gateway from the incoming Request. Optional so
-  // non-gateway callers (tests, tool-dispatcher direct paths) can skip them —
+  // non-gateway callers (tests, tool-dispatcher direct paths) can skip them -
   // the request-metadata policies deny-by-default when missing.
   headers?: Record<string, string>;
   client_ip?: string;

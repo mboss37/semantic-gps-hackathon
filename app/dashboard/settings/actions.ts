@@ -6,7 +6,7 @@ import { requireAuth, UnauthorizedError } from '@/lib/auth';
 
 // Sprint 22 WP-22.5: settings server action. Mirrors completeOnboarding's
 // pattern (organizations.name + auth.users.raw_user_meta_data) but for
-// post-onboarding edits — no profile_completed flip, no JWT refresh needed
+// post-onboarding edits, no profile_completed flip, no JWT refresh needed
 // since we don't change any claim that proxy.ts reads.
 
 const SettingsSchema = z.object({

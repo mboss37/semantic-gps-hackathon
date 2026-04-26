@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Sprint 12 WP-12.4 (I.4): per-policy shadow→enforce timeline route.
-// Uses the hoisted-mock pattern from `gateway-tokens-api.vitest.ts` — we
+// Uses the hoisted-mock pattern from `gateway-tokens-api.vitest.ts`, we
 // stub `requireAuth` so we don't need real cookies/SSR, and hand the route
 // an in-memory Supabase stub that returns whatever rows the test case
 // needs. Covers:
@@ -34,7 +34,7 @@ const UNKNOWN_POLICY_ID = '33333333-3333-4333-8333-333333333333';
 // A Supabase stub matching the route's chain shape. Sprint 15 multitenant
 // refactor chains TWO `.eq()` calls on both tables (`id` + `organization_id`
 // for policies, `organization_id` before `gte` for events). Stub mirrors
-// that shape precisely — any deviation is a real bug and should blow up.
+// that shape precisely, any deviation is a real bug and should blow up.
 const makeStubSupabase = (policyRow: PolicyRow | null, eventRows: EventRow[]) => {
   return {
     from: (table: string) => {
@@ -133,7 +133,7 @@ describe('policy timeline API (WP-12.4)', () => {
     // another policy (must be ignored).
     // Event B (today): one shadow block for target policy.
     // Event C (2 days ago): one allow for target policy + one redact for it
-    // (redact is intentionally skipped — not part of shadow→enforce story).
+    // (redact is intentionally skipped, not part of shadow→enforce story).
     const eventRows: EventRow[] = [
       {
         created_at: todayIso,

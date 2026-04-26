@@ -12,7 +12,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 //     DELETE or JSON body for POST/PUT/PATCH)
 //   - route via safeFetch so SSRF guard + timeout apply uniformly
 //   - retry once on 5xx with 200ms backoff
-//   - normalize upstream errors — never leak body text to the caller
+//   - normalize upstream errors, never leak body text to the caller
 
 const TIMEOUT_MS = 10_000;
 const RETRY_BACKOFF_MS = 200;

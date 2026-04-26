@@ -3,12 +3,12 @@ import { proxyHttp } from '@/lib/mcp/proxy-http';
 import { proxyOpenApi } from '@/lib/mcp/proxy-openapi';
 
 // Tool dispatcher. Two codepaths:
-//   - mockExecuteTool — canned PII-rich data keyed by tool name. Fallback only
+//   - mockExecuteTool, canned PII-rich data keyed by tool name. Fallback only
 //     when the dispatcher can't route to a real proxy: unknown server, unknown
 //     tool row, or a transport value we don't recognize.
-//   - executeTool — default path. Branches on the server's transport
+//   - executeTool, default path. Branches on the server's transport
 //     (openapi / http-streamable) and dispatches to the real proxy. An
-//     explicit `REAL_PROXY_ENABLED=0` opt-out still forces the mock — useful
+//     explicit `REAL_PROXY_ENABLED=0` opt-out still forces the mock, useful
 //     for vitest files that need deterministic canned data.
 
 const DEMO_CUSTOMER = {
@@ -111,7 +111,7 @@ export type ExecuteContext = {
 };
 
 // Real proxies are now the default path. Setting `REAL_PROXY_ENABLED=0`
-// explicitly forces the mock — useful for vitest files that want canned data
+// explicitly forces the mock, useful for vitest files that want canned data
 // without spinning up an upstream. Any other value (or unset) routes live.
 export const isRealProxyEnabled = (): boolean => process.env.REAL_PROXY_ENABLED !== '0';
 

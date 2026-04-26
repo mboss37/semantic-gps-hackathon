@@ -1,7 +1,7 @@
 // Single source of truth for the policy catalog gallery
 // (`/dashboard/policies/catalog`). Mirrors the 12 builtin runners in
 // `lib/policies/runners/*.ts` across the 7 governance dimensions Semantic GPS
-// polices at the gateway layer. Zero auto-seeding — users always create
+// polices at the gateway layer. Zero auto-seeding, users always create
 // instances explicitly via the "Apply to my org" CTA, which deep-links into
 // the existing create-policy dialog with the builtin pre-selected.
 
@@ -99,7 +99,7 @@ export const POLICY_CATALOG: CatalogEntry[] = [
     builtin_key: 'geo_fence',
     title: 'Geo Fence',
     description:
-      'Restrict tool calls to allowed regions. EU AI Act data-residency hook — block US routing from EU agents.',
+      'Restrict tool calls to allowed regions. EU AI Act data-residency hook, block US routing from EU agents.',
     dimension: 'residency',
     config_keys: ['allowed_regions[]', 'source'],
   },

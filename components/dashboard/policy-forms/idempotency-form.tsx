@@ -64,7 +64,7 @@ export const IdempotencyForm = ({
         </Select>
       </div>
       <p className="text-xs text-muted-foreground">
-        Duplicate calls inside the TTL window are blocked. In-memory store (single process) —
+        Duplicate calls inside the TTL window are blocked. In-memory store (single process) -
         Redis-backed dedupe is V2.
       </p>
     </div>

@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 
 // Markdown renderer for assistant text. Renders inline on the pane background
-// — no bordered wrapper — so the response sits next to the tool-call log
+//, no bordered wrapper, so the response sits next to the tool-call log
 // like terminal output, not boxed-in commentary. The pane Card already
 // provides the bounding chrome.
 

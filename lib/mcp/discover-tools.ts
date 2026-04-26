@@ -27,7 +27,7 @@ export type DiscoverResult =
   | { ok: false; error: string };
 
 // HTTP-Streamable MCP servers may reply as either plain JSON or a single SSE
-// event. Parse both shapes — anything else is a protocol violation.
+// event. Parse both shapes, anything else is a protocol violation.
 const parseBody = (text: string, contentType: string): unknown => {
   if (contentType.includes('text/event-stream')) {
     const match = text.match(/data:\s*(\{[\s\S]*?\})\s*$/m);

@@ -1,7 +1,7 @@
 -- Sprint 15 smoke-test finding: policies + policy_assignments had no
 -- `organization_id` column and leaked cross-org. Single-tenant MVP got away
 -- with it; multi-tenant (live signups) does not. This migration closes the
--- gap — both tables become org-scoped first-class citizens, same shape as
+-- gap, both tables become org-scoped first-class citizens, same shape as
 -- every other business-object table.
 --
 -- Backfill strategy:
@@ -9,7 +9,7 @@
 --     (org-wide assignment). When server_id is set, inherit from
 --     servers.organization_id. When only tool_id is set, inherit via
 --     tools.server_id → servers.organization_id. If BOTH are NULL, the
---     assignment has no natural scope — these get deleted in the backfill
+--     assignment has no natural scope, these get deleted in the backfill
 --     because an unscoped assignment is meaningless after the migration
 --     (the pre-migration "global assignment" semantics was the leak itself).
 --   * policies: a policy's org = the org of any of its assignments. If a
@@ -48,7 +48,7 @@ UPDATE public.policy_assignments pa
 
 -- 3. Drop truly unscoped assignments (both server_id + tool_id NULL and
 --    no org to inherit). These were the pre-migration "global" assignments
---    that leaked — after this migration the concept requires an explicit
+--    that leaked, after this migration the concept requires an explicit
 --    org scope.
 DELETE FROM public.policy_assignments
  WHERE organization_id IS NULL;
@@ -66,7 +66,7 @@ UPDATE public.policies p
    )
  WHERE organization_id IS NULL;
 
--- 5. Orphan policies (no assignments, no org) — drop them. They can't be
+-- 5. Orphan policies (no assignments, no org), drop them. They can't be
 --    rendered in any dashboard post-migration and can't be attached to
 --    anything without a scoping step, so keeping them is just debt.
 DELETE FROM public.policies

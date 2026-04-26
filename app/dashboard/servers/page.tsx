@@ -46,7 +46,7 @@ const ServersPage = async () => {
   }
 
   // Sprint 15 smoke-test finding: this page previously fetched ALL servers +
-  // ALL tools across every org — a multi-tenant leak that was invisible in
+  // ALL tools across every org, a multi-tenant leak that was invisible in
   // single-user MVP but surfaced the moment a second account existed. Both
   // queries now filter by the caller's organization_id. Tools inherit scope
   // via servers.organization_id (no org column on tools); we IN-filter tools
@@ -96,10 +96,10 @@ const ServersPage = async () => {
     statsByServer.set(ev.server_id, s);
   }
 
-  // Sprint 26 — live origin probe per server, in parallel during render.
+  // Sprint 26, live origin probe per server, in parallel during render.
   // 2s timeout per probe means worst case is one extra ~2s wait if every
   // origin is dead; happy path is sub-100ms total since they run together.
-  // Health is the FIRST thing the user wants to see on the list page —
+  // Health is the FIRST thing the user wants to see on the list page -
   // surfacing it via card badge avoids the "click in to discover dead
   // origin" anti-pattern.
   const healthEntries = await Promise.all(
@@ -126,7 +126,7 @@ const ServersPage = async () => {
         <div className="rounded-lg border border-dashed px-6 py-10 text-center">
           <p className="text-sm text-muted-foreground">No servers yet.</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Click <span className="text-foreground font-medium">Add Server</span> above — use the
+            Click <span className="text-foreground font-medium">Add Server</span> above, use the
             demo OpenAPI spec or register an MCP server directly.
           </p>
         </div>

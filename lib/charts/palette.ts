@@ -1,7 +1,7 @@
 // Shared chart palette. Single source of truth so every gateway-event
 // surface (overview area chart, monitoring stacks, audit bar, policy
-// timeline) speaks the same color vocabulary. Hex literals — not CSS
-// vars — so dark mode renders without `--chart-*` token drift.
+// timeline) speaks the same color vocabulary. Hex literals, not CSS
+// vars, so dark mode renders without `--chart-*` token drift.
 
 import type { ChartConfig } from '@/components/ui/chart';
 
@@ -29,7 +29,7 @@ export const STATUS_LABELS: Record<AuditStatus, string> = {
 
 // Shared Tailwind classes for the row + sheet status badges. Centralized so
 // the audit table, audit detail Sheet, and audit chart all read the same
-// vocabulary — no drift between the three surfaces.
+// vocabulary, no drift between the three surfaces.
 export const STATUS_BADGE_CLASS: Record<AuditStatus, string> = {
   ok: 'border-emerald-500/30 text-emerald-400',
   blocked_by_policy: 'border-amber-500/30 text-amber-400',

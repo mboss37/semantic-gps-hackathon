@@ -8,7 +8,7 @@ import {
 
 // Sprint 8 WP-I.2: pure mapping between rollback_executed events and the
 // compensated_by edges they should light up in the graph viz. No React, no
-// DOM — just the lookup + filtering logic. The animation layer sits on top
+// DOM, just the lookup + filtering logic. The animation layer sits on top
 // in app/dashboard/graph/page.tsx.
 
 const nodes: GraphNodeLike[] = [
@@ -41,7 +41,7 @@ const edges: GraphEdgeLike[] = [
     type: 'compensated_by',
   },
   {
-    // Non-compensation edge — must never be highlighted.
+    // Non-compensation edge, must never be highlighted.
     id: 'edge-produces-account',
     from: 'node-produces-1',
     to: 'node-create-account',
@@ -94,7 +94,7 @@ describe('mapRollbackEventsToEdges', () => {
   });
 
   it('maps multiple events in reverse step order (arrival sequence preserved)', () => {
-    // F.3 walks completed steps in reverse — step 3 halts, compensations
+    // F.3 walks completed steps in reverse, step 3 halts, compensations
     // fire for step 2 then step 1, landing events in that order.
     const events = [
       mkEvent('e2', 'sf.create_contact', 'sf.delete_contact', 2),

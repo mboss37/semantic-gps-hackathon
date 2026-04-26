@@ -3,7 +3,7 @@
 #
 # Fires on every `git commit` Bash call. Catches the case where TASKS.md
 # gains a new `## Current: Sprint N` block but BACKLOG.md has no staged
-# deletions — i.e. the "remove pulled WPs from BACKLOG in the same edit"
+# deletions, i.e. the "remove pulled WPs from BACKLOG in the same edit"
 # rule from CLAUDE.md was skipped.
 #
 # Non-blocking by design: warns loudly in the pre-commit output so the
@@ -14,7 +14,7 @@
 set -u
 cmd="${TOOL_INPUT_COMMAND:-}"
 
-# Only act on `git commit` — word-boundary match so commits inside
+# Only act on `git commit`, word-boundary match so commits inside
 # strings / subshells don't trigger.
 echo "$cmd" | grep -qE '(^|[^a-zA-Z0-9_-])git[[:space:]]+commit([[:space:]]|$)' || exit 0
 

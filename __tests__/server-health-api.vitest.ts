@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Sprint 14 WP-14.2: origin health probe API.
-// Same hoisted-mock pattern as policy-timeline-api.vitest.ts — stubs
+// Same hoisted-mock pattern as policy-timeline-api.vitest.ts, stubs
 // `requireAuth` so no real cookies needed, stubs `safeFetch` + exports
 // `SsrfBlockedError` from the ssrf-guard module, and hands the route an
 // in-memory Supabase stub that returns the lone `servers` row under test.
@@ -26,7 +26,7 @@ vi.mock('@/lib/auth', async () => {
 });
 
 // Keep `SsrfBlockedError` as the REAL class so `instanceof` checks inside
-// the route still pass — just swap `safeFetch` for the mock.
+// the route still pass, just swap `safeFetch` for the mock.
 vi.mock('@/lib/security/ssrf-guard', async () => {
   const actual = await vi.importActual<typeof import('@/lib/security/ssrf-guard')>(
     '@/lib/security/ssrf-guard',
@@ -110,7 +110,7 @@ describe('origin health probe API (WP-14.2)', () => {
     expect(body.statusCode).toBe(200);
     expect(typeof body.latencyMs).toBe('number');
     expect(typeof body.checkedAt).toBe('string');
-    // HEAD-only path — no GET fallback fired.
+    // HEAD-only path, no GET fallback fired.
     expect(safeFetchMock).toHaveBeenCalledTimes(1);
   });
 

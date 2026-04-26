@@ -135,7 +135,7 @@ function EventDrawer({
         <DrawerHeader className="gap-1">
           <DrawerTitle className="font-mono text-sm">{event.method}</DrawerTitle>
           <DrawerDescription>
-            {event.tool_name ?? "—"} · {event.status}
+            {event.tool_name ?? "-"} · {event.status}
           </DrawerDescription>
         </DrawerHeader>
         <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
@@ -143,12 +143,12 @@ function EventDrawer({
             <DetailField label="Trace ID" value={event.trace_id} mono />
             <DetailField
               label="Server ID"
-              value={event.server_id ?? "—"}
+              value={event.server_id ?? "-"}
               mono
             />
             <DetailField
               label="Latency"
-              value={event.latency_ms != null ? `${event.latency_ms}ms` : "—"}
+              value={event.latency_ms != null ? `${event.latency_ms}ms` : "-"}
             />
             <DetailField
               label="When"
@@ -181,7 +181,7 @@ function EventDrawer({
                           variant="outline"
                           className="text-[10px]"
                         >
-                          {d.decision ?? "—"} · {d.mode ?? "—"}
+                          {d.decision ?? "-"} · {d.mode ?? "-"}
                         </Badge>
                       </div>
                       {d.reason && (
@@ -266,7 +266,7 @@ const columns: ColumnDef<AuditEvent>[] = [
     header: "Tool",
     cell: ({ row }) => (
       <span className="font-mono text-xs text-muted-foreground">
-        {row.original.tool_name ?? "—"}
+        {row.original.tool_name ?? "-"}
       </span>
     ),
   },
@@ -282,7 +282,7 @@ const columns: ColumnDef<AuditEvent>[] = [
       <div className="text-right font-mono text-xs tabular-nums text-muted-foreground">
         {row.original.latency_ms != null
           ? `${row.original.latency_ms}ms`
-          : "—"}
+          : "-"}
       </div>
     ),
   },

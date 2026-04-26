@@ -1,4 +1,4 @@
--- Sprint B WP-B.4 — policy audit history.
+-- Sprint B WP-B.4, policy audit history.
 -- Every insert/update to `policies` snapshots the new state into
 -- `policy_versions`. Diffing is cheap: pull two rows by version and
 -- compare config JSON. Mirrors the actual policies schema (column is

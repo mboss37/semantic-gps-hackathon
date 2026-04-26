@@ -76,7 +76,7 @@ export const CheckEmailView = () => {
       <CardContent className="space-y-6">
         <div className="rounded-md border border-border bg-card/40 p-4 text-sm leading-relaxed text-foreground/70">
           <p className="mb-1 font-medium text-foreground">Didn&apos;t get the email?</p>
-          <p>Check your spam folder — delivery can take a minute or land there.</p>
+          <p>Check your spam folder, delivery can take a minute or land there.</p>
         </div>
         <Button
           type="button"

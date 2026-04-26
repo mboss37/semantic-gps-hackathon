@@ -15,7 +15,7 @@ export class UnauthorizedError extends Error {
  * into the JWT on every token issuance. Reading them here avoids a DB
  * round-trip on every authenticated request.
  *
- * Returns null if the token is missing or malformed — callers fall back
+ * Returns null if the token is missing or malformed, callers fall back
  * to the membership DB query when this returns null.
  */
 export const decodeJwtClaims = (accessToken: string): Record<string, unknown> | null => {
@@ -42,7 +42,7 @@ export const requireAuth = cache(async () => {
 
   // getSession() is convention-banned (spoofable), but getUser() above already
   // server-validated the user. We only need the raw JWT to decode custom claims
-  // stamped by custom_access_token_hook — no auth decision relies on getSession().
+  // stamped by custom_access_token_hook, no auth decision relies on getSession().
   const { data: { session } } = await supabase.auth.getSession();
   const claims = session?.access_token
     ? decodeJwtClaims(session.access_token)
@@ -64,7 +64,7 @@ export const requireAuth = cache(async () => {
   }
 
   // Fallback: JWT claims not yet stamped (pre-hook or first login).
-  // Query the DB directly — mirrors the original Sprint 15 path.
+  // Query the DB directly, mirrors the original Sprint 15 path.
   const { data: membership, error: memErr } = await supabase
     .from('memberships')
     .select('organization_id, role, profile_completed')

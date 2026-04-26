@@ -23,12 +23,12 @@ import type { AuditEvent } from '@/lib/schemas/audit-event';
 import { cn } from '@/lib/utils';
 
 // Visual hierarchy on policy verdicts. The audit panel must answer "which
-// policy was the cause of the block?" at a glance — without forcing the
+// policy was the cause of the block?" at a glance, without forcing the
 // reader to parse `decision` + `mode` text on every row. Mapping:
-//   block + enforce → red, ShieldAlert, "CAUSE" pill — actually halted the call
+//   block + enforce → red, ShieldAlert, "CAUSE" pill, actually halted the call
 //   block + shadow  → amber, TriangleAlert, "WOULD BLOCK · SHADOW"
-//   redact          → orange, EyeOff — post-call PII redaction landed
-//   allow           → muted, CheckCircle2 — ran clean, no action
+//   redact          → orange, EyeOff, post-call PII redaction landed
+//   allow           → muted, CheckCircle2, ran clean, no action
 const verdictStyle = (decision: string, mode: string) => {
   if (decision === 'block' && mode === 'enforce') {
     return {
@@ -80,7 +80,7 @@ const verdictStyle = (decision: string, mode: string) => {
 
 // Sprint 22 WP-22.2: detail drawer for /dashboard/audit. Receives an event id;
 // fetches /api/audit/[id]; renders status + policy verdicts + redacted payload
-// in a right-side Radix Sheet. Built for the demo recording — judges expect a
+// in a right-side Radix Sheet. Built for the demo recording, judges expect a
 // side-slider inspector on a governance product.
 
 type AuditEventDetail = AuditEvent & {
@@ -93,7 +93,7 @@ type Props = {
 };
 
 export const AuditDetailSheet = ({ eventId, onOpenChange }: Props) => {
-  // `detail` is keyed by eventId — when the eventId in `detail` doesn't match
+  // `detail` is keyed by eventId, when the eventId in `detail` doesn't match
   // the current prop, we know the data is stale (still fetching the new id).
   // This avoids a synchronous setState reset in the effect body (which the
   // react-hooks/set-state-in-effect lint rule rightly flags) while still

@@ -1,7 +1,7 @@
 // Monitoring time-range picker spec. Datadog/Grafana shape: short ranges
 // get fine-grained buckets (~30 bars), long ranges get coarser buckets so
 // the chart never shows just 1-2 fat lonely bars. Default `1h` gives 30
-// 2-min bars — dense enough to read intent on a fresh demo dataset.
+// 2-min bars, dense enough to read intent on a fresh demo dataset.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -85,7 +85,7 @@ export const enumerateBuckets = (
 };
 
 // Auto-pick the smallest range whose window contains the latest event.
-// Datadog/Honeycomb pattern — landing the user on a useful default instead
+// Datadog/Honeycomb pattern, landing the user on a useful default instead
 // of an empty chart. Falls back to DEFAULT_MONITORING_RANGE when there is
 // no event yet (org never made a gateway call).
 export const pickAutoRange = (

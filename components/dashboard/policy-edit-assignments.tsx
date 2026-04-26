@@ -154,7 +154,7 @@ export const PolicyEditAssignments = ({
       <Label>Assignments</Label>
       {assignments.length === 0 ? (
         <p className="text-xs text-muted-foreground">
-          Not attached — policy is dormant. Attach to a server or tool below.
+          Not attached, policy is dormant. Attach to a server or tool below.
         </p>
       ) : (
         <ul className="flex flex-col gap-1">

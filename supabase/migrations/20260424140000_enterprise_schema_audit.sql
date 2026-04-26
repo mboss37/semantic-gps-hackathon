@@ -1,4 +1,4 @@
--- Sprint 15 K.1 — Enterprise data-model audit.
+-- Sprint 15 K.1, Enterprise data-model audit.
 -- Five non-destructive schema expansions to make the codebase look
 -- enterprise-shaped under judging scrutiny:
 --   1. mcp_events.organization_id (nullable, backfilled via server_id join)
@@ -8,12 +8,12 @@
 --   4. memberships.profile_completed (A.7 onboarding gate)
 --   5. Backfill profile_completed=true for pre-existing memberships so
 --      existing users bypass the onboarding wizard on first login.
--- Idempotent — safe to re-run via `pnpm supabase db reset`. Hosted mirror
+-- Idempotent, safe to re-run via `pnpm supabase db reset`. Hosted mirror
 -- lands after local validation passes (CLAUDE.md § Off-Limits hard rule).
 
 -- 1. mcp_events.organization_id + index + backfill.
 --    Nullable because the gateway logs auth-level events before a scope is
---    resolved (missing bearer, invalid token, db_error) — those rows genuinely
+--    resolved (missing bearer, invalid token, db_error), those rows genuinely
 --    have no org. V2 (RLS) can narrow to NOT NULL once every writer threads it.
 alter table public.mcp_events
   add column if not exists organization_id uuid references public.organizations(id) on delete cascade;
@@ -23,14 +23,14 @@ create index if not exists idx_mcp_events_organization
 
 -- Backfill existing events via server_id → servers.organization_id join.
 -- Rows with NULL server_id (echo builtin, TRel methods pre-scope) stay NULL;
--- that's honest — they never had an org in the first place.
+-- that's honest, they never had an org in the first place.
 update public.mcp_events e
   set organization_id = s.organization_id
   from public.servers s
   where e.server_id = s.id
     and e.organization_id is null;
 
--- 2. organizations billing metadata. All nullable — no UI yet, just the schema
+-- 2. organizations billing metadata. All nullable, no UI yet, just the schema
 --    shape that signals enterprise-readiness. V2 picks up the plan picker +
 --    trial-countdown + billing-email settings UI (see BACKLOG § P1 A.5).
 alter table public.organizations
@@ -49,14 +49,14 @@ alter table public.memberships
 alter table public.memberships
   add constraint memberships_role_check check (role in ('admin', 'member'));
 
--- 4. memberships.profile_completed — A.7's onboarding gate.
+-- 4. memberships.profile_completed, A.7's onboarding gate.
 --    Default false so new signups route through /onboarding. Existing rows
 --    get backfilled to true in step 5 so demo users don't trip the wizard.
 alter table public.memberships
   add column if not exists profile_completed boolean not null default false;
 
 -- 5. Backfill: every membership that exists before this migration runs is
---    considered "already onboarded" — the user is mid-session or was seeded
+--    considered "already onboarded", the user is mid-session or was seeded
 --    by `supabase/seed.sql` and shouldn't see the wizard.
 update public.memberships
   set profile_completed = true

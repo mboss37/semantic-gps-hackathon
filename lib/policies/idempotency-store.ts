@@ -1,5 +1,5 @@
 // Sprint 10 WP-G.15: in-memory idempotency store for duplicate-request dedupe.
-// Mirrors rate-limiter shape — module-level Map, cleanup-on-read. Single-
+// Mirrors rate-limiter shape, module-level Map, cleanup-on-read. Single-
 // process scope (Redis/distributed backing is deferred to V2).
 
 type Entry = { seenAt: number };
@@ -32,7 +32,7 @@ export const checkIdempotency = (
   return { ok: true };
 };
 
-// Test hook — vitest uses this to reset between cases. Not exported via index
+// Test hook, vitest uses this to reset between cases. Not exported via index
 // so production code never touches it.
 export const __resetIdempotencyStoreForTests = (): void => {
   entries.clear();

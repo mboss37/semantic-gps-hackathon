@@ -12,7 +12,7 @@ import {
 export const dynamic = 'force-dynamic';
 
 // Sprint 7 WP-A.6: tokens dashboard. Plaintext is returned ONLY by the POST
-// response and surfaced once in the create dialog — we never store or display
+// response and surfaced once in the create dialog, we never store or display
 // it again. The list here is intentionally minimal (name + timestamps) so a
 // shoulder-surfer can't reconstruct anything useful.
 

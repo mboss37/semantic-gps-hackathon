@@ -1,5 +1,5 @@
 # Files copied into every git worktree Claude Code creates for subagents.
-# Only files that are BOTH gitignored AND listed here are copied — keeps
+# Only files that are BOTH gitignored AND listed here are copied, keeps
 # secrets out of commits while making sure worktree subagents can:
 #   - connect to local Supabase (NEXT_PUBLIC_SUPABASE_URL + keys)
 #   - mint gateway tokens (SUPABASE_SECRET_KEY, ENCRYPTION_KEY)

@@ -59,7 +59,7 @@ const makeStubSupabase = (opts: StubOptions = {}) => {
             const chain = {
               eq: (col: string, value: string) => {
                 filter[col] = value;
-                // Two chained `.eq()` calls — second one resolves the promise.
+                // Two chained `.eq()` calls, second one resolves the promise.
                 return Object.keys(filter).length < 2
                   ? chain
                   : (membershipUpdates.push({ filter, payload }),
@@ -148,7 +148,7 @@ describe('completeOnboarding action (Sprint 15 A.7)', () => {
     } else {
       throw new Error(`unexpected result: ${JSON.stringify(result)}`);
     }
-    // requireAuth should NOT be called — Zod validation short-circuits.
+    // requireAuth should NOT be called, Zod validation short-circuits.
     expect(requireAuthMock).not.toHaveBeenCalled();
   });
 
@@ -165,7 +165,7 @@ describe('completeOnboarding action (Sprint 15 A.7)', () => {
     const result = await completeOnboarding(VALID_INPUT);
 
     expect(result).toEqual({ ok: false, error: 'already_completed' });
-    // Early return must not touch ANY of the three write surfaces — the flag
+    // Early return must not touch ANY of the three write surfaces, the flag
     // flip is idempotent but org.name/created_by overwrites would be real
     // data loss on a stale replay.
     expect(orgUpdates).toHaveLength(0);

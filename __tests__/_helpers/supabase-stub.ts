@@ -4,7 +4,7 @@
 // every chained call resolve immediately with empty data, so logMCPEvent
 // and loadManifest are no-ops during CI runs.
 //
-// Local dev (CI unset) keeps the real client — tests that rely on a running
+// Local dev (CI unset) keeps the real client, tests that rely on a running
 // `pnpm supabase start` stack still talk to it. Integration suites that
 // actually need DB state have their own `!process.env.CI` skip guard.
 //

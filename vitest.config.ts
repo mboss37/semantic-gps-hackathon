@@ -5,7 +5,7 @@ import { defineConfig } from 'vitest/config';
 
 // Load .env.local into process.env so DB integration + opt-in E2E tests
 // see Supabase / Anthropic creds without a separate shell `source` step.
-// Shell-set vars win — lets CI and one-off runs override file values.
+// Shell-set vars win, lets CI and one-off runs override file values.
 const loadDotenvLocal = (): void => {
   try {
     const raw = readFileSync(resolve(process.cwd(), '.env.local'), 'utf8');
@@ -27,7 +27,7 @@ const loadDotenvLocal = (): void => {
       }
     }
   } catch {
-    // no .env.local — tests either get env from shell or skip via skipIf
+    // no .env.local, tests either get env from shell or skip via skipIf
   }
 };
 loadDotenvLocal();

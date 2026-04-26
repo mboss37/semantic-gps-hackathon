@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createServiceClient } from '@/lib/supabase/service';
 
 // DB integration test for the on_auth_user_created trigger (WP-A.1).
-// Skipped unless Supabase env vars are present — main session runs this after
+// Skipped unless Supabase env vars are present, main session runs this after
 // `pnpm supabase start` + `supabase db reset`.
 
 const shouldRun =
@@ -83,7 +83,7 @@ describe.skipIf(!shouldRun)('on_auth_user_created trigger + backfill', () => {
 
     expect(userErr).toBeNull();
     // If the demo user exists (local seed), they must have a membership.
-    // On hosted (no seed), the query returns null — skip the assertion.
+    // On hosted (no seed), the query returns null, skip the assertion.
     if (user) {
       expect(user.role).toBe('admin');
       expect(user.organization_id).toBeTruthy();

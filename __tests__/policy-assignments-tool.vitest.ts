@@ -120,7 +120,7 @@ describe.skipIf(!shouldRun)('policy_assignments tool-scope invariants', () => {
     }
   });
 
-  it('POST happy path — tool_id for in-org tool inserts with server_id null', async () => {
+  it('POST happy path, tool_id for in-org tool inserts with server_id null', async () => {
     const { data, error } = await supabase
       .from('policy_assignments')
       .insert({ organization_id: orgA, policy_id: policyA, server_id: null, tool_id: toolA1 })
@@ -134,7 +134,7 @@ describe.skipIf(!shouldRun)('policy_assignments tool-scope invariants', () => {
     if (data) createdAssignmentIds.push(data.id);
   });
 
-  it('cross-org tool rejection — POST handler guard: tool -> server -> org mismatch filters out foreign tool', async () => {
+  it('cross-org tool rejection, POST handler guard: tool -> server -> org mismatch filters out foreign tool', async () => {
     // This replays exactly what app/api/policies/[id]/assignments/route.ts
     // does before inserting: look up the tool with servers!inner and verify
     // the org matches the caller's org. toolB1 lives in orgB, so a caller
@@ -150,7 +150,7 @@ describe.skipIf(!shouldRun)('policy_assignments tool-scope invariants', () => {
     expect(data).toBeNull();
   });
 
-  it('in-org lookup succeeds — confirms the same guard passes for the caller\'s own tool', async () => {
+  it('in-org lookup succeeds, confirms the same guard passes for the caller\'s own tool', async () => {
     const { data, error } = await supabase
       .from('tools')
       .select('id, server_id, servers!inner(organization_id)')

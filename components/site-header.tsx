@@ -5,7 +5,7 @@ import { Zap } from 'lucide-react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useRealtimeDashboardEvents } from '@/hooks/use-realtime-dashboard-events';
 
-// Pure chrome strip — sidebar trigger on the left, competition/build tag on
+// Pure chrome strip, sidebar trigger on the left, competition/build tag on
 // the right. Org name lives in the sidebar's WorkspaceBadge, not here, so the
 // header stays brand-only across every dashboard page. Realtime channel is
 // mounted once here as a singleton so every page picks up live mcp_events

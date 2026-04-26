@@ -19,7 +19,7 @@ import {
 // route_steps by step_order, resolves each step's input_mapping against a
 // rolling capture-bag, and threads every call through the same pre/post
 // policy stack + real proxies as a plain tools/call. Halts on first error
-// with halted_at_step — fallback/rollback are Sprint 7 concerns.
+// with halted_at_step, fallback/rollback are Sprint 7 concerns.
 
 export type PolicyContextBuilder = (
   entry: ToolCatalogEntry,
@@ -219,7 +219,7 @@ const runExecPhase = async (
 };
 
 // Handles the fallback_to dance when the primary tool errors. Emits the
-// fallback_triggered audit events and returns the final step shape —
+// fallback_triggered audit events and returns the final step shape -
 // either a rewritten ok step with fallback_used, or the original origin_error
 // step annotated with fallback_also_failed=true.
 const attemptFallback = async (
@@ -239,7 +239,7 @@ const attemptFallback = async (
   if (!fallback) return primaryStep;
 
   // Resolve the fallback tool against the catalog; if unreachable, keep the
-  // primary error shape — a mis-wired relationship shouldn't silently rewrite
+  // primary error shape, a mis-wired relationship shouldn't silently rewrite
   // history.
   const catalog = buildCatalog(manifest);
   const fallbackEntry = findCatalogEntry(catalog, fallback.tool);
@@ -248,7 +248,7 @@ const attemptFallback = async (
   // Translate args for the fallback tool. Default = legacy verbatim reuse
   // (preserves all existing routes that assume schema compatibility). When
   // step.fallback_input_mapping is set, resolve its DSL against inputs +
-  // capture bag — same primitive used by primary input_mapping and
+  // capture bag, same primitive used by primary input_mapping and
   // rollback_input_mapping. WP-22.4 added this for cross-MCP fallbacks
   // where the fallback target's schema differs from the primary's.
   let fallbackArgs = args;
@@ -419,7 +419,7 @@ const runSingleStep = async (
     return stepResult;
   }
 
-  // Only origin_error triggers fallback — policy blocks and unauthorized are
+  // Only origin_error triggers fallback, policy blocks and unauthorized are
   // governance decisions, not reachability failures.
   if (stepResult.status !== 'origin_error') return stepResult;
 
@@ -465,7 +465,7 @@ const haltedResult = (
   steps,
   halted_at_step: last.step_order,
   rationale: `Halted at step ${last.step_order} (${last.tool_name}): ${last.status}${
-    last.error ? ` — ${last.error}` : ''
+    last.error ? `, ${last.error}` : ''
   }.`,
 });
 

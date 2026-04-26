@@ -19,14 +19,14 @@ export const parseBearer = (authHeader: string | undefined): string | null => {
 };
 
 // Discriminated result so the gateway can distinguish "no matching token"
-// from "couldn't reach the DB" — these produce different JSON-RPC errors
+// from "couldn't reach the DB", these produce different JSON-RPC errors
 // at the client (one is an auth problem, the other is a server problem).
 export type ResolveTokenResult =
   | { ok: true; organization_id: string }
   | { ok: false; reason: 'not_found' }
   | { ok: false; reason: 'db_error'; detail: string };
 
-// Fire-and-forget `last_used_at` bump on hit — surfaces rotation candidates
+// Fire-and-forget `last_used_at` bump on hit, surfaces rotation candidates
 // without blocking the gateway response.
 export const resolveOrgFromToken = async (
   supabase: SupabaseClient,

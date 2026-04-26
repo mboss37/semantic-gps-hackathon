@@ -108,7 +108,7 @@ describe.skipIf(!shouldRun)('relationships CRUD invariants', () => {
     }
   });
 
-  it('POST happy path — creates a same-org edge', async () => {
+  it('POST happy path, creates a same-org edge', async () => {
     const { data, error } = await supabase
       .from('relationships')
       .insert({
@@ -125,7 +125,7 @@ describe.skipIf(!shouldRun)('relationships CRUD invariants', () => {
     if (data) createdRelIds.push(data.id);
   });
 
-  it('PATCH — description edit persists', async () => {
+  it('PATCH, description edit persists', async () => {
     const insert = await supabase
       .from('relationships')
       .insert({
@@ -194,7 +194,7 @@ describe.skipIf(!shouldRun)('relationships CRUD invariants', () => {
     expect(data?.[0].id).toBe(toolA1);
   });
 
-  it('DELETE — relationship is removed and no longer queryable', async () => {
+  it('DELETE, relationship is removed and no longer queryable', async () => {
     const insert = await supabase
       .from('relationships')
       .insert({

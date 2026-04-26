@@ -4,7 +4,7 @@ import { evaluateGoal } from '@/lib/mcp/evaluate-goal';
 import { validateWorkflow } from '@/lib/mcp/validate-workflow';
 
 // Unit tests for WP-G.1 validate_workflow + evaluate_goal. Pure-function
-// entry points against a hand-rolled Manifest — no DB, no gateway. The Opus
+// entry points against a hand-rolled Manifest, no DB, no gateway. The Opus
 // tier is exercised via a module-level mock of '@anthropic-ai/sdk'; the
 // keyword tier runs whenever ANTHROPIC_API_KEY is unset.
 
@@ -104,7 +104,7 @@ describe('validateWorkflow', () => {
     expect(warnings).toHaveLength(1);
     expect(warnings[0]?.severity).toBe('warning');
     expect(warnings[0]?.expected_preceding_tool).toBe('getCustomer');
-    // No errors — valid stays true despite the warning.
+    // No errors, valid stays true despite the warning.
     expect(out.valid).toBe(true);
   });
 
@@ -122,7 +122,7 @@ describe('validateWorkflow', () => {
 });
 
 // ---------------------------------------------------------------------------
-// evaluate_goal — keyword + Opus tiers.
+// evaluate_goal, keyword + Opus tiers.
 
 // Hoisted mock state so the factory can reach it from inside the vi.mock call.
 const mockState = vi.hoisted(() => ({
@@ -167,7 +167,7 @@ describe('evaluateGoal', () => {
     const manifest = baseManifest();
     const out = await evaluateGoal({ goal: 'open a support ticket for a customer' }, manifest);
     expect(out.candidates.length).toBeGreaterThan(0);
-    // Top candidate should be the escalation route — more keyword overlap.
+    // Top candidate should be the escalation route, more keyword overlap.
     expect(out.candidates[0]?.name).toBe('customer_escalation');
     // Relevance is normalised to [0, 1] against the top score.
     expect(out.candidates[0]?.relevance).toBe(1);

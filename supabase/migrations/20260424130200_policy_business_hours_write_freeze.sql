@@ -1,5 +1,5 @@
 -- Sprint 9 WP-G.10 + G.11: widen policies.builtin_key CHECK with the two new
--- gateway-native builtins — business_hours (time-window gate) and
+-- gateway-native builtins, business_hours (time-window gate) and
 -- write_freeze (kill-switch for write tools). Idempotent via
 -- `drop constraint if exists`, same pattern as 20260423120100_builtin_keys.sql.
 

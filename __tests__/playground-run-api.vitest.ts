@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 // WP-J.1 (Sprint 29): Playground /api/playground/run endpoint. Both modes go
 // through Anthropic's beta mcp_servers connector via the streaming API
-// (`messages.stream`) — events flow back per-block (text deltas, thinking
+// (`messages.stream`), events flow back per-block (text deltas, thinking
 // deltas, tool_use, tool_result) so the client can render live latency.
 // Tests verify the NDJSON event stream shape, the URL routing per mode, the
 // trace_id query param threading, and the auth gate.
@@ -254,7 +254,7 @@ describe('POST /api/playground/run', () => {
       stats: { tool_calls: number; ms: number; policy_events?: number; trace_id: string };
     };
     expect(done.stats.tool_calls).toBe(1);
-    // Raw mode reports policy_events = 0 by definition — the observable
+    // Raw mode reports policy_events = 0 by definition, the observable
     // contrast vs governed.
     expect(done.stats.policy_events).toBe(0);
     // Sprint 29: every run ships a trace_id so the client can deep-link the
@@ -324,7 +324,7 @@ describe('POST /api/playground/run', () => {
       mcp_servers: Array<{ authorization_token?: string; url: string }>;
     };
     expect(callArgs.mcp_servers[0].authorization_token).toMatch(/^sgps_/);
-    // Governed mode hits /api/mcp (not /api/mcp/raw) — anchor so raw doesn't
+    // Governed mode hits /api/mcp (not /api/mcp/raw), anchor so raw doesn't
     // accidentally match. trace_id query param trails the path.
     expect(callArgs.mcp_servers[0].url).toMatch(/\/api\/mcp\?trace_id=[0-9a-f-]{36}$/);
     expect(callArgs.mcp_servers[0].url).not.toMatch(/\/api\/mcp\/raw/);
@@ -388,7 +388,7 @@ describe('POST /api/playground/run', () => {
       (thinkingEvents[0].content as string).length + (thinkingEvents[1].content as string).length,
     );
 
-    // Request param sanity — thinking must be enabled on the call.
+    // Request param sanity, thinking must be enabled on the call.
     const callArgs = betaStreamMock.mock.calls[0][0] as {
       thinking?: { type: string; budget_tokens: number };
       max_tokens: number;

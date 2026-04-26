@@ -1,19 +1,19 @@
 // Read-only Server detail helpers for the /dashboard/servers/[id] page.
 // Two helpers:
-//   • fetchServerDetail(supabase, org, id) — server row + tools + 7-day
+//   • fetchServerDetail(supabase, org, id), server row + tools + 7-day
 //     violation counts. UI surface exposes `has_auth` bool only; raw
 //     `authConfig` is attached as a server-only internal field for the
 //     capabilities-introspection path to consume (never pass to Client
 //     Components). Cross-org id requests return null (same 404 pattern as
 //     lib/routes/fetch.ts).
-//   • fetchRemoteCapabilities(server) — live JSON-RPC introspection of an MCP
+//   • fetchRemoteCapabilities(server), live JSON-RPC introspection of an MCP
 //     origin's resources/list + prompts/list. Only attempts for transport
 //     'http-streamable'; all other transports early-return `null` capabilities
 //     (they don't speak MCP JSON-RPC). -32601 method-not-found becomes []
 //     (method missing ≠ error).
 //
 // Violations aggregation is JS-side from `mcp_events.policy_decisions` jsonb
-// — mirrors app/api/policies/[id]/timeline/route.ts. At demo scale the plain
+//, mirrors app/api/policies/[id]/timeline/route.ts. At demo scale the plain
 // SELECT + loop beats an RPC; past ~10k rows/day we'd push to Postgres.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -53,7 +53,7 @@ export type ServerDetail = {
   /**
    * Server-only: raw auth_config from the DB (encrypted envelope or legacy
    * plaintext). Used by fetchRemoteCapabilities for MCP introspection. NEVER
-   * pass this to Client Components — the UI reads `server.has_auth` instead.
+   * pass this to Client Components, the UI reads `server.has_auth` instead.
    */
   authConfig: unknown;
 };
@@ -308,7 +308,7 @@ const rpcList = async <T>(
 
   if (parsed.data.error) {
     // -32601 = method not found. Standard MCP signal that the origin just
-    // doesn't implement this capability — treat as empty list, not an error.
+    // doesn't implement this capability, treat as empty list, not an error.
     if (parsed.data.error.code === -32601) return { ok: true, list: [] };
     return { ok: false, error: 'upstream_jsonrpc_error' };
   }
@@ -360,7 +360,7 @@ export const fetchRemoteCapabilities = async (
     ),
   ]);
 
-  // If both calls errored identically the origin is probably unreachable —
+  // If both calls errored identically the origin is probably unreachable -
   // surface the first error. If one succeeded, prefer that signal.
   const firstError = !resRes.ok ? resRes.error : !prmRes.ok ? prmRes.error : null;
 

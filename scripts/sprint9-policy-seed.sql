@@ -1,4 +1,4 @@
--- Sprint 9 J.5 — realistic policy set for the demo.
+-- Sprint 9 J.5, realistic policy set for the demo.
 --
 -- Idempotent: re-running wipes the three policies by name (cascading to
 -- assignments + versions) and reinstalls them. Tool-scoped assignments are
@@ -28,11 +28,11 @@ DELETE FROM public.policies
    'redact_contact_pii'
  );
 
--- 1. business_hours_window — enforce, Mon-Fri 09:00-17:00 Europe/Vienna,
+-- 1. business_hours_window, enforce, Mon-Fri 09:00-17:00 Europe/Vienna,
 --    applied globally.
--- 2. write_freeze_killswitch — enforce mode but disabled initially; the
+-- 2. write_freeze_killswitch, enforce mode but disabled initially; the
 --    demo flips enabled=true live on the dashboard.
--- 3. redact_contact_pii — shadow mode; scoped to find_account + find_contact
+-- 3. redact_contact_pii, shadow mode; scoped to find_account + find_contact
 --    so the PII preset can flip it to enforce and see the redaction hit
 --    exactly the gateway side.
 INSERT INTO public.policies (id, name, builtin_key, config, enforcement_mode)

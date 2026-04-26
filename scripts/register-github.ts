@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-// Importable helper — NOT a CLI runner. Invoked from J.3 and demo-setup flows
+// Importable helper, NOT a CLI runner. Invoked from J.3 and demo-setup flows
 // to register the GitHub vendor MCP. After Sprint 15 WP-C.6 the GitHub proxy
 // lives as a Next.js route under `app/api/mcps/github/route.ts`; this helper
 // registers it into the gateway via the standard http-streamable transport
@@ -15,7 +15,7 @@ type Args = {
   // Absolute URL of the vendor MCP route. Defaults to the co-deployed route.
   // Override for tests or a future standalone extraction.
   origin_url?: string;
-  // Display name — defaults to "Demo GitHub".
+  // Display name, defaults to "Demo GitHub".
   name?: string;
 };
 

@@ -1,6 +1,6 @@
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Sprint 20 WP-20.3: monitoring skeleton — three Recharts widgets stacked.
+// Sprint 20 WP-20.3: monitoring skeleton, three Recharts widgets stacked.
 
 const MonitoringLoading = () => (
   <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">

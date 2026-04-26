@@ -1,6 +1,6 @@
 ---
 name: open-sprint
-description: Open a new sprint by pulling WPs from BACKLOG into TASKS.md § Current, with BACKLOG removal enforced in the same phase. TRIGGER when user runs /open-sprint or asks to "open a sprint" / "start sprint N" / "pull items from backlog into a sprint". DO NOT TRIGGER mid-sprint, or on routine edits, or on wrap-up. Side-effecting on TASKS.md + BACKLOG.md — always proposes scope before applying.
+description: Open a new sprint by pulling WPs from BACKLOG into TASKS.md § Current, with BACKLOG removal enforced in the same phase. TRIGGER when user runs /open-sprint or asks to "open a sprint" / "start sprint N" / "pull items from backlog into a sprint". DO NOT TRIGGER mid-sprint, or on routine edits, or on wrap-up. Side-effecting on TASKS.md + BACKLOG.md, always proposes scope before applying.
 argument-hint: "[optional sprint number; defaults to next]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 disable-model-invocation: true
@@ -36,28 +36,28 @@ No edits. Build full context.
 Print a structured proposal to the user. Be terse.
 
 Required elements:
-- **Sprint theme** (one line — the "why of this sprint")
+- **Sprint theme** (one line, the "why of this sprint")
 - **3-6 candidate WPs** from BACKLOG, ranked by ROI against judging weights (Impact 30 / Demo 25 / Opus 4.7 Use 25 / Depth 20 for this repo). Size each (S/M/L).
-- **Dependencies resolved** — if a proposed WP has `← X` on an open BACKLOG item, either include X in this sprint or note why the dep is acceptable.
-- **Lane assignment** — subagent lanes A/B/C vs main thread. Parallel where possible.
-- **Explicit cut list** — what you're NOT pulling this sprint and why (brief).
+- **Dependencies resolved**, if a proposed WP has `← X` on an open BACKLOG item, either include X in this sprint or note why the dep is acceptable.
+- **Lane assignment**, subagent lanes A/B/C vs main thread. Parallel where possible.
+- **Explicit cut list**, what you're NOT pulling this sprint and why (brief).
 
 Example proposal shape:
 
 ```
-## Sprint N proposal — [theme]
+## Sprint N proposal, [theme]
 
 Time check: [X hrs until build cutoff]. Judging-weight framing: [brief].
 
 ### Pulling (4 WPs)
-1. I.5 (M) Managed Agents wrap — $5K side prize
-2. G.7 (M) Per-server detail — judges can copy MCP config
+1. I.5 (M) Managed Agents wrap, $5K side prize
+2. G.7 (M) Per-server detail, judges can copy MCP config
 3. J.2 (M) E2E Vercel verification
 4. Playground UI validation through tunnel (from Sat deliverables)
 
 ### Not pulling (why)
-- I.6 (L) Refine with Opus — chains after I.5, defer one sprint
-- G.3 (L) Route designer — routes already work seeded; post-hackathon
+- I.6 (L) Refine with Opus, chains after I.5, defer one sprint
+- G.3 (L) Route designer, routes already work seeded; post-hackathon
 
 ### Lanes
 - Main: I.5 (strategic)
@@ -74,21 +74,21 @@ Wait for user approval. Silence is not approval. Auto mode is not blanket approv
 
 ## Phase 3: Execute atomically
 
-**Critical phase.** Both files must be touched in the same logical step. Do NOT commit between TASKS.md edit and BACKLOG.md edit — they land together or not at all.
+**Critical phase.** Both files must be touched in the same logical step. Do NOT commit between TASKS.md edit and BACKLOG.md edit, they land together or not at all.
 
 For each approved WP:
 
-1. **Add to `TASKS.md § Current`** — unchecked bullet with size, ID, one-line intent, lane tag.
-2. **Remove from `BACKLOG.md`** — delete the WP line entirely.
+1. **Add to `TASKS.md § Current`**, unchecked bullet with size, ID, one-line intent, lane tag.
+2. **Remove from `BACKLOG.md`**, delete the WP line entirely.
 
 Order doesn't matter within the phase; what matters is that BOTH edits are complete before the phase ends.
 
 Insert pattern for `TASKS.md`:
 
 ```markdown
-## Current: Sprint N — [theme] ([date])
+## Current: Sprint N, [theme] ([date])
 
-[One-paragraph why — what judging signal / demo beat / dev friction this sprint buys]
+[One-paragraph why, what judging signal / demo beat / dev friction this sprint buys]
 
 - [ ] **N.1** (S|M|L) [intent]. (Main thread. | Subagent lane A.)
 - [ ] **N.2** ...
@@ -98,7 +98,7 @@ Replace the entire existing `## Current:` line (and anything between it and the 
 
 Deletion pattern for `BACKLOG.md`:
 
-Locate each pulled WP line via its ID (e.g. `- **I.5** (M, P1 stretch)...`) and delete the whole line. Do NOT leave empty section headers — if removing the last item under a heading empties the section, remove the heading too, or leave a placeholder: `_(all pulled or shipped)_` to keep the structure visible.
+Locate each pulled WP line via its ID (e.g. `- **I.5** (M, P1 stretch)...`) and delete the whole line. Do NOT leave empty section headers, if removing the last item under a heading empties the section, remove the heading too, or leave a placeholder: `_(all pulled or shipped)_` to keep the structure visible.
 
 **Invariant enforcement:** after both edits land, run a sanity grep:
 
@@ -118,25 +118,25 @@ If any pulled ID is still in BACKLOG after Phase 3, **stop and fix before procee
 
 ## Phase 4: Verify
 
-1. `git status --porcelain` — show the user exactly which files changed. Expect TASKS.md + BACKLOG.md, nothing else.
-2. `git diff TASKS.md BACKLOG.md | head -60` — print the delta so the user sees the atomic shape.
+1. `git status --porcelain`, show the user exactly which files changed. Expect TASKS.md + BACKLOG.md, nothing else.
+2. `git diff TASKS.md BACKLOG.md | head -60`, print the delta so the user sees the atomic shape.
 3. Remind the user:
    - Sprint is opened but NOT committed. They decide when to commit.
-   - The pre-commit hook `sprint-open-check.sh` will warn if TASKS.md stages a new `## Current:` block without BACKLOG.md deletions — a backstop for cases where this skill wasn't invoked.
+   - The pre-commit hook `sprint-open-check.sh` will warn if TASKS.md stages a new `## Current:` block without BACKLOG.md deletions, a backstop for cases where this skill wasn't invoked.
 4. Suggested next step: "Approve scope and I kick off WP plans per the Plan First rule in CLAUDE.md."
 
 **Done when:** user sees a clean tree + atomic diff + knows the next action.
 
 ## Edge cases
 
-- **User wants to add net-new WPs not in BACKLOG.** Fine — add them to TASKS Current, but note that they bypassed the scoping rule. Don't touch BACKLOG for these. The hook will still warn on commit because BACKLOG has no deletions; the user can acknowledge and push through (warn, not block).
+- **User wants to add net-new WPs not in BACKLOG.** Fine, add them to TASKS Current, but note that they bypassed the scoping rule. Don't touch BACKLOG for these. The hook will still warn on commit because BACKLOG has no deletions; the user can acknowledge and push through (warn, not block).
 - **User pulls a WP with an unlanded dep.** Surface the dep in the proposal. Either include it or get explicit waiver.
 - **Mid-sprint "add one more WP".** Open-sprint is for the initial scope. Mid-sprint additions happen in place (edit TASKS.md + remove from BACKLOG). The skill isn't needed for single-WP additions; the hook catches the hygiene.
 - **Sprint cancelled mid-flight.** Return remaining open WPs to BACKLOG.md with updated notes, then run this skill cleanly for the next sprint.
 
 ## Non-goals
 
-- Not running `/wrap-sprint` — that's the sister skill for closing.
-- Not planning individual WP implementation — that's the `Plan First` rule in CLAUDE.md (per-WP plan check-in before any `Write`/`Edit`).
-- Not writing code — this skill only touches TASKS.md and BACKLOG.md.
-- Not a replacement for human judgment on scope — the skill asks for explicit approval of the proposal before executing.
+- Not running `/wrap-sprint`, that's the sister skill for closing.
+- Not planning individual WP implementation, that's the `Plan First` rule in CLAUDE.md (per-WP plan check-in before any `Write`/`Edit`).
+- Not writing code, this skill only touches TASKS.md and BACKLOG.md.
+- Not a replacement for human judgment on scope, the skill asks for explicit approval of the proposal before executing.

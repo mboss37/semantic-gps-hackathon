@@ -39,7 +39,7 @@ describe('rate-limiter (WP-G.4)', () => {
     }
     expect(checkRateLimit('k1', { max_rpm: 3 }).ok).toBe(false);
 
-    // Advance 61s — prior window is stale, new window starts fresh.
+    // Advance 61s, prior window is stale, new window starts fresh.
     vi.setSystemTime(new Date(2026, 0, 1, 12, 1, 1));
     expect(checkRateLimit('k1', { max_rpm: 3 }).ok).toBe(true);
   });

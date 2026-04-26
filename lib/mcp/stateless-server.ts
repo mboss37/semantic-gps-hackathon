@@ -34,7 +34,7 @@ type CreateServerOpts = {
   // gateway URL) for batched orchestrators that want every internal MCP
   // call to share one id; the gateway-handler falls back to a fresh per-
   // request UUID for ad-hoc callers. By the time we get here, it's already
-  // resolved — this server just threads it onto every audit row.
+  // resolved, this server just threads it onto every audit row.
   traceId: string;
   // Manifest scope dictates which servers/tools this gateway instance sees.
   // `org` for the root `/api/mcp`, `domain` for `/api/mcp/domain/[slug]`,
@@ -48,7 +48,7 @@ type CreateServerOpts = {
   // When `false`, the server behaves like a plain MCP gateway: no relationship
   // sidecar on tools/list, no policy enforcement on tools/call, no semantic
   // rewriting, no TRel extension methods, no execute_route orchestration. Used
-  // by /api/mcp/raw for the Playground A/B contrast — proves the value of the
+  // by /api/mcp/raw for the Playground A/B contrast, proves the value of the
   // control plane by running the same agent against a governance-stripped peer.
   // Defaults to `true` so existing callers keep the full control plane.
   governed?: boolean;
@@ -74,12 +74,12 @@ export const createStatelessServer = ({
     // edges + semantic rewriting) is O(1). `_meta.relationships` is the TRel
     // sidecar that lets callers (Claude + orchestrators) see adjacency hints
     // without a second round-trip through `discover_relationships`. Skipped
-    // on ungoverned surfaces — raw MCPs don't expose graph context.
+    // on ungoverned surfaces, raw MCPs don't expose graph context.
     const manifestRowById = new Map<string, typeof manifest.tools[number]>();
     for (const t of manifest.tools) manifestRowById.set(t.id, t);
 
     // Display name for outgoing edge targets: use `display_name` when set,
-    // fall back to the origin `name` — keeps edge labels consistent with the
+    // fall back to the origin `name`, keeps edge labels consistent with the
     // rewriting layer below.
     const displayNameById = new Map<string, string>();
     for (const t of manifest.tools) displayNameById.set(t.id, t.display_name ?? t.name);
@@ -142,7 +142,7 @@ export const createStatelessServer = ({
     // if both exist (protects against display collisions). Builtin tools
     // have no manifest row, so they only match by origin name. Ungoverned
     // surfaces never emit display_name on tools/list, but still resolve it on
-    // tools/call defensively — keeps the dispatch contract stable.
+    // tools/call defensively, keeps the dispatch contract stable.
     const displayToOrigin = new Map<string, string>();
     for (const t of manifest.tools) {
       if (t.display_name) displayToOrigin.set(t.display_name, t.name);
@@ -182,7 +182,7 @@ export const createStatelessServer = ({
 
     // Ungoverned path: dispatch straight through. No pre-call policies, no
     // post-call redaction, no PII scrubbing. Audit still fires so the demo
-    // has a receipt, but `policy_decisions` is always empty — that's the
+    // has a receipt, but `policy_decisions` is always empty, that's the
     // observable contrast on the mcp_events timeline.
     if (!governed) {
       const execResult = await executeTool(manifest, entry, args, { traceId });
@@ -236,7 +236,7 @@ export const createStatelessServer = ({
     const execResult = await executeTool(manifest, entry, args, { traceId });
     const post = runPostCallPolicies({ ...policyCtx, result: execResult.result }, manifest);
 
-    // Prefer the upstream latency from the real proxy when available — gives
+    // Prefer the upstream latency from the real proxy when available, gives
     // the audit row a pure "time on the wire" measurement instead of the full
     // gateway round-trip (policies + serialization). Falls back to total
     // gateway latency for mock/builtin paths.
@@ -261,7 +261,7 @@ export const createStatelessServer = ({
 
   // TRel extensions + execute_route are gateway-only surface area. Raw MCPs
   // don't expose graph discovery, workflow planning, or rollback orchestration
-  // — leaving the handlers unregistered means the SDK returns JSON-RPC
+  //, leaving the handlers unregistered means the SDK returns JSON-RPC
   // -32601 (method_not_found) automatically. No silent success, no crash.
   if (!governed) {
     server.onerror = (err: Error) => {
@@ -390,7 +390,7 @@ export const createStatelessServer = ({
   });
 
   server.onerror = (err: Error) => {
-    // McpError here is a method-not-found or protocol-level fault — audit and move on.
+    // McpError here is a method-not-found or protocol-level fault, audit and move on.
     logMCPEvent({
       trace_id: traceId,
       organization_id: scope.organization_id,

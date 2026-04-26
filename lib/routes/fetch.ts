@@ -1,6 +1,6 @@
 // Read-only Route access for the dashboard. Routes + route_steps are joined to
 // tools + routes in two-stage fetches (tools by id, fallback routes by id)
-// instead of PostgREST inline joins — route_steps has two FKs to `tools`
+// instead of PostgREST inline joins, route_steps has two FKs to `tools`
 // (`tool_id` + `rollback_tool_id`) and PostgREST ambiguity is noisier than
 // two extra `.in(...)` calls.
 //
@@ -215,7 +215,7 @@ export const fetchRouteDetail = async (
         id: s.id,
         step_order: s.step_order,
         tool_id: s.tool_id,
-        tool_name: tool?.name ?? '—',
+        tool_name: tool?.name ?? '-',
         tool_display_name: tool?.display_name ?? null,
         tool_server_id: toolServer?.id ?? null,
         tool_server_name: toolServer?.name ?? null,
@@ -233,8 +233,8 @@ export const fetchRouteDetail = async (
   };
 };
 
-// Latest top-level execute_route event for a given route — drives the
-// "Last ran 2h ago — succeeded" breadcrumb on the detail page.
+// Latest top-level execute_route event for a given route, drives the
+// "Last ran 2h ago, succeeded" breadcrumb on the detail page.
 export type LatestRouteRun = {
   trace_id: string;
   status: string;

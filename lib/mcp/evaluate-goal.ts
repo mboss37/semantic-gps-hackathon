@@ -9,8 +9,8 @@ import type {
 } from '@/lib/mcp/trel-schemas';
 
 // Goal-to-route matcher. Two tiers:
-//  1. Keyword scorer — always runs, always finishes. Primary response path.
-//  2. Opus 4.7 ranker — engaged when ANTHROPIC_API_KEY is present. Silent
+//  1. Keyword scorer, always runs, always finishes. Primary response path.
+//  2. Opus 4.7 ranker, engaged when ANTHROPIC_API_KEY is present. Silent
 //     fallback to tier 1 on any failure (API error, parse miss, quota).
 
 const tokenize = (s: string): string[] =>
@@ -100,7 +100,7 @@ const compactManifest = (manifest: Manifest): string => {
   });
   const tools = manifest.tools.map((t: ToolRow) => `- ${t.name}: ${t.description ?? ''}`);
   const text = `Routes:\n${routes.join('\n')}\n\nTools:\n${tools.join('\n')}`;
-  // Cheap token guard — keep the system prompt bounded regardless of manifest size.
+  // Cheap token guard, keep the system prompt bounded regardless of manifest size.
   return text.length > MANIFEST_TOKEN_BUDGET
     ? `${text.slice(0, MANIFEST_TOKEN_BUDGET)}\n[truncated]`
     : text;
@@ -121,7 +121,7 @@ const OpusReplySchema = z.object({
 });
 
 const parseOpusReply = (text: string): EvaluateGoalResult | null => {
-  // Model sometimes wraps JSON in ```json fences — strip to the first { / last }.
+  // Model sometimes wraps JSON in ```json fences, strip to the first { / last }.
   const firstBrace = text.indexOf('{');
   const lastBrace = text.lastIndexOf('}');
   if (firstBrace < 0 || lastBrace <= firstBrace) return null;

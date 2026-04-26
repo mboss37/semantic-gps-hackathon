@@ -10,7 +10,7 @@ import type {
 import type { PreCallContext } from '@/lib/policies/enforce';
 
 // F.2 fallback_to orchestration tests. We mock the dispatcher to control
-// per-tool outcomes deterministically — mockExecuteTool's canned data isn't
+// per-tool outcomes deterministically, mockExecuteTool's canned data isn't
 // expressive enough to distinguish success vs failure per tool name.
 const executeToolMock = vi.fn();
 

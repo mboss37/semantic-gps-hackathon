@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-// Gateway smoke — bearer-auth resolver is mocked so the suite works without
+// Gateway smoke, bearer-auth resolver is mocked so the suite works without
 // a live Supabase stack. Real-bearer coverage lives in gateway-auth.vitest.ts.
 // On CI the service client is also stubbed (fake Supabase URL would hang the
 // fire-and-forget logMCPEvent insert); locally the real client stays in play.
@@ -51,7 +51,7 @@ const rpc = async (body: unknown, sessionId?: string): Promise<Response> => {
 
 const readJson = async (res: Response): Promise<JsonRpcResponse> => {
   const text = await res.text();
-  // Transport may reply as SSE ("event: message\ndata: {...}") — unwrap if so.
+  // Transport may reply as SSE ("event: message\ndata: {...}"), unwrap if so.
   const sseMatch = text.match(/data:\s*(\{[\s\S]*\})/);
   const payload = sseMatch ? sseMatch[1] : text;
   return JSON.parse(payload) as JsonRpcResponse;

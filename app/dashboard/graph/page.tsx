@@ -56,7 +56,7 @@ const SIMULATORS_ENABLED =
   process.env.NEXT_PUBLIC_ENABLE_DEMO_SIMULATORS === '1';
 
 const layoutNodes = (nodes: TrelNode[]): Node[] => {
-  // Simple grid layout keyed by server — good enough for a hackathon demo.
+  // Simple grid layout keyed by server, good enough for a hackathon demo.
   const bySrv = new Map<string, TrelNode[]>();
   for (const n of nodes) {
     const bucket = bySrv.get(n.server_id) ?? [];

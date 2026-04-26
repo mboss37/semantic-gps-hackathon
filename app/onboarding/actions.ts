@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { requireAuth, UnauthorizedError } from '@/lib/auth';
 
 // Sprint 15 A.7: onboarding form server action. Writes happen in three places
-// in one logical flow — `organizations.name` (retires the `<handle>'s
+// in one logical flow, `organizations.name` (retires the `<handle>'s
 // Workspace` placeholder), `memberships.profile_completed=true` (flips the
 // gate), `auth.users.raw_user_meta_data` (persists first/last/company).
 //
@@ -88,7 +88,7 @@ export const completeOnboarding = async (
   });
   if (userUpdate.error) {
     // Flag is already flipped; surface the metadata failure but don't block
-    // dashboard access — user can edit in V2 Settings.
+    // dashboard access, user can edit in V2 Settings.
     return { ok: false, error: 'update_failed', detail: 'user_metadata_update_failed' };
   }
 

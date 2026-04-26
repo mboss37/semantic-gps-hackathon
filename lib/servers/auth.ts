@@ -39,7 +39,7 @@ export const decodeAuthConfig = (raw: unknown): AuthConfig => {
   if (raw === null || raw === undefined) return { type: 'none' };
   const envelope = EncryptedAuthSchema.safeParse(raw);
   if (!envelope.success) {
-    // Legacy plaintext fallback — never stored in prod but keeps tests simple.
+    // Legacy plaintext fallback, never stored in prod but keeps tests simple.
     const plain = AuthConfigSchema.safeParse(raw);
     return plain.success ? plain.data : { type: 'none' };
   }

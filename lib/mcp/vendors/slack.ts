@@ -3,7 +3,7 @@ import { safeFetch, SsrfBlockedError } from '@/lib/security/ssrf-guard';
 import { VendorError } from '@/lib/mcp/vendors/errors';
 
 // Slack MCP vendor seam. Owns Bot Token REST dispatch for the 4 curated Slack
-// tools. `SLACK_BOT_TOKEN` comes from the env var — tokens don't auto-refresh
+// tools. `SLACK_BOT_TOKEN` comes from the env var, tokens don't auto-refresh
 // so no cache or mint flow. Colocated with the gateway today; extraction to a
 // standalone deploy is a zero-gateway-change refactor.
 
@@ -11,7 +11,7 @@ const TIMEOUT_MS = 10_000;
 const SLACK_API_BASE = 'https://slack.com/api';
 
 // Slack: every response is `{ok: boolean, ...}`. HTTP 200 with `{ok:false}` is
-// an app-level error — surface with `error` as detail so callers can tell
+// an app-level error, surface with `error` as detail so callers can tell
 // `channel_not_found` from generic 4xx.
 const SlackEnvelopeSchema = z.object({
   ok: z.boolean(),

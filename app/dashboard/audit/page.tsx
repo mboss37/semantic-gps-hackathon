@@ -225,7 +225,7 @@ const AuditPage = () => {
             </p>
             {events.length === 0 && (
               <p className="mt-1 text-sm text-muted-foreground">
-                Every gateway call — allowed, blocked, errored — lands here. Try a preset in the{' '}
+                Every gateway call, allowed, blocked, errored, lands here. Try a preset in the{' '}
                 <a
                   href="/dashboard/playground"
                   className="text-foreground underline underline-offset-2"
@@ -273,10 +273,10 @@ const AuditPage = () => {
                       </TableCell>
                       <TableCell className="font-mono text-xs">{event.method}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {event.server_name ?? '—'}
+                        {event.server_name ?? '-'}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {event.tool_name ?? '—'}
+                        {event.tool_name ?? '-'}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className={`${statusClass} text-[10px]`}>
@@ -284,7 +284,7 @@ const AuditPage = () => {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                        {event.latency_ms !== null ? `${event.latency_ms}ms` : '—'}
+                        {event.latency_ms !== null ? `${event.latency_ms}ms` : '-'}
                       </TableCell>
                       <TableCell>
                         <button

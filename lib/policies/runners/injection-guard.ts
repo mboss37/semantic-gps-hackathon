@@ -1,4 +1,4 @@
-// injection_guard — scan serialized tool args for LLM prompt-injection and
+// injection_guard, scan serialized tool args for LLM prompt-injection and
 // SQL-injection signatures. Tuned for the demo hero scenario, not a
 // comprehensive WAF. Callers can extend via config.patterns; the built-ins
 // always run first.

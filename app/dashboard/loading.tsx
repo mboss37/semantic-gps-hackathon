@@ -3,7 +3,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 // Sprint 20 WP-20.3: top-level dashboard loading skeleton. Wraps every
 // /dashboard/* route that does not ship its own loading.tsx. Renders inside
 // SidebarInset → the sidebar + header stay stable; only this content swaps.
-// Shape, not content — update when the page layout structure changes.
+// Shape, not content, update when the page layout structure changes.
 
 const DashboardLoading = () => (
   <div className="@container/main flex flex-1 flex-col gap-2">

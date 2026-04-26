@@ -14,7 +14,7 @@ import {
 // `?filter=applied` shows only builtins with at least one instance attached.
 // `?builtin=<key>` lands the user on the catalog with the create dialog
 // auto-opened for that builtin (Apply CTA from any catalog card). Each card
-// hosts edit-in-place for its instances via `<PolicyEditDialog>` — no
+// hosts edit-in-place for its instances via `<PolicyEditDialog>`, no
 // separate active page, no row-management surface.
 
 export const dynamic = 'force-dynamic';
@@ -148,7 +148,7 @@ const PoliciesPage = async ({
         <div className="max-w-2xl">
           <h1 className="text-2xl font-semibold">Policies</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Twelve gateway policies across seven governance dimensions. Apply one to your org —
+            Twelve gateway policies across seven governance dimensions. Apply one to your org -
             shadow mode first, then flip to enforce when the timeline looks clean.
           </p>
         </div>
@@ -158,7 +158,7 @@ const PoliciesPage = async ({
       {/* URL-driven create dialog. `?builtin=<key>` deep-links here from any
           card's "Apply to my org" CTA. The `key` prop forces a remount on URL
           change so the dialog's `useState(Boolean(initialBuiltinKey))`
-          initializer re-runs and reopens — without this, same-page client
+          initializer re-runs and reopens, without this, same-page client
           navigation preserves the (false) initial state. */}
       <PolicyCreateDialog
         key={initialBuiltinKey ?? 'idle'}

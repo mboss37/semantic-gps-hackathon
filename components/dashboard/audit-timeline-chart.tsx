@@ -42,7 +42,7 @@ export const AuditTimelineChart = ({ series }: Props) => {
     );
   }
 
-  // Drop status keys with zero events across the window — keeps the chart +
+  // Drop status keys with zero events across the window, keeps the chart +
   // legend focused on what actually happened. Wholly-empty windows hit the
   // total === 0 branch above.
   const activeKeys = AUDIT_TIMELINE_STATUS_KEYS.filter((k) =>

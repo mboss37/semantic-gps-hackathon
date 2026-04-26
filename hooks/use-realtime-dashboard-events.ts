@@ -14,17 +14,17 @@ import { useDashboardRefresh } from './use-dashboard-refresh';
 //
 // Mount once at the dashboard shell (SiteHeader). Consumers of
 // useDashboardRefresh that only need the manual refresh fn (e.g. the
-// header refresh button) do NOT call this hook — one channel per tab.
+// header refresh button) do NOT call this hook, one channel per tab.
 //
 // Other dashboard surfaces (Overview chart, Monitoring, Audit) listen for
 // the DASHBOARD_REFRESH_EVENT window CustomEvent that useDashboardRefresh
-// dispatches — they don't open their own channel. One websocket per tab,
+// dispatches, they don't open their own channel. One websocket per tab,
 // many readers.
 //
 // RLS isolation: the browser client carries the user JWT, and the
 // custom_access_token_hook stamps `organization_id`. Realtime applies
 // the same `org_isolation` RLS policy used by jwt_org_id() before
-// fanning out — cross-org rows never reach this channel. Verified by
+// fanning out, cross-org rows never reach this channel. Verified by
 // the cross-org isolation check in the WP-22.1 manual test plan.
 //
 // Debouncing: useDashboardRefresh enforces a 2s debounce, so a burst
@@ -42,7 +42,7 @@ export const useRealtimeDashboardEvents = () => {
     let cancelled = false;
 
     const wireUp = async () => {
-      // Force the realtime websocket to carry the user JWT — without this,
+      // Force the realtime websocket to carry the user JWT, without this,
       // the channel auth context is anon and RLS on mcp_events drops every
       // event before fanout. createBrowserClient sets this on init, but
       // not always before the first .subscribe(), depending on cookie
@@ -54,7 +54,7 @@ export const useRealtimeDashboardEvents = () => {
       if (session) {
         await supabase.realtime.setAuth(session.access_token);
       } else {
-        console.warn('[realtime] no session on mount — channel will be anon');
+        console.warn('[realtime] no session on mount, channel will be anon');
       }
 
       const channel = supabase
@@ -67,7 +67,7 @@ export const useRealtimeDashboardEvents = () => {
           },
         )
         .subscribe((status, err) => {
-          // Only warn on terminal/error states — SUBSCRIBED success path
+          // Only warn on terminal/error states, SUBSCRIBED success path
           // is the normal case and doesn't need a console line per mount.
           if (status !== 'SUBSCRIBED' && status !== 'CLOSED') {
             console.warn('[realtime] dashboard channel', status, err ?? '');

@@ -4,7 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 
 // DB integration test for the domains table.
 // Sprint 24 contract change: signup no longer auto-seeds a SalesOps domain.
-// New signups get a clean org + membership only — domain creation is
+// New signups get a clean org + membership only, domain creation is
 // user-controlled (UI greyed out as "Soon" pending CRUD work). Tests below
 // reflect the new shape: no domain on signup, domain inserts are explicit,
 // and the per-org unique constraint still holds.
@@ -70,7 +70,7 @@ describe.skipIf(!shouldRun)('domains table contract', () => {
     const orgIds = memberships.data?.map((m) => m.organization_id) ?? [];
     expect(orgIds).toHaveLength(2);
 
-    // Insert the same slug into both orgs — should succeed twice because
+    // Insert the same slug into both orgs, should succeed twice because
     // the unique index is composite (organization_id, slug).
     for (const organization_id of orgIds) {
       const { error } = await supabase

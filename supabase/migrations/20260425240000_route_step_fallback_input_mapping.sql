@@ -2,7 +2,7 @@
 --
 -- Why: until this migration, executeRoute's fallback handler reused the
 -- primary step's resolved args verbatim against the fallback tool. That
--- assumed input-shape compatibility — fine for symmetric tool pairs,
+-- assumed input-shape compatibility, fine for symmetric tool pairs,
 -- broken for cross-MCP fallbacks where the fallback target's schema
 -- differs (e.g. chat_post_message {text,channel} → create_issue
 -- {owner,repo,title,body}). Sprint 22 E2E surfaced the gap when we

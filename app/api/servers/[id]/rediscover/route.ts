@@ -1,9 +1,9 @@
-// GET  /api/servers/[id]/rediscover — dry-run preview (diff without writing)
-// POST /api/servers/[id]/rediscover — re-runs tools/list against the origin
+// GET  /api/servers/[id]/rediscover, dry-run preview (diff without writing)
+// POST /api/servers/[id]/rediscover, re-runs tools/list against the origin
 // and syncs the `tools` table via name-keyed upsert on (server_id, name).
 // Preserves user-set `display_name` / `display_description` overrides (G.6)
 // by only upserting `description` + `input_schema`. Stale tools (present in
-// DB, absent from discovery) are counted but not deleted — deletion would
+// DB, absent from discovery) are counted but not deleted, deletion would
 // orphan routes/policies; operators can handle explicit cleanup later.
 
 import type { SupabaseClient } from '@supabase/supabase-js';

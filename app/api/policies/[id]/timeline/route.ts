@@ -9,11 +9,11 @@ import { requireAuth, UnauthorizedError } from '@/lib/auth';
 // beats an RPC; if this ever grows past ~10k rows/day we'd push the bucket
 // into Postgres via a SQL function. For now, JS wins on simplicity.
 //
-// Org-scoping mirrors `app/api/policies/[id]/route.ts` exactly — policies
+// Org-scoping mirrors `app/api/policies/[id]/route.ts` exactly, policies
 // are global-by-intent today, so we rely on the user-scoped Supabase client
 // + `.maybeSingle()` to return 404 when the policy doesn't exist. RLS is
 // off in the MVP; if a policy id is wrong or unknown, we never leak that
-// detail — just 404.
+// detail, just 404.
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

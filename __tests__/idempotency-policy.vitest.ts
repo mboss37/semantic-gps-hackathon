@@ -95,7 +95,7 @@ describe('runIdempotency (WP-G.15)', () => {
     };
     const config = { ttl_seconds: 10, key_source: 'header' as const };
     expect(runIdempotency(ctx, config).ok).toBe(true);
-    // Advance 11s — entry is stale, new window.
+    // Advance 11s, entry is stale, new window.
     vi.setSystemTime(new Date(2026, 3, 20, 12, 0, 11));
     expect(runIdempotency(ctx, config).ok).toBe(true);
   });

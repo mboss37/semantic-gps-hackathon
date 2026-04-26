@@ -15,7 +15,7 @@ import {
 import { EDGE_STYLES } from '@/components/dashboard/graph-legend';
 
 // Sprint 27: filter strip on the relationships page. URL state via
-// useSearchParams — reload preserves filters and the recent activity row's
+// useSearchParams, reload preserves filters and the recent activity row's
 // "View audit trail" pattern works the same way here for share-by-link.
 
 type ServerOption = {

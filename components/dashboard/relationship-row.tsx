@@ -27,12 +27,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { EDGE_STYLES } from '@/components/dashboard/graph-legend';
 import { monogramFor, serverHex } from '@/lib/relationships/server-tint';
 
-// Sprint 27 redesign: each row is a 3-block grid — From tool (with monogram
+// Sprint 27 redesign: each row is a 3-block grid, From tool (with monogram
 // chip + server slug), mid-row glyph + connector arrow, To tool. Description
 // rides on row 2. Edit + Delete are inline always-visible icon buttons (the
 // hover-revealed `⋯` menu was both hard to discover AND raced with Radix
 // DropdownMenu focus restoration on edit-mode mount, causing the textarea
-// to flash and disappear). Inline edit saves on Enter, cancels on Esc — no
+// to flash and disappear). Inline edit saves on Enter, cancels on Esc, no
 // onBlur autosave (avoids the same race when focus lands inside the modal).
 
 type ToolEndpoint = {
@@ -147,7 +147,7 @@ export const RelationshipRow = ({
               >
                 {Icon ? <Icon className="size-4" /> : null}
                 <span className="font-mono text-[10px] uppercase tracking-wider">
-                  {style?.shortLabel ?? '—'}
+                  {style?.shortLabel ?? '-'}
                 </span>
               </div>
             </TooltipTrigger>

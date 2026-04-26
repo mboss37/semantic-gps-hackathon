@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { PlaygroundSandboxInfo } from '@/components/dashboard/playground-sandbox-info';
 import { PlaygroundWorkbench } from '@/components/dashboard/playground-workbench';
 
-// Playground A/B page. Side-by-side runs of the same prompt — Raw (no
+// Playground A/B page. Side-by-side runs of the same prompt, Raw (no
 // governance) vs Semantic GPS (full control plane). Server fetches the org's
 // MCP servers so the workbench can show the scope picker; the run uses the
 // auto-managed system token via `/api/playground/run`.

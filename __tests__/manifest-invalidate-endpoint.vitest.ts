@@ -76,7 +76,7 @@ describe('POST /api/_internal/manifest/invalidate (WP-12.3)', () => {
     expect(res.status).toBe(404);
     const body = (await res.json()) as { error: string };
     expect(body.error).toBe('not_found');
-    // Env check runs before auth — requireAuth must not even be consulted.
+    // Env check runs before auth, requireAuth must not even be consulted.
     expect(requireAuthMock).not.toHaveBeenCalled();
     expect(invalidateManifestMock).not.toHaveBeenCalled();
   });

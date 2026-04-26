@@ -15,7 +15,7 @@ import { verdictChartConfig } from '@/lib/charts/palette';
 // Sprint 12 WP-12.4 (I.4): per-policy shadow→enforce timeline chart. Stacks
 // enforce_block (red) + shadow_block (amber) + allow (emerald) per day so the
 // judge can see at a glance how often this policy would have fired. Amber
-// bars are the shadow-mode "would-have-blocked" events — the core auditing
+// bars are the shadow-mode "would-have-blocked" events, the core auditing
 // story we're pitching.
 
 type Bucket = {
@@ -87,7 +87,7 @@ export const PolicyTimelineChart = ({ policyId, days = 7 }: Props) => {
   if (totalEvents === 0) {
     return (
       <div className="h-80 rounded-lg border border-dashed bg-muted/30 p-4 text-center text-sm text-muted-foreground">
-        <p>No events in the last {data.days} days — this policy hasn&apos;t fired yet.</p>
+        <p>No events in the last {data.days} days, this policy hasn&apos;t fired yet.</p>
         <p className="mt-1">Run a Playground preset to populate.</p>
       </div>
     );

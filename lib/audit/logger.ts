@@ -18,7 +18,7 @@ export type McpEventStatus =
 
 export type McpEvent = {
   // Sprint 29: trace_id can be supplied by the caller via `?trace_id=<uuid>`
-  // on the gateway URL — every MCP call from a single Playground (or any
+  // on the gateway URL, every MCP call from a single Playground (or any
   // batched) run shares the same trace_id, so the audit page filters all of
   // them with one click. Ad-hoc callers (Claude Desktop, Inspector, customer
   // agents) don't pass it; the gateway falls back to a fresh per-request
@@ -26,7 +26,7 @@ export type McpEvent = {
   trace_id: string;
   // Sprint 15 K.1: scope identity for every event. Nullable because the
   // gateway logs auth-level events before a scope resolves (missing bearer,
-  // invalid token, upstream db error) — those rows genuinely have no org.
+  // invalid token, upstream db error), those rows genuinely have no org.
   // Every post-auth writer MUST thread the authenticated org id from the
   // resolved scope; V2 (RLS) narrows this to NOT NULL.
   organization_id?: string | null;
@@ -69,7 +69,7 @@ export const redactPayload = (input: unknown, depth = 0): unknown => {
 
 export const logMCPEvent = (event: McpEvent): void => {
   // Skip when Supabase isn't wired (tests, cold CLI scripts). Audit is
-  // fire-and-forget — never block the gateway response on logging.
+  // fire-and-forget, never block the gateway response on logging.
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) {
     return;
   }

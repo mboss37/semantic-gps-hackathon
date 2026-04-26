@@ -1,4 +1,4 @@
-// rate_limit — thin wrapper around the in-memory token-bucket store in
+// rate_limit, thin wrapper around the in-memory token-bucket store in
 // `lib/policies/rate-limiter.ts`. Delegates all state handling so the runner
 // stays a pure function call at its surface.
 

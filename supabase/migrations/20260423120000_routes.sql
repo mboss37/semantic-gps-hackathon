@@ -1,5 +1,5 @@
 -- Sprint 5 WP-B.2: routes + route_steps tables.
--- Routes are the deterministic replay unit — an ordered list of tool calls
+-- Routes are the deterministic replay unit, an ordered list of tool calls
 -- with optional fallback + rollback. `tool_id` uses `on delete restrict` so
 -- we can't orphan a step by deleting the tool; `fallback_route_id` uses
 -- `on delete set null` so a broken fallback doesn't cascade-delete the

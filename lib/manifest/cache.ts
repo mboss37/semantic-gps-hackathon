@@ -2,7 +2,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 
 // In-memory compiled manifest for the MCP gateway. Stateless route still
 // shares a process cache across warm invocations. Every mutation route MUST
-// call invalidateManifest() before returning — it's the rule that makes
+// call invalidateManifest() before returning, it's the rule that makes
 // live policy reload work.
 
 export type ServerRow = {
@@ -123,7 +123,7 @@ export type ManifestScope =
   | { kind: 'server'; organization_id: string; server_id: string };
 
 // Deterministic key for the per-scope manifest cache. JSON.stringify is fine
-// here — our three scope shapes have stable key orders.
+// here, our three scope shapes have stable key orders.
 const scopeKey = (scope: ManifestScope): string => {
   if (scope.kind === 'org') return `org:${scope.organization_id}`;
   if (scope.kind === 'domain')
@@ -153,7 +153,7 @@ const fetchOrgManifest = async (
   organizationId: string,
 ): Promise<Manifest> => {
   // Parallel fan-out of every directly-org-scoped table. `route_steps` is
-  // org-scoped indirectly via `route_id` — sequenced after routes so the
+  // org-scoped indirectly via `route_id`, sequenced after routes so the
   // IN-filter has a real id list.
   const [servers, policies, assignments, routes] = await Promise.all([
     supabase.from('servers').select('*').eq('organization_id', organizationId),
@@ -339,7 +339,7 @@ const fetchServerManifest = async (
 };
 
 const fetchManifest = async (scope: ManifestScope): Promise<Manifest> => {
-  // Graceful degrade in test / CLI envs that don't wire Supabase — gateway
+  // Graceful degrade in test / CLI envs that don't wire Supabase, gateway
   // stays functional (no manifest = just the builtin echo tool).
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) {
     return emptyManifest();

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 // Sprint 17 WP-17.2: schema + wiring checks for the Playground token-consent
 // fix. The real behaviour test is "fresh orgs never see playground-minted
-// tokens in /dashboard/tokens" — which the schema CHECK + the route filter
+// tokens in /dashboard/tokens", which the schema CHECK + the route filter
 // together enforce. This test pins those invariants at the source level so a
 // future edit can't silently reopen the consent hole.
 
@@ -28,7 +28,7 @@ const TOKENS_PAGE = readFileSync(
   'utf-8',
 );
 
-describe('WP-17.2 token consent — migration schema', () => {
+describe('WP-17.2 token consent, migration schema', () => {
   it('adds a kind column with the user|system CHECK', () => {
     expect(MIGRATION).toMatch(/add column kind text not null default 'user'/i);
     expect(MIGRATION).toMatch(/check \(kind in \('user', 'system'\)\)/i);
@@ -48,7 +48,7 @@ describe('WP-17.2 token consent — migration schema', () => {
   });
 });
 
-describe('WP-17.2 token consent — Playground token helper', () => {
+describe('WP-17.2 token consent, Playground token helper', () => {
   it("mints exactly one system token per org, reused across runs", () => {
     // "kind='system'" on the SELECT proves the reuse path is scoped to system
     // rows. The INSERT sets kind: 'system' so the returned token is never
@@ -63,7 +63,7 @@ describe('WP-17.2 token consent — Playground token helper', () => {
   });
 });
 
-describe('WP-17.2 token consent — user-facing surface filters', () => {
+describe('WP-17.2 token consent, user-facing surface filters', () => {
   it("GET /api/gateway-tokens hides kind='system' rows", () => {
     expect(TOKENS_API).toMatch(/\.eq\('kind', 'user'\)/);
   });

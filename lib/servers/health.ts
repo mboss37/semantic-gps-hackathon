@@ -1,10 +1,10 @@
 // Sprint 26: shared origin-probe helper. Extracted from
 // app/api/servers/[id]/health/route.ts so the servers list page can probe
-// every registered MCP origin in parallel during a single page render —
+// every registered MCP origin in parallel during a single page render -
 // surfaces "is it up RIGHT NOW?" on the cards instead of buried on detail.
 //
 // HEAD first (cheap), GET fallback once if HEAD fails (some origins reject
-// HEAD with 4xx/405). All outbound traffic routes through `safeFetch` —
+// HEAD with 4xx/405). All outbound traffic routes through `safeFetch` -
 // SSRF guard + 2s timeout cap.
 
 import { safeFetch, SsrfBlockedError } from '@/lib/security/ssrf-guard';

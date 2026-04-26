@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { requireAuth, UnauthorizedError } from '@/lib/auth';
 import { hashToken } from '@/lib/mcp/auth-token';
 
-// Sprint 7 WP-A.6: gateway-token mint UI closes the hosted bootstrap gap —
+// Sprint 7 WP-A.6: gateway-token mint UI closes the hosted bootstrap gap -
 // a fresh deploy has zero rows in `gateway_tokens`, so every MCP call 401s
 // with `invalid_token`. Plaintext is returned ONCE on POST and never again;
 // DB stores only the SHA-256 hash (see `hashToken`). All reads are org-scoped
@@ -77,7 +77,7 @@ export const POST = async (request: Request): Promise<Response> => {
 
   // Sprint 17 WP-17.2: user-facing route always mints `kind='user'`. System
   // tokens are infra-owned and only the Playground's `mintPlaygroundToken`
-  // creates them — never through this user-consent surface. Explicit here
+  // creates them, never through this user-consent surface. Explicit here
   // even though the column default is 'user', so a future default flip can't
   // silently escalate a user-minted token into a hidden system token.
   const { data, error } = await supabase

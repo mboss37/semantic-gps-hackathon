@@ -3,7 +3,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 // AES-256-GCM for servers.auth_config. CREDENTIALS_ENCRYPTION_KEY is a
 // base64-encoded 32-byte key (openssl rand -base64 32). Output layout:
 //   base64( iv[12] || ciphertext || authTag[16] )
-// Any tamper — IV, ciphertext, or tag — fails decrypt with authentication error.
+// Any tamper, IV, ciphertext, or tag, fails decrypt with authentication error.
 
 const IV_LENGTH = 12;
 const TAG_LENGTH = 16;

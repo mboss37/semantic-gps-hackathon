@@ -1,4 +1,4 @@
-// business_hours — block tool calls outside configured weekly windows. Pure
+// business_hours, block tool calls outside configured weekly windows. Pure
 // time check; identity and tool name are irrelevant. Uses
 // Intl.DateTimeFormat(..., {timeZone}) so DST transitions are handled by the
 // runtime instead of any hand-rolled offset math.

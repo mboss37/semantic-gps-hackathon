@@ -138,7 +138,7 @@ describe('fetchServerDetail', () => {
 
   it('aggregates violations by policy_name from policy_decisions array', async () => {
     const tables = baseTables();
-    // Three blocked events against the server — two policies involved, one
+    // Three blocked events against the server, two policies involved, one
     // policy appears twice, one "allow" decision is ignored.
     tables.mcp_events = [
       {
@@ -183,7 +183,7 @@ describe('fetchServerDetail', () => {
 
 describe('fetchRemoteCapabilities', () => {
   it('returns null capabilities without network for openapi transport', async () => {
-    // Spy on fetch by monkey-patching — any call during this test fails it.
+    // Spy on fetch by monkey-patching, any call during this test fails it.
     const original = globalThis.fetch;
     let fetchCalled = false;
     globalThis.fetch = (async () => {

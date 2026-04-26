@@ -17,7 +17,7 @@ import {
 import { TableCell, TableRow } from '@/components/ui/table';
 
 // Sprint 7 WP-A.6: one row per token. We only ever display name + timestamps
-// — the plaintext / hash never leave the server. `last_used_at` is humanized
+//, the plaintext / hash never leave the server. `last_used_at` is humanized
 // relative to "now" since raw ISO strings are hostile at a glance on a
 // reconcile-the-clients screen.
 
@@ -109,7 +109,7 @@ export const GatewayTokenRow = ({ id, name, lastUsedAt, createdAt }: Props) => {
             <DialogTitle>Revoke token?</DialogTitle>
             <DialogDescription>
               Any MCP client using <span className="text-foreground">{name}</span> will start
-              getting 401 on the next call. This cannot be undone — mint a new token if you need
+              getting 401 on the next call. This cannot be undone, mint a new token if you need
               to restore access.
             </DialogDescription>
           </DialogHeader>

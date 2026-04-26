@@ -6,7 +6,7 @@
 -- dispatcher's uniform http-streamable pipeline.
 --
 -- After: the three vendor proxies ship as standalone Next.js MCP routes under
--- `app/api/mcps/<vendor>/route.ts` — indistinguishable from any third-party
+-- `app/api/mcps/<vendor>/route.ts`, indistinguishable from any third-party
 -- HTTP-streamable upstream. The dispatcher drops vendor branches; every
 -- upstream routes through `proxy-http.ts` + `proxy-openapi.ts`.
 --
@@ -29,7 +29,7 @@ ALTER TABLE public.servers DROP CONSTRAINT IF EXISTS servers_transport_check;
 -- Step 2: backfill any legacy vendor rows to http-streamable + the route URL.
 -- Idempotent: rows already on http-streamable are untouched. We null out
 -- `auth_config` because the new vendor routes read credentials from env vars
--- on the same Next.js deployment — per-tenant/per-server credentials are a
+-- on the same Next.js deployment, per-tenant/per-server credentials are a
 -- V2 story (re-introduce via `auth_config` when vendor MCPs are physically
 -- extracted to their own deploys).
 

@@ -1,4 +1,4 @@
-// Windowed monitoring fetch — bucket size derived from `MonitoringRange`,
+// Windowed monitoring fetch, bucket size derived from `MonitoringRange`,
 // not hardcoded to days. Single SQL round-trip pulls every column we need
 // for all three charts (volume / per-policy blocks / PII counts), so a
 // range switch costs one DB query, not three.
@@ -114,7 +114,7 @@ export const fetchMonitoringWindowed = async (
   const priorSince = new Date(priorEarliest).toISOString();
 
   // Single query covering BOTH the current window and the prior equal-length
-  // window. Splits in JS — half the network cost, same data, simpler than
+  // window. Splits in JS, half the network cost, same data, simpler than
   // two parallel selects. Optional serverId filter lets server-detail pages
   // reuse the exact same compute path scoped to one MCP server.
   let query = supabase

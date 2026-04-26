@@ -1,4 +1,4 @@
-// allowlist — gate tool invocations by tool name. Empty/missing allowlist is
+// allowlist, gate tool invocations by tool name. Empty/missing allowlist is
 // treated as "no restriction" so policies can be attached before the tool set
 // is finalised without silently breaking existing calls.
 

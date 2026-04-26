@@ -9,7 +9,7 @@
 
 When creating Claude Code skills (.claude/skills/*/SKILL.md):
 
-- Keep SKILL.md under 500 lines — move reference material to supporting files in the same directory
+- Keep SKILL.md under 500 lines, move reference material to supporting files in the same directory
 - Front-load description (first 250 chars shown in listings) with TRIGGER when / DO NOT TRIGGER when clauses
 - Add allowed-tools in frontmatter to restrict tool access (e.g. Read, Glob, Grep for read-only skills)
 - Add argument-hint in frontmatter showing the expected input format (use $ARGUMENTS or $0, $1 for dynamic input)

@@ -1,6 +1,6 @@
-// Sprint 24 WP-24.1 — client snippet templates for /dashboard/connect.
+// Sprint 24 WP-24.1, client snippet templates for /dashboard/connect.
 // Every template uses a `tools/list` call as the canonical "did this work?"
-// probe — universal across MCP clients, no per-tool customization needed.
+// probe, universal across MCP clients, no per-tool customization needed.
 // `<TOKEN>` placeholder is intentional: plaintext only exists in the user's
 // clipboard at mint time, never server-side. We never auto-fill secrets.
 
@@ -10,7 +10,7 @@ export type SnippetInput = {
   serverSlug: string;
 };
 
-export const TOKEN_PLACEHOLDER = '<YOUR_GATEWAY_TOKEN — mint at /dashboard/tokens>';
+export const TOKEN_PLACEHOLDER = '<YOUR_GATEWAY_TOKEN, mint at /dashboard/tokens>';
 
 export const curlSnippet = ({ endpoint, token }: SnippetInput): string =>
   `curl -X POST '${endpoint}' \\
@@ -42,7 +42,7 @@ export const inspectorSnippet = ({ endpoint, token }: SnippetInput): string =>
   --header 'Authorization: Bearer ${token}' \\
   --method tools/list`;
 
-// Mirrors the canonical pattern from app/api/playground/run/route.ts —
+// Mirrors the canonical pattern from app/api/playground/run/route.ts -
 // `mcp_servers` lives on the beta API, requires the `mcp-client-2025-11-20`
 // beta header, and the paired `mcp_toolset` tool entry to actually expose
 // the upstream tools to the model.

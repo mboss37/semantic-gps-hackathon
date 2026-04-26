@@ -11,7 +11,7 @@ import {
 // Sprint 9 WP-G.9: tool-level assignments. Body still accepts {server_id?,
 // tool_id?} but we now enforce that every referenced id resolves to the
 // caller's org (same pattern as app/api/relationships/route.ts). A tool_id
-// whose parent server lives in another org is rejected with 403 — otherwise
+// whose parent server lives in another org is rejected with 403, otherwise
 // an attacker could enumerate policies against cross-org tools.
 
 export const runtime = 'nodejs';

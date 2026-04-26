@@ -2,7 +2,7 @@
 --
 -- Defense-in-depth layer. App-layer .eq('organization_id', ...) filters remain
 -- as belt-and-braces; this migration is the belt. Cross-org UUID guesses now
--- return zero rows AT THE DB LEVEL — the app layer no longer carries the
+-- return zero rows AT THE DB LEVEL, the app layer no longer carries the
 -- isolation invariant alone.
 --
 -- Service-role key bypasses RLS automatically. The MCP gateway path
@@ -16,7 +16,7 @@
 -- Part 1: JWT claim hook
 -- ---------------------------------------------------------------------------
 --
--- Supabase custom-access-token hook — fires on every access-token issuance
+-- Supabase custom-access-token hook, fires on every access-token issuance
 -- (login + refresh). Reads the user's org from memberships and merges it into
 -- the JWT claims so `auth.jwt() ->> 'organization_id'` resolves server-side.
 --

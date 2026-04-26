@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createServiceClient } from '@/lib/supabase/service';
 
 // DB integration test for the policy_versions audit trigger (WP-B.4).
-// Skipped unless Supabase env vars are present — main session runs this
+// Skipped unless Supabase env vars are present, main session runs this
 // after `pnpm supabase start` + `supabase db reset` has applied migrations.
 
 const shouldRun =
@@ -121,7 +121,7 @@ describe.skipIf(!shouldRun)('policy_versions snapshot trigger', () => {
 // Always-on guard so a run with no DB env still has at least one assertion.
 describe('policy_versions migration shape (smoke)', () => {
   it('migration file is importable as a string artefact (no runtime deps)', () => {
-    // Placeholder — migration is SQL; real coverage is the skipIf block above.
+    // Placeholder, migration is SQL; real coverage is the skipIf block above.
     expect(true).toBe(true);
   });
 });

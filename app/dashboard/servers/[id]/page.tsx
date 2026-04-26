@@ -18,12 +18,12 @@ import { CopyButton } from '@/components/dashboard/copy-button';
 import { ServerRediscoverButton } from '@/components/dashboard/server-rediscover-button';
 import { ServerToolsTable } from '@/components/dashboard/server-tools-table';
 
-// Sprint 26 — server detail = REGISTRATION + DRILL-DOWN. The list-page card
+// Sprint 26, server detail = REGISTRATION + DRILL-DOWN. The list-page card
 // already shows identity, health, tool count, and chips. The detail page
 // earns its click by exposing what the card cannot:
-//   • per-tool drill — full description, display rewrite, input JSON Schema
+//   • per-tool drill, full description, display rewrite, input JSON Schema
 //   • per-tool 24h calls + errors
-//   • configuration block — origin URL, transport, auth, registered date
+//   • configuration block, origin URL, transport, auth, registered date
 //   • remote capabilities (resources/prompts) live from origin
 
 export const dynamic = 'force-dynamic';
@@ -133,7 +133,7 @@ const ServerDetailPage = async ({ params }: { params: Promise<Params> }) => {
                 <CopyButton value={detail.server.origin_url} compact />
               </>
             ) : (
-              <span className="text-xs text-muted-foreground/70">—</span>
+              <span className="text-xs text-muted-foreground/70">-</span>
             )}
           </ConfigRow>
           <ConfigRow label="Transport">

@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createServiceClient } from '@/lib/supabase/service';
 
 // DB integration test for the routes + route_steps tables (WP-B.2).
-// Skipped unless Supabase env vars are present — main session runs this after
+// Skipped unless Supabase env vars are present, main session runs this after
 // `pnpm supabase start` + `supabase db reset` has applied migrations.
 
 const shouldRun =
@@ -159,7 +159,7 @@ describe.skipIf(!shouldRun)('routes + route_steps tables', () => {
 
     const { error: deleteErr } = await supabase.from('routes').delete().eq('id', routeId);
     expect(deleteErr).toBeNull();
-    // Remove from cleanup list — already gone.
+    // Remove from cleanup list, already gone.
     const idx = createdRouteIds.indexOf(routeId);
     if (idx >= 0) createdRouteIds.splice(idx, 1);
 

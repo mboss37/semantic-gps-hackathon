@@ -4,12 +4,12 @@ import { ConnectPanel } from '@/components/dashboard/connect-panel';
 
 export const dynamic = 'force-dynamic';
 
-// Sprint 24 WP-24.1 — self-serve onboarding patch. Without this page, a fresh
+// Sprint 24 WP-24.1, self-serve onboarding patch. Without this page, a fresh
 // signup who has minted a token + registered an MCP has zero UI for "where do
-// I point my client?" Industry pattern (Kong / Apigee / Stripe / Twilio) — every
+// I point my client?" Industry pattern (Kong / Apigee / Stripe / Twilio), every
 // API gateway ships a connect/quickstart surface. Three tiers map to the
 // existing scoped gateway: org / domain / server. Token plaintext is never
-// re-shown (SHA-256 only in DB) — user pastes their own when testing.
+// re-shown (SHA-256 only in DB), user pastes their own when testing.
 
 type DomainRow = { slug: string; name: string };
 type ServerRow = { id: string; name: string; transport: string };

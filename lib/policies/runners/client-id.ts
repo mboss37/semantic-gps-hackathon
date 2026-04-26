@@ -1,4 +1,4 @@
-// client_id — require a caller-supplied client identifier in a configurable
+// client_id, require a caller-supplied client identifier in a configurable
 // header and verify it's in an explicit allowlist. Empty allowlist denies so
 // a misconfigured policy can't accidentally grant access.
 

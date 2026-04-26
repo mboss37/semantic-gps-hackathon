@@ -40,14 +40,14 @@ begin
   insert into public.memberships (organization_id, user_id, role)
     values (new_org_id, NEW.id, 'admin');
   insert into public.domains (organization_id, slug, name, description)
-    values (new_org_id, 'salesops', 'SalesOps', 'Sales operations — Salesforce, Slack, GitHub');
+    values (new_org_id, 'salesops', 'SalesOps', 'Sales operations, Salesforce, Slack, GitHub');
   return NEW;
 end;
 $$;
 
 -- Backfill: every existing org without a salesops domain gets one.
 insert into public.domains (organization_id, slug, name, description)
-select o.id, 'salesops', 'SalesOps', 'Sales operations — Salesforce, Slack, GitHub'
+select o.id, 'salesops', 'SalesOps', 'Sales operations, Salesforce, Slack, GitHub'
 from public.organizations o
 where not exists (
   select 1 from public.domains d

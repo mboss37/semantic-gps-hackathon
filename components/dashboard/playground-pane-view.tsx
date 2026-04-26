@@ -35,7 +35,7 @@ const PANE_THEME = {
   },
 } as const;
 
-// Section labels — terminal-stream feel. Tiny mono uppercase markers with a
+// Section labels, terminal-stream feel. Tiny mono uppercase markers with a
 // `▸` prefix so each block reads like a log section rather than a card.
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
   <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
@@ -187,7 +187,7 @@ export const PaneView = ({ pane, state, canRun, onRun }: Props) => {
         <div className="flex flex-wrap items-center gap-3 border-t border-border/50 bg-background/40 px-3 py-1.5 font-mono text-[10px] tabular-nums text-muted-foreground">
           <span>{state.stats?.tool_calls ?? state.toolCalls.length} call(s)</span>
           <span className="opacity-50">·</span>
-          <span>{state.stats?.ms ? `${state.stats.ms} ms` : state.running ? '…' : '—'}</span>
+          <span>{state.stats?.ms ? `${state.stats.ms} ms` : state.running ? '…' : '-'}</span>
           {pane.key === 'gateway' ? (
             <>
               <span className="opacity-50">·</span>

@@ -241,7 +241,7 @@ describe('proxyOpenApi', () => {
 
   it('retries once on 5xx then fails without leaking body', async () => {
     let calls = 0;
-    const leakedBody = 'INTERNAL STACK TRACE — do not leak';
+    const leakedBody = 'INTERNAL STACK TRACE, do not leak';
     const { server, url } = await startUpstream((_req, res) => {
       calls += 1;
       res.writeHead(503, { 'content-type': 'text/plain' });

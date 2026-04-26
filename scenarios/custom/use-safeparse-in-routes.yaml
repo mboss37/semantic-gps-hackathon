@@ -9,13 +9,13 @@ setup:
     - path: CLAUDE.md
       content: |
         ## Conventions
-        - Zod `.safeParse()` in route handlers — never `.parse()` (crashes server on bad input)
+        - Zod `.safeParse()` in route handlers, never `.parse()` (crashes server on bad input)
         - On validation failure, return 400 with `result.error.flatten()`
   instructions: |
-    Route handlers must use zod `.safeParse()` — never `.parse()`.
+    Route handlers must use zod `.safeParse()`, never `.parse()`.
     `.parse()` throws on invalid input and crashes the serverless function;
     `.safeParse()` returns a result object the handler can branch on.
-prompt: "Implement the POST handler in app/api/servers/route.ts. Accept JSON body with name, origin_url, and transport. Validate with zod and return 400 on invalid input, 201 on success. No DB code needed — just mock the insert."
+prompt: "Implement the POST handler in app/api/servers/route.ts. Accept JSON body with name, origin_url, and transport. Validate with zod and return 400 on invalid input, 201 on success. No DB code needed, just mock the insert."
 checks:
   - type: grep
     pattern: "\\.safeParse\\("

@@ -1,7 +1,7 @@
 // Barrel for built-in policy runners. Each runner + its Config/Verdict types
 // + its private helpers live under `lib/policies/runners/` so every file stays
 // inside the 400-line budget and diffs cleanly. Import sites continue to use
-// `@/lib/policies/built-in` — they never need to know about the split.
+// `@/lib/policies/built-in`, they never need to know about the split.
 
 export { runPiiRedaction, DEFAULT_PII_PATTERNS } from './runners/pii-redaction';
 export type {

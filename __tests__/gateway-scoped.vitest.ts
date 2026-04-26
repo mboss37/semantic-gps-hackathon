@@ -102,7 +102,7 @@ describe.skipIf(!shouldRun)('scoped loadManifest (org / domain / server)', () =>
     if (!tA || !tB) throw new Error('missing seeded tool');
     toolAId = tA.id;
     toolBId = tB.id;
-    // No explicit tool cleanup — servers cascade-delete their tools.
+    // No explicit tool cleanup, servers cascade-delete their tools.
 
     invalidateManifest();
   });

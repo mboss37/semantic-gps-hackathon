@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 // Two invariants:
 //   1. mcp_events is added to the supabase_realtime publication
 //   2. mcp_events has REPLICA IDENTITY FULL (so RLS columns reach the
-//      replication stream — without this Realtime can't filter rows
+//      replication stream, without this Realtime can't filter rows
 //      against jwt_org_id() and the channel either silently drops or
 //      leaks across orgs)
 const MIGRATION_PATH = join(

@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Service-role client. MCP gateway route ONLY — never in a user-scoped path.
+// Service-role client. MCP gateway route ONLY, never in a user-scoped path.
 // Bypasses RLS; caller is responsible for scoping.
 //
 // Throw loudly on missing env instead of silently coalescing to ''. An empty

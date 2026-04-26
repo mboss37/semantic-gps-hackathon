@@ -41,7 +41,7 @@ export const checkRateLimit = (
   return { ok: true };
 };
 
-// Test hook — vitest uses this to reset between cases. Not exported via index
+// Test hook, vitest uses this to reset between cases. Not exported via index
 // so production code never touches it.
 export const __resetRateLimiterForTests = (): void => {
   buckets.clear();

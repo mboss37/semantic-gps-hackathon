@@ -34,7 +34,7 @@ const allowlist = (mode: PolicyRow['enforcement_mode']): PolicyRow => ({
   enforcement_mode: mode,
 });
 
-// Real-looking area code (512 = Austin) — libphonenumber rejects 555-anything
+// Real-looking area code (512 = Austin), libphonenumber rejects 555-anything
 // as fictional per NANP reservation, so the earlier "Jenny's song" number
 // wouldn't redact even though the old regex would have caught it.
 const resultWithPii = {

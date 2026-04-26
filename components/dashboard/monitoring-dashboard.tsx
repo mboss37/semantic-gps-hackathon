@@ -64,7 +64,7 @@ export const MonitoringDashboard = () => {
   // Bumped by the dashboard-refresh window event to retrigger the fetch
   // effect without changing the picked range.
   const [refreshTick, setRefreshTick] = useState(0);
-  // Derive loading from data freshness — avoids setState-in-effect, and the
+  // Derive loading from data freshness, avoids setState-in-effect, and the
   // chart switches the moment the response for the picked range lands.
   const loading = data === null || (range !== null && data.range !== range);
 

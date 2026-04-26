@@ -1,11 +1,11 @@
 // Sprint 27: deterministic per-server tint for the monogram chip on the
 // relationships page. Stable color across renders so the eye learns "blue =
 // Salesforce, purple = Slack, etc." Color comes from POLICY_PALETTE (already
-// the unrelated-axis palette in this codebase) — no new color additions.
+// the unrelated-axis palette in this codebase), no new color additions.
 //
 // Hash on `server_id` so two orgs with different server names but the same
 // alphabetical order don't accidentally share colors. POLICY_PALETTE has
-// 6 colors today, so collisions begin past 6 servers — acceptable for
+// 6 colors today, so collisions begin past 6 servers, acceptable for
 // hackathon scope. Future: workspace admins pin a color per server.
 
 import { POLICY_PALETTE } from '@/lib/charts/palette';

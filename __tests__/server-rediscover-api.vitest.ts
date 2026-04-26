@@ -176,7 +176,7 @@ describe('server rediscover API', () => {
       },
     ]);
 
-    // Upsert does NOT include display_name / display_description — preserves overrides
+    // Upsert does NOT include display_name / display_description, preserves overrides
     for (const row of upsertCalls[0].rows) {
       expect(row).not.toHaveProperty('display_name');
       expect(row).not.toHaveProperty('display_description');

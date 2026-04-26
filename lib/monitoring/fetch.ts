@@ -1,11 +1,11 @@
 // Read-only aggregations over `mcp_events` for the monitoring dashboard.
 // Mirrors the Sprint 12 policy-timeline pattern in
 // `app/api/policies/[id]/timeline/route.ts`: pull the last `days` rows,
-// bucket in JS. At demo scale (<1000 events) a plain SELECT beats an RPC —
+// bucket in JS. At demo scale (<1000 events) a plain SELECT beats an RPC -
 // if this ever grows past ~10k/day we'd push the bucketing into Postgres.
 //
 // PII pattern names are sourced from `lib/policies/runners/pii-redaction.ts`
-// — the runner stays source-of-truth so adding a new PII pattern doesn't
+//, the runner stays source-of-truth so adding a new PII pattern doesn't
 // require a parallel edit here.
 
 import type { SupabaseClient } from '@supabase/supabase-js';

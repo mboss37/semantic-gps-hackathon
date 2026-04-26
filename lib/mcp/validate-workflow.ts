@@ -5,7 +5,7 @@ import type {
   ValidateWorkflowResult,
 } from '@/lib/mcp/trel-schemas';
 
-// Planning-time workflow linter. Pure function against the scoped manifest —
+// Planning-time workflow linter. Pure function against the scoped manifest -
 // no LLM, no DB. Returns a structured issue list + graph coverage metric so
 // an agent can decide whether to keep planning or just execute.
 
@@ -117,7 +117,7 @@ const collectPolicyBlocks = (
 ): ValidateWorkflowIssue[] => {
   const out: ValidateWorkflowIssue[] = [];
   // Runtime-arg-dependent policies (injection_guard, rate_limit, basic_auth,
-  // client_id, ip_allowlist) are flagged as warnings here — we can't evaluate
+  // client_id, ip_allowlist) are flagged as warnings here, we can't evaluate
   // them without real headers / args. Static-config allowlist we CAN check.
   for (let i = 0; i < steps.length; i += 1) {
     const step = steps[i];
@@ -145,7 +145,7 @@ const collectPolicyBlocks = (
         }
         continue;
       }
-      // All other enforce-mode policies need runtime signals — warn, don't block.
+      // All other enforce-mode policies need runtime signals, warn, don't block.
       out.push({
         step_index: i,
         severity: 'warning',

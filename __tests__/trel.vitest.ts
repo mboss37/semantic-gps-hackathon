@@ -30,7 +30,7 @@ const manifest: Manifest = {
     { id: uuid(21), from_tool_id: T.getCustomer, to_tool_id: T.listOrders, relationship_type: 'produces_input_for', description: 'customer data informs order lookup' },
     { id: uuid(22), from_tool_id: T.listOrders, to_tool_id: T.createTicket, relationship_type: 'suggests_after', description: 'tickets commonly follow an order lookup' },
     { id: uuid(23), from_tool_id: T.createTicket, to_tool_id: T.sendEmail, relationship_type: 'alternative_to', description: 'can send email instead of a ticket' },
-    { id: uuid(24), from_tool_id: T.getCustomer, to_tool_id: T.createTicket, relationship_type: 'requires_before', description: 'ticket requires customer — reverse-sense edge for BFS coverage' },
+    { id: uuid(24), from_tool_id: T.getCustomer, to_tool_id: T.createTicket, relationship_type: 'requires_before', description: 'ticket requires customer, reverse-sense edge for BFS coverage' },
   ],
   policies: [],
   assignments: [],
@@ -85,7 +85,7 @@ describe('findWorkflowPath', () => {
 
 describe('relationship taxonomy guard', () => {
   it('accepts all 8 canonical types and rejects anything else at the type level', () => {
-    // Exhaustive list of valid types — assigning each one must compile.
+    // Exhaustive list of valid types, assigning each one must compile.
     const valid: ReadonlyArray<RelationshipRow['relationship_type']> = [
       'produces_input_for',
       'requires_before',
@@ -105,7 +105,7 @@ describe('relationship taxonomy guard', () => {
       id: uuid(99),
       from_tool_id: T.search,
       to_tool_id: T.getCustomer,
-      // @ts-expect-error — 'depends_on' is not in the canonical 8 types.
+      // @ts-expect-error, 'depends_on' is not in the canonical 8 types.
       relationship_type: 'depends_on',
       description: 'retired type, must be rejected',
     } satisfies RelationshipRow;

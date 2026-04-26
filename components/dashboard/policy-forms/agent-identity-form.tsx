@@ -24,7 +24,7 @@ export const AgentIdentityForm = ({
     <div className="grid gap-3">
       <div className="grid gap-2">
         <Label className="text-xs text-muted-foreground">
-          Required headers (one per line — presence check only)
+          Required headers (one per line, presence check only)
         </Label>
         <Textarea
           rows={4}
@@ -43,7 +43,7 @@ export const AgentIdentityForm = ({
           onCheckedChange={(v) => onChange({ ...config, verify_signature: v === true })}
         />
         <span className="text-muted-foreground">
-          Verify signature (not yet implemented — will block every call)
+          Verify signature (not yet implemented, will block every call)
         </span>
       </label>
       <div className="grid gap-2">

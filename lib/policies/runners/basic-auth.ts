@@ -1,4 +1,4 @@
-// basic_auth — minimum-viable request-metadata gate. Checks only that an
+// basic_auth, minimum-viable request-metadata gate. Checks only that an
 // `Authorization: Basic …` header is present; credential validation is the
 // upstream's job. Empty value fails closed.
 

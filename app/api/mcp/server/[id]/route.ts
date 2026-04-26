@@ -1,7 +1,7 @@
 import { buildGatewayHandler, serverScope } from '@/lib/mcp/gateway-handler';
 
 // Single-server gateway. Manifest narrows to one server + its tools +
-// relationships limited to those tools — scoped to the token's org (WP-D.2).
+// relationships limited to those tools, scoped to the token's org (WP-D.2).
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

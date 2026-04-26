@@ -21,7 +21,7 @@ export type BusinessHoursWindow = {
 export type BusinessHoursConfig = {
   timezone?: string;
   windows?: BusinessHoursWindow[];
-  // Legacy fields — accepted on input, stripped on first onChange.
+  // Legacy fields, accepted on input, stripped on first onChange.
   days?: BusinessHoursDay[];
   start_hour?: number;
   end_hour?: number;
@@ -44,7 +44,7 @@ const toCanonicalConfig = (input: BusinessHoursConfig): CanonicalConfig => {
   if (input.windows && input.windows.length > 0) {
     return { timezone, windows: input.windows };
   }
-  // Legacy single-window row — fold into the canonical shape.
+  // Legacy single-window row, fold into the canonical shape.
   if (input.days && input.start_hour !== undefined && input.end_hour !== undefined) {
     return {
       timezone,

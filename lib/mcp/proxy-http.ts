@@ -7,7 +7,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 // Real direct-MCP proxy. For servers where transport='http-streamable'
 // (another MCP server registered into our gateway) we forward the tools/call
 // JSON-RPC frame upstream with the decrypted bearer. Upstream may reply as
-// plain JSON or a single SSE event — both shapes land on the same return
+// plain JSON or a single SSE event, both shapes land on the same return
 // contract as proxy-openapi.
 
 const TIMEOUT_MS = 10_000;
@@ -42,7 +42,7 @@ const loadServer = async (serverId: string): Promise<ServerRecord | null> => {
 };
 
 // Parse either plain-JSON or an SSE-style body. We pick out a single `data:`
-// event — multi-event streams are a BACKLOG item. Lenient regex mirrors the
+// event, multi-event streams are a BACKLOG item. Lenient regex mirrors the
 // discover-tools parser so upstream behavior stays consistent.
 const parseBody = (text: string, contentType: string): unknown => {
   if (contentType.includes('text/event-stream')) {
@@ -127,7 +127,7 @@ export const proxyHttp = async (
 
   if (parsed.data.error) {
     // Upstream's message is typed + short, but we still want a stable error
-    // code on our side — strip to generic code for the caller, let the raw
+    // code on our side, strip to generic code for the caller, let the raw
     // message only into logs via the caller's redactPayload pipeline.
     return { ok: false, error: 'upstream_jsonrpc_error' };
   }

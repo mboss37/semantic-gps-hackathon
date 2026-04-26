@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic';
 const QuerySchema = z.object({
   // Sprint 29: trace_id can be the per-request UUID (one Claude Desktop tool
   // call) OR the caller-supplied UUID a Playground Run threads through every
-  // internal MCP call — same field, two filling strategies. One filter
+  // internal MCP call, same field, two filling strategies. One filter
   // surfaces both naturally.
   trace_id: z.string().uuid().optional(),
   range: z
@@ -76,7 +76,7 @@ export const GET = async (request: Request): Promise<Response> => {
     .order('created_at', { ascending: false })
     .range(parsed.data.offset, parsed.data.offset + parsed.data.limit - 1);
 
-  // trace_id filter overrides the time-range narrowing — a Playground deep
+  // trace_id filter overrides the time-range narrowing, a Playground deep
   // link should surface every event from the run even if it falls outside
   // the default window. Otherwise apply the standard range gate.
   if (parsed.data.trace_id) {

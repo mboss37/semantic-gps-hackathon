@@ -59,7 +59,7 @@ const chartConfig: ChartConfig = {
 
 const SERIES_KEYS = ['ok', 'blocked', 'error'] as const;
 
-// Drop series with no events in the window — flat zero-lines just clutter
+// Drop series with no events in the window, flat zero-lines just clutter
 // the chart + legend. Empty state covers the "everything zero" case.
 const activeSeries = (data: readonly Bucket[] | null): readonly (typeof SERIES_KEYS)[number][] => {
   if (!data || data.length === 0) return SERIES_KEYS;
@@ -67,7 +67,7 @@ const activeSeries = (data: readonly Bucket[] | null): readonly (typeof SERIES_K
 };
 
 export const ChartAreaInteractive = () => {
-  // null = "let server auto-pick the smallest range that contains data" —
+  // null = "let server auto-pick the smallest range that contains data" -
   // same auto-range UX as Monitoring + Audit.
   const [range, setRange] = React.useState<MonitoringRange | null>(null);
   const [data, setData] = React.useState<Bucket[] | null>(null);
@@ -183,7 +183,7 @@ export const ChartAreaInteractive = () => {
                 >
                   Playground
                 </a>{' '}
-                — calls will land here once the gateway sees traffic.
+               , calls will land here once the gateway sees traffic.
               </p>
             </div>
           ) : null}

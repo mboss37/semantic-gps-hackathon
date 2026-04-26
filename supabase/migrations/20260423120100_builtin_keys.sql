@@ -1,6 +1,6 @@
 -- Sprint 5 WP-G.5: extend policies.builtin_key CHECK with the three
 -- request-metadata policies shipped in built-in.ts (basic_auth, client_id,
--- ip_allowlist). Idempotent via `drop constraint if exists` — matches the
+-- ip_allowlist). Idempotent via `drop constraint if exists`, matches the
 -- pattern used in 20260422120200_rel_taxonomy.sql.
 
 alter table public.policies

@@ -1,5 +1,5 @@
-// ip_allowlist — CIDR-based client-IP gate. Full CIDR library would be
-// overkill — a dotted-quad parse and masked-integer compare covers the
+// ip_allowlist, CIDR-based client-IP gate. Full CIDR library would be
+// overkill, a dotted-quad parse and masked-integer compare covers the
 // single-org MVP. IPv6 falls back to exact string match so unknown-shape
 // inputs deny-by-default instead of silently allowing.
 

@@ -124,7 +124,7 @@ export const ServerCard = ({
       className="group relative cursor-pointer transition-colors hover:bg-accent/30"
     >
       <CardContent className="flex flex-col gap-4">
-        {/* Identity row — name on the left, health pill + actions on the right */}
+        {/* Identity row, name on the left, health pill + actions on the right */}
         <div className="flex items-start justify-between gap-3">
           <h3 className="min-w-0 truncate text-[15px] font-medium tracking-tight">{name}</h3>
           <div className="flex shrink-0 items-center gap-2" onClick={stop}>
@@ -165,14 +165,14 @@ export const ServerCard = ({
           </div>
         </div>
 
-        {/* Origin URL — confirms which upstream this is at a glance */}
+        {/* Origin URL, confirms which upstream this is at a glance */}
         {originUrl ? (
           <p className="-mt-2 truncate font-mono text-[11px] text-muted-foreground">
             {originUrl}
           </p>
         ) : null}
 
-        {/* Tools section — labeled, then chips */}
+        {/* Tools section, labeled, then chips */}
         <div className="flex flex-col gap-2">
           <div className="flex items-baseline gap-2">
             <h4 className="text-xs font-medium text-muted-foreground">Tools</h4>
@@ -182,7 +182,7 @@ export const ServerCard = ({
           </div>
           {tools.length === 0 ? (
             <p className="font-mono text-[11px] text-muted-foreground/80">
-              No tools discovered — rediscover or check origin
+              No tools discovered, rediscover or check origin
             </p>
           ) : (
             <div className="flex flex-wrap gap-1" onClick={stop}>
@@ -216,7 +216,7 @@ export const ServerCard = ({
           )}
         </div>
 
-        {/* Traffic strip — actionable activity signal, transport demoted to tail */}
+        {/* Traffic strip, actionable activity signal, transport demoted to tail */}
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-[11px] text-muted-foreground">
           <span>
             <span className="text-foreground">{calls24h}</span> calls 24h

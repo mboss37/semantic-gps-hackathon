@@ -3,7 +3,7 @@ import { safeFetch, SsrfBlockedError } from '@/lib/security/ssrf-guard';
 import { VendorError } from '@/lib/mcp/vendors/errors';
 
 // GitHub MCP vendor seam. Owns PAT-authed REST dispatch for the 4 curated GH
-// tools. `GITHUB_PAT` comes from the env var — classic + fine-grained PATs
+// tools. `GITHUB_PAT` comes from the env var, classic + fine-grained PATs
 // don't auto-refresh so there is no token cache. Colocated with the gateway
 // today; extraction to a standalone deploy is a zero-gateway-change refactor.
 
@@ -23,7 +23,7 @@ type CallInit = {
   body?: Record<string, unknown>;
 };
 
-// GitHub REST call. User-Agent is non-optional — missing it returns 403.
+// GitHub REST call. User-Agent is non-optional, missing it returns 403.
 // 401/403 surface as upstream_auth_failed; 404 as origin_error("not found");
 // other non-2xx as origin_error with body.message detail when present.
 const ghCall = async (pat: string, call: CallInit): Promise<{ body: unknown }> => {

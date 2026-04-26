@@ -167,7 +167,7 @@ describe('POST /api/mcps/salesforce', () => {
   });
 
   it('tools/call with invalid args surfaces vendor invalid_input error', async () => {
-    // No upstream needed — validation rejects before any fetch. We still set
+    // No upstream needed, validation rejects before any fetch. We still set
     // SF_LOGIN_URL to satisfy the creds-missing check in dispatchSalesforceTool.
     process.env.SF_LOGIN_URL = 'https://example.test';
     // Token mint will be attempted (dispatcher calls getAccessToken before

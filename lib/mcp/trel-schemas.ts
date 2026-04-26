@@ -20,7 +20,7 @@ export const FindWorkflowPathRequestSchema = z.object({
     starting_tool: z
       .string()
       .optional()
-      .describe('Tool UUID or exact tool name. Optional — if omitted we pick one by goal keyword match.'),
+      .describe('Tool UUID or exact tool name. Optional, if omitted we pick one by goal keyword match.'),
     max_depth: z.number().int().min(1).max(6).optional(),
   }),
 });
@@ -38,14 +38,14 @@ export const ExecuteRouteRequestSchema = z.object({
 
 // Planning-time workflow linter. Caller supplies an ordered step list (tool
 // names or ids) and we check it against the manifest's relationship graph +
-// static-config policies. Offline / deterministic — no LLM.
+// static-config policies. Offline / deterministic, no LLM.
 export const ValidateWorkflowRequestSchema = z.object({
   method: z.literal('validate_workflow'),
   params: z.object({
     steps: z
       .array(
         z.object({
-          tool: z.string().min(1).describe('Tool name OR tool UUID — resolver accepts either.'),
+          tool: z.string().min(1).describe('Tool name OR tool UUID, resolver accepts either.'),
         }),
       )
       .min(1),

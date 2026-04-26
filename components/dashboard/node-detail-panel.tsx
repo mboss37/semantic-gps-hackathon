@@ -22,7 +22,7 @@ type ToolOption = {
 type Props = {
   detail: NodeDetail | null;
   onClose: () => void;
-  // Optional — graph page passes this so the "+ Add relationship" button
+  // Optional, graph page passes this so the "+ Add relationship" button
   // opens the dialog pre-filled with the selected node as the source.
   tools?: ToolOption[];
   onRelationshipCreated?: () => void;

@@ -14,7 +14,7 @@ import { auditEventSchema } from '@/lib/schemas/audit-event';
 // that drive the empty-state rendering so we don't regress on a quiet org.
 //
 // Repo has no jsdom stack (vitest.config.ts environment: 'node'), so we
-// exercise the pure helpers + the loaders' empty-data return shapes — the
+// exercise the pure helpers + the loaders' empty-data return shapes, the
 // same pattern `playground-no-mcp-guard.vitest.ts` established for WP-17.3.
 
 type QueryResult = { data: unknown; error: null };
@@ -60,7 +60,7 @@ const makeClient = (rowsByTable: Record<string, Row[]>) => {
   } as any;
 };
 
-describe('/dashboard overview — ChartAreaInteractive empty state', () => {
+describe('/dashboard overview, ChartAreaInteractive empty state', () => {
   it('hasNoGatewayTraffic treats still-loading (null) as not-empty so we do not flash the empty card', () => {
     expect(hasNoGatewayTraffic(null)).toBe(false);
   });
@@ -84,7 +84,7 @@ describe('/dashboard overview — ChartAreaInteractive empty state', () => {
   });
 });
 
-describe('/dashboard overview — recent-events empty guard', () => {
+describe('/dashboard overview, recent-events empty guard', () => {
   it('auditEventSchema parses a real event without crashing on the populated path', () => {
     const good = {
       id: 'e1',
@@ -102,7 +102,7 @@ describe('/dashboard overview — recent-events empty guard', () => {
     expect(parsed.success).toBe(true);
   });
 
-  it('auditEventSchema.safeParse on an empty object rejects cleanly (no crash) — empty-feed loader filters these out', () => {
+  it('auditEventSchema.safeParse on an empty object rejects cleanly (no crash), empty-feed loader filters these out', () => {
     const parsed = auditEventSchema.safeParse({});
     expect(parsed.success).toBe(false);
   });
@@ -123,7 +123,7 @@ describe('/dashboard overview — recent-events empty guard', () => {
   });
 });
 
-describe('/dashboard/monitoring — chart loaders on empty data', () => {
+describe('/dashboard/monitoring, chart loaders on empty data', () => {
   it('fetchCallVolume returns 7 zero-filled buckets so the chart renders an honest empty state', async () => {
     const client = makeClient({ mcp_events: [] });
     const series = await fetchCallVolume(client, ORG, 7);
@@ -139,14 +139,14 @@ describe('/dashboard/monitoring — chart loaders on empty data', () => {
     expect(series.every((b) => Object.keys(b.byPolicy).length === 0)).toBe(true);
   });
 
-  it('fetchPiiByPattern returns [] on zero traffic — PII chart renders the dashed empty card', async () => {
+  it('fetchPiiByPattern returns [] on zero traffic, PII chart renders the dashed empty card', async () => {
     const client = makeClient({ mcp_events: [] });
     const result = await fetchPiiByPattern(client, ORG, 7);
     expect(result).toEqual([]);
   });
 });
 
-describe('/dashboard/routes — list loader on empty data', () => {
+describe('/dashboard/routes, list loader on empty data', () => {
   it('fetchOrgRoutes returns [] when the org has zero routes', async () => {
     const client = makeClient({ routes: [], route_steps: [] });
     const routes = await fetchOrgRoutes(client, ORG);
@@ -164,7 +164,7 @@ describe('/dashboard/routes — list loader on empty data', () => {
     expect(routes).toEqual([]);
   });
 
-  it('fetchRouteDetail returns null for a cross-org id — route detail page triggers notFound()', async () => {
+  it('fetchRouteDetail returns null for a cross-org id, route detail page triggers notFound()', async () => {
     const client = makeClient({
       routes: [
         {

@@ -12,10 +12,10 @@ export type ToolResultEvent = {
   id: string;
   summary: string;
   is_error?: boolean;
-  // Wall-clock latency the model perceives — Anthropic dispatch + our
-  // gateway + upstream + round-trip — measured between mcp_tool_use start
+  // Wall-clock latency the model perceives, Anthropic dispatch + our
+  // gateway + upstream + round-trip, measured between mcp_tool_use start
   // and mcp_tool_result start. Undefined if the start timestamp went
-  // missing (defensive — should never happen in practice).
+  // missing (defensive, should never happen in practice).
   ms?: number;
 };
 
@@ -135,7 +135,7 @@ export const applyEvent = (prev: PaneState, event: StreamEvent): PaneState => {
   }
   if (event.type === 'thinking') {
     // Streaming beta.messages.stream emits thinking as incremental deltas.
-    // Append verbatim — the model produces sensible whitespace within deltas.
+    // Append verbatim, the model produces sensible whitespace within deltas.
     return { ...prev, thinking: prev.thinking + event.content };
   }
   if (event.type === 'error') {

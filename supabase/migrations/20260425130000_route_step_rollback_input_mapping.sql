@@ -6,10 +6,10 @@
 -- and the side effect stays on the downstream system.
 --
 -- DSL mirrors `input_mapping`:
---   $inputs.<field>               — route-level input
---   $steps.<key>.args.<path>      — original args of a captured step
---   $steps.<key>.result.<path>    — post-redaction result of a captured step
---   $steps.<key>.<path>           — backwards-compat, resolves against .result
+--   $inputs.<field>              , route-level input
+--   $steps.<key>.args.<path>     , original args of a captured step
+--   $steps.<key>.result.<path>   , post-redaction result of a captured step
+--   $steps.<key>.<path>          , backwards-compat, resolves against .result
 --
 -- Null = fall back to the legacy behaviour (pass the producing step's result
 -- verbatim as compensator args). Existing rows are unaffected.

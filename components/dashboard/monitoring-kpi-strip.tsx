@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/card';
 
 // Sprint 24 WP-24.2: headline KPI strip above the monitoring charts.
-// Datadog/Honeycomb pattern — judges see the four numbers that matter
+// Datadog/Honeycomb pattern, judges see the four numbers that matter
 // before they parse the bar charts. Deltas compare to the equal-length
 // window immediately prior so a 1h range shows "vs prior 1h", a 7d range
 // shows "vs prior 7d".
@@ -34,11 +34,11 @@ const tintedPill =
   'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium';
 
 const formatPercent = (rate: number): string => `${(rate * 100).toFixed(1)}%`;
-const formatLatency = (ms: number): string => (ms === 0 ? '—' : `${ms} ms`);
+const formatLatency = (ms: number): string => (ms === 0 ? '-' : `${ms} ms`);
 const formatCount = (n: number): string => n.toLocaleString('en-US');
 
 // Higher-is-better metrics (calls): up=emerald, down=amber.
-// Lower-is-better metrics (error / block / latency): inverted — up=amber, down=emerald.
+// Lower-is-better metrics (error / block / latency): inverted, up=amber, down=emerald.
 type DeltaIntent = 'higher-is-better' | 'lower-is-better';
 
 const renderDelta = (

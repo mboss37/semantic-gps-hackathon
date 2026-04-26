@@ -1,5 +1,5 @@
 -- Sprint 4 WP-B.3: swap the relationship taxonomy to the 8 semantic-flow types
--- locked in docs/USER-STORIES.md. Pre-launch, no prod data — purge all rows,
+-- locked in docs/USER-STORIES.md. Pre-launch, no prod data, purge all rows,
 -- drop the old CHECK, re-add with the canonical set.
 
 delete from public.relationships;

@@ -3,7 +3,7 @@
 -- Why: dashboard auto-refresh today is tab-focus + manual button (Sprint 21
 -- WP-21.5). External MCP calls (Postman, Playground, autonomous agents)
 -- require a manual click to see updated traffic. Realtime publication on
--- mcp_events closes that gap — the browser supabase client opens a
+-- mcp_events closes that gap, the browser supabase client opens a
 -- postgres_changes channel, INSERT events fire the existing
 -- useDashboardRefresh hook (2s debounced), KPI cards + chart re-render
 -- automatically. Policy decisions live in mcp_events.policy_decisions

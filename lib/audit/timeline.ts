@@ -1,4 +1,4 @@
-// Audit timeline bucketing — same range/bucket spec as monitoring so the
+// Audit timeline bucketing, same range/bucket spec as monitoring so the
 // two surfaces share the time vocabulary. Lives next to the audit logger
 // because the timeline schema is owned by audit, not monitoring.
 

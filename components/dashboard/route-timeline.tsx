@@ -9,7 +9,7 @@ import type { RouteStepDetail } from '@/lib/routes/fetch';
 
 // Sprint 28 redesign: Routes detail no longer renders a React Flow canvas
 // (the static `fitView` + minimap was unreadable). Instead each step is a
-// card row in a vertical pipeline — same shape Vercel/GitHub Actions use
+// card row in a vertical pipeline, same shape Vercel/GitHub Actions use
 // to show CI/CD step lists. Saga affordances (rollback, fallback) live
 // inline as iconified chips so the eye can scan a 5-step procedure in one
 // pass without zooming. Mapping detail is collapsible per step.
@@ -96,7 +96,7 @@ const RouteStepRow = ({
             ) : null}
           </div>
 
-          {/* Saga affordances row — only render when something to say */}
+          {/* Saga affordances row, only render when something to say */}
           {(step.rollback_tool_name || step.fallback_route_name) && (
             <div className="flex flex-wrap gap-2 text-[11px]">
               {step.rollback_tool_name ? (

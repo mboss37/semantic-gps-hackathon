@@ -25,7 +25,7 @@ export const PlaygroundSandboxInfo = () => (
       <p className="text-amber-100/90">
         Use the Playground to validate configurations against{' '}
         <span className="font-semibold">sandbox or staging</span> environments. Never validate
-        against production systems — connect production via your agent runtime, not here.
+        against production systems, connect production via your agent runtime, not here.
       </p>
     </TooltipContent>
   </Tooltip>

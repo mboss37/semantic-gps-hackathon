@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
 // Sprint 28 redesign: Routes catalog mirrors the chrome of `/dashboard/servers`
-// — `<Card>` shell, `<CardContent flex flex-col gap-4>` body, identity row +
+//, `<Card>` shell, `<CardContent flex flex-col gap-4>` body, identity row +
 // description + stats footer. No bespoke hero, no marketing copy: this is an
 // enterprise procedure list, not a tasting menu.
 
@@ -55,7 +55,7 @@ const RoutesPage = async () => {
           <p className="text-sm text-muted-foreground">No routes yet.</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Routes chain tools with fallbacks and rollbacks. Authoring lives in SQL migrations
-            for this release —{' '}
+            for this release -{' '}
             <Link
               href="/dashboard/graph"
               className="text-foreground underline underline-offset-2 hover:text-foreground/80"
@@ -85,7 +85,7 @@ const RouteCard = ({ route }: { route: RouteListItem }) => {
     <Link href={`/dashboard/routes/${route.id}`} className="group block focus-visible:outline-none">
       <Card className="h-full transition-colors hover:bg-accent/30 group-focus-visible:bg-accent/30">
         <CardContent className="flex flex-col gap-4">
-          {/* Identity row — name on the left, step count on the right */}
+          {/* Identity row, name on the left, step count on the right */}
           <div className="flex items-start justify-between gap-3">
             <h3 className="min-w-0 truncate font-mono text-[15px] font-medium tracking-tight">
               {route.name}
@@ -100,7 +100,7 @@ const RouteCard = ({ route }: { route: RouteListItem }) => {
             {route.description ?? 'No description.'}
           </p>
 
-          {/* Activity strip — same shape as server-card.tsx footer for visual parity */}
+          {/* Activity strip, same shape as server-card.tsx footer for visual parity */}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-[11px] text-muted-foreground">
             {runs === 0 ? (
               <span>No runs · 24h</span>

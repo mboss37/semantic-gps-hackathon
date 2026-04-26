@@ -3,7 +3,7 @@ import { handleVendorRpcRequest, type VendorRouteConfig } from '@/lib/mcp/vendor
 
 // Salesforce vendor MCP. Registered into the gateway via `POST /api/servers`
 // as any other HTTP-Streamable upstream. Same-process today, standalone-deploy
-// tomorrow — the gateway can't tell the difference. Governance (policies,
+// tomorrow, the gateway can't tell the difference. Governance (policies,
 // audit, saga) runs at the main gateway tier before this route is even hit.
 
 export const runtime = 'nodejs';

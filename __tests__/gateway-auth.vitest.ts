@@ -176,7 +176,7 @@ describe('gateway bearer auth (WP-D.2)', () => {
     );
     expect(resB.status).toBe(200);
 
-    // Each request compiled a scope for its own org — no leakage.
+    // Each request compiled a scope for its own org, no leakage.
     expect(seen).toEqual([ORG_A, ORG_B]);
   });
 });

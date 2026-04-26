@@ -1,6 +1,6 @@
 -- Local-only demo user. Runs after migrations on `pnpm supabase db reset`.
 -- Credentials are intentionally hardcoded (demo@semantic-gps.dev / demo-password-123)
--- for local Docker stack only. Sign in through `/login` with email/password —
+-- for local Docker stack only. Sign in through `/login` with email/password -
 -- dev-login bypass was removed in Sprint 6 WP-A.4. seed.sql is ignored by
 -- `supabase db push`, so hosted never sees this row.
 
@@ -61,12 +61,12 @@ update public.organizations o
 
 -- Sprint 24: SalesOps domain seeded here (demo-only) instead of in the
 -- signup trigger. Real users signing up no longer get an auto-provisioned
--- "Sales operations — Salesforce, Slack, GitHub" domain — that was demo
+-- "Sales operations, Salesforce, Slack, GitHub" domain, that was demo
 -- content masquerading as platform behavior. Bootstrap scripts that target
 -- the demo user keep working because seed.sql still creates this row.
 insert into public.domains (organization_id, slug, name, description)
 select m.organization_id, 'salesops', 'SalesOps',
-       'Sales operations — Salesforce, Slack, GitHub'
+       'Sales operations, Salesforce, Slack, GitHub'
 from public.memberships m
 where m.user_id = '11111111-1111-1111-1111-111111111111'
 on conflict (organization_id, slug) do nothing;

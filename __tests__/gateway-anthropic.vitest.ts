@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { describe, expect, it } from 'vitest';
 
 // Live verification: Claude Opus 4.7 calls the deployed MCP gateway via the
-// Anthropic Messages `mcp_servers` connector. Opt-in — default `pnpm test`
+// Anthropic Messages `mcp_servers` connector. Opt-in, default `pnpm test`
 // skips this because it costs real tokens and needs a deployed URL.
 //
 //   VERIFY_ANTHROPIC=1 \

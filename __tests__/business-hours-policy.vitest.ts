@@ -12,7 +12,7 @@ import { runPreCallPolicies } from '@/lib/policies/enforce';
 //   union's `.transform()` leg (legacy row → canonical `{timezone, windows}`).
 //   This is the only place the transform runs in production, so hitting it
 //   here is the real backcompat guarantee.
-// - New-shape tests call `runBusinessHours` directly — runner only sees the
+// - New-shape tests call `runBusinessHours` directly, runner only sees the
 //   canonical shape, and multi-window + overnight-wrap semantics live there.
 
 const uuid = (n: number): string =>
@@ -80,7 +80,7 @@ describe('business_hours legacy shape via dispatch (backcompat)', () => {
     end_hour: 17,
   };
 
-  it('passes inside the window (Mon 10:00 Europe/Vienna) — legacy row transforms to single window', () => {
+  it('passes inside the window (Mon 10:00 Europe/Vienna), legacy row transforms to single window', () => {
     // Apr 20 2026 is a Monday. +02:00 because Vienna is CEST in April.
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-04-20T10:00:00+02:00'));
@@ -88,7 +88,7 @@ describe('business_hours legacy shape via dispatch (backcompat)', () => {
     expect(outcome.action).toBe('allow');
   });
 
-  it('blocks outside the window on an allowed day (Mon 20:00) — legacy row transforms + runner rejects', () => {
+  it('blocks outside the window on an allowed day (Mon 20:00), legacy row transforms + runner rejects', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-04-20T20:00:00+02:00'));
     const outcome = dispatch(legacyConfig);
@@ -98,7 +98,7 @@ describe('business_hours legacy shape via dispatch (backcompat)', () => {
     }
   });
 
-  it('blocks on a disallowed day (Sat 10:00 Europe/Vienna) — legacy row', () => {
+  it('blocks on a disallowed day (Sat 10:00 Europe/Vienna), legacy row', () => {
     // Apr 25 2026 is a Saturday.
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-04-25T10:00:00+02:00'));
@@ -109,9 +109,9 @@ describe('business_hours legacy shape via dispatch (backcompat)', () => {
     }
   });
 
-  it('handles the Europe/Vienna DST spring-forward boundary correctly — legacy row', () => {
+  it('handles the Europe/Vienna DST spring-forward boundary correctly, legacy row', () => {
     // DST in Europe: last Sunday of March 2026 is Mar 29. Clocks jump from
-    // 02:00 CET → 03:00 CEST. UTC 01:30 lands at 03:30 CEST on Sunday —
+    // 02:00 CET → 03:00 CEST. UTC 01:30 lands at 03:30 CEST on Sunday -
     // outside 9-17 AND not in Mon-Fri, so the dispatch path must block.
     // This case is load-bearing: if the runtime's tz offset math drifted,
     // the runner would land on Saturday (a disallowed day for a different
@@ -126,7 +126,7 @@ describe('business_hours legacy shape via dispatch (backcompat)', () => {
   });
 });
 
-describe('runBusinessHours — multi-window allow-list', () => {
+describe('runBusinessHours, multi-window allow-list', () => {
   it('Mon 10:00 passes (first window), Fri 10:00 passes (second), Fri 15:00 blocks', () => {
     const config = {
       timezone: 'Europe/Vienna',
@@ -170,7 +170,7 @@ describe('runBusinessHours — multi-window allow-list', () => {
   });
 });
 
-describe('runBusinessHours — overnight wrap', () => {
+describe('runBusinessHours, overnight wrap', () => {
   const overnightConfig: {
     timezone: string;
     windows: Array<{ days: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>; start_hour: number; end_hour: number }>;
@@ -209,7 +209,7 @@ describe('runBusinessHours — overnight wrap', () => {
   });
 });
 
-describe('runBusinessHours — per-window timezone override', () => {
+describe('runBusinessHours, per-window timezone override', () => {
   const config: {
     timezone: string;
     windows: Array<{
@@ -233,7 +233,7 @@ describe('runBusinessHours — per-window timezone override', () => {
     expect(verdict.ok).toBe(true);
   });
 
-  it('Mon 22:00 UTC (= Mon 18:00 NY EDT) blocks — outside the window', () => {
+  it('Mon 22:00 UTC (= Mon 18:00 NY EDT) blocks, outside the window', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-04-20T22:00:00Z'));
     const verdict = runBusinessHours(new Date(), config);
@@ -244,9 +244,9 @@ describe('runBusinessHours — per-window timezone override', () => {
   });
 });
 
-describe('runPreCallPolicies dispatch — malformed new-shape config', () => {
+describe('runPreCallPolicies dispatch, malformed new-shape config', () => {
   it('empty windows array fails Zod .min(1) → business_hours_config_invalid via dispatch', () => {
-    // The runner never sees this — Zod rejects first. Assert through dispatch
+    // The runner never sees this, Zod rejects first. Assert through dispatch
     // to prove the fail-closed path (block with `business_hours_config_invalid`
     // reason) is wired all the way to the gateway verdict surface.
     vi.useFakeTimers();
@@ -263,7 +263,7 @@ describe('runPreCallPolicies dispatch — malformed new-shape config', () => {
 });
 
 describe('runPreCallPolicies dispatch (business_hours)', () => {
-  it('enforce mode blocks when outside the window — legacy shape, dispatched', () => {
+  it('enforce mode blocks when outside the window, legacy shape, dispatched', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-04-20T20:00:00+02:00'));
     const outcome = dispatch(

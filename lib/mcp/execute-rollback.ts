@@ -10,7 +10,7 @@ import type { CapturedStep, ExecuteRouteCtx } from '@/lib/mcp/route-utils';
 import { resolveInputMapping, findCatalogEntry } from '@/lib/mcp/route-utils';
 
 // Pick the first outgoing compensated_by edge, deterministic by edge id. Same
-// shape as pickFallbackEdge — unreachable to_tool_id returns undefined so a
+// shape as pickFallbackEdge, unreachable to_tool_id returns undefined so a
 // mis-wired compensation is surfaced as "no_compensation_available" rather
 // than crashing rollback.
 const pickCompensationEdge = (
@@ -30,7 +30,7 @@ const pickCompensationEdge = (
 
 // Walk the completed steps in reverse and fire each step's compensated_by
 // tool. Compensator args come from `step.rollback_input_mapping` when set
-// (canonical saga pattern — producer result shape rarely matches compensator
+// (canonical saga pattern, producer result shape rarely matches compensator
 // schema), falling back to the producing step's result verbatim for legacy
 // routes without a mapping. Best-effort: a compensation that throws or
 // returns !ok is logged + marked compensation_failed, but the walk continues
@@ -52,7 +52,7 @@ export const executeRollback = async (
     failed_count: 0,
   };
 
-  // The final step entry is the failing one — it never completed, so skip it.
+  // The final step entry is the failing one, it never completed, so skip it.
   // Walk from the second-last step backwards to step 0.
   for (let i = steps.length - 2; i >= 0; i -= 1) {
     const stepEntry = steps[i];

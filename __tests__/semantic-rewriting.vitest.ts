@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Manifest } from '@/lib/manifest/cache';
 
-// Stub service client on CI — loadManifest is mocked below, but the route
+// Stub service client on CI, loadManifest is mocked below, but the route
 // also fires logMCPEvent through the service client.
 vi.mock('@/lib/supabase/service', async () => {
   const { stubServiceClientFactory } = await import('./_helpers/supabase-stub');

@@ -2,7 +2,7 @@
 --
 --   1. Stamp `profile_completed` into JWT claims alongside `organization_id`.
 --      Eliminates the ~2ms DB round-trip in proxy.ts on every authenticated
---      request — the proxy reads the claim from the already-validated JWT
+--      request, the proxy reads the claim from the already-validated JWT
 --      instead of querying memberships.
 --
 --   2. Support `active_org_id` for V2 multi-org users. The hook checks

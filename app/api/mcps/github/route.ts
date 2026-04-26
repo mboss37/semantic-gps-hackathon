@@ -2,7 +2,7 @@ import { dispatchGithubTool, GITHUB_TOOLS } from '@/lib/mcp/vendors/github';
 import { handleVendorRpcRequest, type VendorRouteConfig } from '@/lib/mcp/vendors/json-rpc';
 
 // GitHub vendor MCP. See `app/api/mcps/salesforce/route.ts` for the full
-// architectural rationale — this is the same shape with a GitHub tool catalog.
+// architectural rationale, this is the same shape with a GitHub tool catalog.
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

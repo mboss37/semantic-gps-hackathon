@@ -37,7 +37,7 @@ import {
 // Sprint 28 redesign: 4 stacked bespoke panels (each its own bg-muted/30
 // rounded border) collapsed into ONE shadcn <Card>. Internal sections are
 // labeled "1 · SCOPE / 2 · ENDPOINT / 3 · TEST / 4 · SNIPPET" with subtle
-// uppercase mono headings — matches the disclosure pattern from the route
+// uppercase mono headings, matches the disclosure pattern from the route
 // timeline. Code shells now use the shared `<CodeBlock>` primitive instead
 // of the reinvented per-page `<pre>` chrome.
 
@@ -68,7 +68,7 @@ const slugify = (input: string): string => {
 
 export const ConnectPanel = ({ domains, servers, tokens }: Props) => {
   const [tier, setTier] = useState<Tier>('org');
-  // Domain tab is disabled ("Soon"), so the slug stays at its default —
+  // Domain tab is disabled ("Soon"), so the slug stays at its default -
   // no setter needed until the tab unlocks.
   const domainSlug = domains[0]?.slug ?? '';
   const [serverId, setServerId] = useState<string>(servers[0]?.id ?? '');
@@ -317,7 +317,7 @@ const TestRow = ({ tokens, pasteToken, setPasteToken, onTest, canTest, testState
   <div className="flex flex-col gap-3">
     <p className="text-xs text-muted-foreground">
       {tokens.length === 0
-        ? 'Mint a gateway token to authenticate any client. Or paste an existing plaintext value below to test live — it stays in your browser and never re-renders into snippets unless you choose.'
+        ? 'Mint a gateway token to authenticate any client. Or paste an existing plaintext value below to test live, it stays in your browser and never re-renders into snippets unless you choose.'
         : 'Paste a gateway token plaintext value to test live against this scope. The value stays in your browser and never re-renders into snippets unless you choose.'}
     </p>
     <form
@@ -335,7 +335,7 @@ const TestRow = ({ tokens, pasteToken, setPasteToken, onTest, canTest, testState
         autoComplete="off"
         spellCheck={false}
         aria-label="Gateway token"
-        // Tell every major password manager this is NOT a credential field —
+        // Tell every major password manager this is NOT a credential field -
         // the token is session-only paste-to-test, never stored. Without
         // these, Dashlane/1Password/LastPass offer to save it as a password.
         data-form-type="other"

@@ -19,20 +19,20 @@ if [ "$total" -eq 0 ]; then
   exit 0
 fi
 
-# All items done — sprint-complete nudge handles that separately
+# All items done, sprint-complete nudge handles that separately
 if [ "$unchecked" -eq 0 ]; then
   exit 0
 fi
 
 # Microsprint
 if [ "$unchecked" -lt 3 ]; then
-  echo "NOTE: Current sprint has $unchecked open work package(s) — that's a microsprint. Pull from BACKLOG.md (aim 3-6)."
+  echo "NOTE: Current sprint has $unchecked open work package(s), that's a microsprint. Pull from BACKLOG.md (aim 3-6)."
   exit 0
 fi
 
 # Oversized
 if [ "$unchecked" -gt 7 ]; then
-  echo "NOTE: Current sprint has $unchecked open work packages — oversized. Move some back to BACKLOG.md (aim 3-6)."
+  echo "NOTE: Current sprint has $unchecked open work packages, oversized. Move some back to BACKLOG.md (aim 3-6)."
   exit 0
 fi
 

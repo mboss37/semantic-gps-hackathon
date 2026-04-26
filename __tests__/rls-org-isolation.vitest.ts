@@ -68,7 +68,7 @@ describe.skipIf(!shouldRun)('RLS org isolation (WP-L.1)', () => {
 
     const a = await signUp(emailA);
     const b = await signUp(emailB);
-    if (a.orgId === b.orgId) throw new Error('two signups produced same org — trigger broken');
+    if (a.orgId === b.orgId) throw new Error('two signups produced same org, trigger broken');
 
     // Seed a server row for userA (via service role, bypasses RLS).
     const { data: server, error: seedErr } = await admin
@@ -159,7 +159,7 @@ describe.skipIf(!shouldRun)('RLS org isolation (WP-L.1)', () => {
   });
 
   it("userB cannot SELECT userA's tool via parent-join RLS", async () => {
-    // Tools have no organization_id column — RLS is scoped via the parent
+    // Tools have no organization_id column, RLS is scoped via the parent
     // server. This exercises the EXISTS (SELECT 1 FROM servers ...) policy.
     const { data } = await userB.client
       .from('tools')
@@ -179,7 +179,7 @@ describe.skipIf(!shouldRun)('RLS org isolation (WP-L.1)', () => {
     expect(error).toBeTruthy();
     expect(error?.message).toMatch(/row-level security/i);
 
-    // Double-check via service-role read — the row wasn't mutated.
+    // Double-check via service-role read, the row wasn't mutated.
     const { data: fresh } = await admin
       .from('memberships')
       .select('organization_id')

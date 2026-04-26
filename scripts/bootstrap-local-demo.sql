@@ -5,13 +5,13 @@
 -- Playground story can be validated E2E against real upstreams without
 -- reaching for hosted.
 --
--- Apply (local — default base_url is http://localhost:3000):
+-- Apply (local, default base_url is http://localhost:3000):
 --   docker cp scripts/bootstrap-local-demo.sql \
 --     supabase_db_semantic-gps-hackathon:/tmp/bootstrap.sql
 --   docker exec supabase_db_semantic-gps-hackathon \
 --     psql -U postgres -d postgres -f /tmp/bootstrap.sql
 --
--- Apply (hosted — override base_url):
+-- Apply (hosted, override base_url):
 --   psql "$DATABASE_URL" \
 --     -v base_url='https://semantic-gps.vercel.app' \
 --     -f scripts/bootstrap-local-demo.sql
@@ -20,7 +20,7 @@
 --   - `pnpm supabase start` (local stack up)
 --   - `seed.sql` has run (demo user + org + gateway token present)
 --   - `.env.local` has `SF_LOGIN_URL` / `SF_CLIENT_ID` / `SF_CLIENT_SECRET` /
---     `SLACK_BOT_TOKEN` / `GITHUB_PAT` — the vendor MCP routes at
+--     `SLACK_BOT_TOKEN` / `GITHUB_PAT`, the vendor MCP routes at
 --     `app/api/mcps/<vendor>/route.ts` read credentials from env at request
 --     time. Sprint 15 WP-C.6 removed the encrypted `auth_config` path; the
 --     gateway registration now stores `auth_config=null` and the vendor
@@ -55,12 +55,12 @@ BEGIN
    LIMIT 1;
 
   IF _org_id IS NULL THEN
-    RAISE EXCEPTION 'Demo org not found — run seed.sql first (pnpm supabase db reset)';
+    RAISE EXCEPTION 'Demo org not found, run seed.sql first (pnpm supabase db reset)';
   END IF;
 END $$;
 
 -- ---------------------------------------------------------------------------
--- Cleanup (safe order — reverse of FK dependency)
+-- Cleanup (safe order, reverse of FK dependency)
 -- ---------------------------------------------------------------------------
 
 -- Scope every delete to the demo org so re-running this bootstrap doesn't
@@ -97,7 +97,7 @@ DELETE FROM public.servers
 -- cascades to tools → relationships, policy_assignments
 
 -- ---------------------------------------------------------------------------
--- Servers — pointed at the co-deployed vendor MCP routes. `auth_config` is
+-- Servers, pointed at the co-deployed vendor MCP routes. `auth_config` is
 -- NULL because the vendor routes read credentials from env vars on the same
 -- Next.js deployment (Sprint 15 WP-C.6). For a future standalone extraction,
 -- re-introduce encrypted `auth_config` via the standard bearer path.
@@ -242,7 +242,7 @@ SELECT s.id,
   FROM public.servers s WHERE s.name = 'Demo GitHub';
 
 -- ---------------------------------------------------------------------------
--- Relationships (13 total — TRel graph edges)
+-- Relationships (13 total, TRel graph edges)
 -- ---------------------------------------------------------------------------
 
 -- Salesforce: find_account → find_contact (produces_input_for)
@@ -308,7 +308,7 @@ SELECT ft.id, tt.id, 'alternative_to', 'Search first to avoid filing a duplicate
  WHERE ft.name = 'search_issues' AND fs.name = 'Demo GitHub'
    AND ts.name = 'Demo GitHub';
 
--- GitHub: create_issue → close_issue (compensated_by) — rollback edge
+-- GitHub: create_issue → close_issue (compensated_by), rollback edge
 INSERT INTO public.relationships (from_tool_id, to_tool_id, relationship_type, description)
 SELECT ft.id, tt.id, 'compensated_by', 'Rollback: close the GitHub issue that was just created.'
   FROM public.tools ft JOIN public.servers fs ON fs.id = ft.server_id
@@ -317,7 +317,7 @@ SELECT ft.id, tt.id, 'compensated_by', 'Rollback: close the GitHub issue that wa
  WHERE ft.name = 'create_issue' AND fs.name = 'Demo GitHub'
    AND ts.name = 'Demo GitHub';
 
--- Slack: chat_post_message → delete_message (compensated_by) — rollback edge
+-- Slack: chat_post_message → delete_message (compensated_by), rollback edge
 INSERT INTO public.relationships (from_tool_id, to_tool_id, relationship_type, description)
 SELECT ft.id, tt.id, 'compensated_by', 'Saga compensator: deletes the posted Slack message on rollback.'
   FROM public.tools ft JOIN public.servers fs ON fs.id = ft.server_id
@@ -326,7 +326,7 @@ SELECT ft.id, tt.id, 'compensated_by', 'Saga compensator: deletes the posted Sla
  WHERE ft.name = 'chat_post_message' AND fs.name = 'Demo Slack'
    AND ts.name = 'Demo Slack';
 
--- Salesforce: create_task → delete_task (compensated_by) — rollback edge
+-- Salesforce: create_task → delete_task (compensated_by), rollback edge
 INSERT INTO public.relationships (from_tool_id, to_tool_id, relationship_type, description)
 SELECT ft.id, tt.id, 'compensated_by', 'Saga compensator: deletes the SF Task on rollback.'
   FROM public.tools ft JOIN public.servers fs ON fs.id = ft.server_id
@@ -353,7 +353,7 @@ SELECT ft.id, tt.id, 'produces_input_for', 'GitHub issue number + html_url feed 
  WHERE ft.name = 'create_issue' AND fs.name = 'Demo GitHub'
    AND ts.name = 'Demo Salesforce';
 
--- Slack → GitHub: chat_post_message → create_issue (fallback_to) — degraded
+-- Slack → GitHub: chat_post_message → create_issue (fallback_to), degraded
 -- escalation channel. When Slack is unreachable, the gateway routes the
 -- escalation to a GitHub issue with the same content. Backs demo story #8
 -- (Sprint 22 WP-22.4): proves `executeRoute` walks the `fallback_to` edge on

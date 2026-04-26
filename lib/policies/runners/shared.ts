@@ -1,4 +1,4 @@
-// Shared helpers used by multiple policy runners. Keep this surface tiny —
+// Shared helpers used by multiple policy runners. Keep this surface tiny -
 // if a helper is only used by one runner, keep it local to that runner file.
 
 export type PreCallVerdict = { ok: true } | { ok: false; reason: string };

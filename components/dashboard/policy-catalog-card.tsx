@@ -46,11 +46,11 @@ type Props = {
   tools: ToolOption[];
 };
 
-// Mode pill is read-only on the catalog card — flipping mode happens inside
+// Mode pill is read-only on the catalog card, flipping mode happens inside
 // `<PolicyEditDialog>` so the mutation surface stays in one canonical place.
 // Color semantics:
-//   shadow  → zinc (passive, log-only — observation, no enforcement)
-//   enforce → amber (active, blocking — warning-tone signals "this will reject")
+//   shadow  → zinc (passive, log-only, observation, no enforcement)
+//   enforce → amber (active, blocking, warning-tone signals "this will reject")
 const MODE_BADGE_CLASS: Record<Mode, string> = {
   shadow: 'border-zinc-500/40 bg-zinc-500/15 text-zinc-200',
   enforce: 'border-amber-500/50 bg-amber-500/15 text-amber-300',
@@ -116,11 +116,11 @@ export const PolicyCatalogCard = ({
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-[260px] text-left normal-case tracking-normal">
                           <p className="mb-1">
-                            <span className="font-semibold">Shadow</span> — log every violation, never block.
+                            <span className="font-semibold">Shadow</span>, log every violation, never block.
                             Use this to audit a new policy against real traffic.
                           </p>
                           <p>
-                            <span className="font-semibold">Enforce</span> — block or redact at the gateway.
+                            <span className="font-semibold">Enforce</span>, block or redact at the gateway.
                             Flip here once the shadow timeline looks clean.
                           </p>
                         </TooltipContent>
@@ -150,7 +150,7 @@ export const PolicyCatalogCard = ({
           )}
         </CardContent>
 
-        {/* Apply CTA disappears once the policy is applied — adding it to more
+        {/* Apply CTA disappears once the policy is applied, adding it to more
             servers / tools happens inside the Edit dialog's assignments
             section. Keeps the catalog card's footer reserved for the
             "first-touch" action only. */}

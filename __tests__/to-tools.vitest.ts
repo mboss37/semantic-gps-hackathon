@@ -12,7 +12,7 @@ describe('openApiToTools', () => {
           },
         },
         '/widgets/{id}': {
-          // No operationId — must fall back.
+          // No operationId, must fall back.
           delete: {
             summary: 'Remove a widget.',
             parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],

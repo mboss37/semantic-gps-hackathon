@@ -58,7 +58,7 @@ export const SettingsForm = ({ initial, email }: Props) => {
         return;
       }
       if (result.error === 'unauthorized') {
-        toast.error('Session expired — please sign in again');
+        toast.error('Session expired, please sign in again');
         router.push('/login?next=/dashboard/settings');
         return;
       }

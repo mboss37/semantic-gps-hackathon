@@ -1,8 +1,8 @@
-// pii_redaction — scan request/response payloads for PII and replace matches
+// pii_redaction, scan request/response payloads for PII and replace matches
 // with deterministic placeholders. Pure function: no DB, no manifest.
 // Caller decides what to log.
 //
-// Phone numbers: parsed via libphonenumber-js (Google's libphonenumber port —
+// Phone numbers: parsed via libphonenumber-js (Google's libphonenumber port -
 // same library Twilio / Stripe / etc. use). Covers US parenthesized format,
 // international E.164, common separator variants, and rejects dates / IPs /
 // long digit runs that a naive regex would false-positive on. Countries
@@ -47,7 +47,7 @@ export const DEFAULT_PII_PATTERNS: readonly PiiPattern[] = [
 // pattern, so it doesn't live in `DEFAULT_PII_PATTERNS`).
 //
 // Consumers (e.g. monitoring dashboard) SHOULD import from here instead of
-// hardcoding a parallel list — if we add a pattern in `DEFAULT_PII_PATTERNS`
+// hardcoding a parallel list, if we add a pattern in `DEFAULT_PII_PATTERNS`
 // or a new libphonenumber-style branch, this stays the source of truth.
 export const PII_PATTERN_NAMES: readonly string[] = [
   'phone',
@@ -58,7 +58,7 @@ const PII_PATTERN_SET: ReadonlySet<string> = new Set(PII_PATTERN_NAMES);
 
 export const isPiiPatternName = (name: string): boolean => PII_PATTERN_SET.has(name);
 
-// `match_samples` entries are shaped as `<pattern_name>:<preview>…` — see
+// `match_samples` entries are shaped as `<pattern_name>:<preview>…`, see
 // the `samples.push(...)` calls in `runPiiRedaction`. This extracts the
 // pattern name prefix; returns null when the sample doesn't match the
 // expected shape or the prefix isn't a known PII pattern.

@@ -333,7 +333,7 @@ describe('gateway-tokens API (WP-A.6)', () => {
       params: Promise.resolve({ id: '00000000-0000-4000-8000-00000000bbbb' }),
     });
     expect(res.status).toBe(404);
-    // Row untouched — cross-org scope filter refused to match it.
+    // Row untouched, cross-org scope filter refused to match it.
     expect(rows).toHaveLength(1);
   });
 });

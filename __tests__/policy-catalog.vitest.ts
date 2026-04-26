@@ -8,7 +8,7 @@ import {
 // Sprint 17 WP-17.1: pins the Mulesoft-pattern catalog shape so judges (and
 // new signups) always see every shipped builtin runner on the gallery. If a
 // runner lands in `lib/policies/runners/` without a catalog entry, this test
-// fails — forcing the gallery to stay in sync with the enforcement layer.
+// fails, forcing the gallery to stay in sync with the enforcement layer.
 
 const EXPECTED_BUILTINS = [
   'pii_redaction',

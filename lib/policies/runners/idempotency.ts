@@ -1,4 +1,4 @@
-// idempotency_required — reject duplicate tool calls inside a TTL window.
+// idempotency_required, reject duplicate tool calls inside a TTL window.
 // Key comes from either an opaque header or a deterministic hash of
 // (tool_name + args) so agents without retry machinery still get dedupe for
 // free via args_hash.
@@ -20,7 +20,7 @@ export type IdempotencyVerdictRunner =
       detail?: string;
     };
 
-// Stable JSON serialization — sort keys recursively so the hash is deterministic
+// Stable JSON serialization, sort keys recursively so the hash is deterministic
 // across JS engine iteration orders. `JSON.stringify` with a sorting replacer
 // keeps the surface tiny and avoids a dependency.
 const stableStringify = (value: unknown): string => {

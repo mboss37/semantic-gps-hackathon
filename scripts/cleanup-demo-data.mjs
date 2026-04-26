@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Demo-data cleanup CLI — WP-11.5 (G.19). Resets upstream artefacts between
+// Demo-data cleanup CLI, WP-11.5 (G.19). Resets upstream artefacts between
 // recording takes so previous issues/messages/tasks don't bleed across takes.
 // Idempotent. Safe to re-run.
 //
@@ -53,7 +53,7 @@ const readHours = () => {
   return Number.isFinite(n) && n > 0 ? n : DEFAULTS.windowHours;
 };
 
-// GitHub — close every OPEN issue on the sandbox repo. PAT auth + the
+// GitHub, close every OPEN issue on the sandbox repo. PAT auth + the
 // required User-Agent header (missing it returns 403 from api.github.com).
 const cleanupGithub = async () => {
   const pat = requireEnv('GITHUB_PAT');
@@ -67,7 +67,7 @@ const cleanupGithub = async () => {
     'user-agent': 'semantic-gps-cleanup',
   };
 
-  // No window filter on GitHub — closes EVERY open issue on the sandbox repo
+  // No window filter on GitHub, closes EVERY open issue on the sandbox repo
   // by design. This is a recording-day reset, not a maintenance pass.
   console.log(`[github] scanning open issues on ${repo}...`);
   const q = encodeURIComponent(`is:issue is:open repo:${repo}`);
@@ -76,7 +76,7 @@ const cleanupGithub = async () => {
   const data = await res.json();
   const numbers = (Array.isArray(data.items) ? data.items : [])
     .map((i) => i.number).filter((n) => typeof n === 'number');
-  if (numbers.length === 0) { console.log('[github] no open issues — nothing to do'); return; }
+  if (numbers.length === 0) { console.log('[github] no open issues, nothing to do'); return; }
 
   const closed = [];
   for (const num of numbers) {
@@ -92,9 +92,9 @@ const cleanupGithub = async () => {
   console.log(`[github] closed ${closed.length} issues (${closed.map((n) => `#${n}`).join(', ') || 'none'})`);
 };
 
-// Slack — delete bot-posted messages in the demo channel within the window.
+// Slack, delete bot-posted messages in the demo channel within the window.
 // auth.test returns bot user_id + bot_id for filtering. chat.delete needs
-// `chat:write`; if missing, Slack returns `cant_delete_message` — warn + continue.
+// `chat:write`; if missing, Slack returns `cant_delete_message`, warn + continue.
 const slackCall = async (token, method, body) => {
   const res = await fetch(`https://slack.com/api/${method}`, {
     method: 'POST',
@@ -125,7 +125,7 @@ const cleanupSlack = async () => {
   const history = await slackCall(token, 'conversations.history', { channel, oldest, limit: 100 });
   const mine = (Array.isArray(history.messages) ? history.messages : [])
     .filter((m) => m.user === botUserId || (botId && m.bot_id === botId));
-  if (mine.length === 0) { console.log('[slack] no bot messages in window — nothing to do'); return; }
+  if (mine.length === 0) { console.log('[slack] no bot messages in window, nothing to do'); return; }
 
   let deleted = 0;
   for (const msg of mine) {
@@ -136,7 +136,7 @@ const cleanupSlack = async () => {
   console.log(`[slack] deleted ${deleted} bot messages`);
 };
 
-// Salesforce — OAuth client-credentials, then delete recent Tasks on the demo
+// Salesforce, OAuth client-credentials, then delete recent Tasks on the demo
 // Account. Window-scoped via CreatedDate LAST_N_HOURS so we never touch older
 // records than this recording session.
 const sfMintToken = async () => {
@@ -164,14 +164,14 @@ const cleanupSalesforce = async () => {
   const authHeader = { authorization: `Bearer ${token}`, accept: 'application/json' };
 
   console.log(`[salesforce] scanning recent demo tasks on ${account}...`);
-  // SOQL escape: `\` FIRST, then `'` — matches lib/mcp/proxy-salesforce.ts soqlEscape.
+  // SOQL escape: `\` FIRST, then `'`, matches lib/mcp/proxy-salesforce.ts soqlEscape.
   const sfEscape = (s) => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   const soql = `SELECT Id FROM Task WHERE WhatId IN (SELECT Id FROM Account WHERE Name = '${sfEscape(account)}') AND CreatedDate = LAST_N_HOURS:${hours}`;
   const qRes = await fetch(`${base}/query?q=${encodeURIComponent(soql)}`, { headers: authHeader });
   if (!qRes.ok) throw new Error(`salesforce query failed: ${qRes.status}`);
   const qData = await qRes.json();
   const records = Array.isArray(qData.records) ? qData.records : [];
-  if (records.length === 0) { console.log('[salesforce] no recent tasks — nothing to do'); return; }
+  if (records.length === 0) { console.log('[salesforce] no recent tasks, nothing to do'); return; }
 
   const deleted = [];
   for (const rec of records) {

@@ -28,7 +28,7 @@ export const WriteFreezeForm = ({
       </label>
       <div className="grid gap-2">
         <Label className="text-xs text-muted-foreground">
-          Frozen tool names (one per line — leave empty to block ALL tools)
+          Frozen tool names (one per line, leave empty to block ALL tools)
         </Label>
         <Textarea
           rows={4}

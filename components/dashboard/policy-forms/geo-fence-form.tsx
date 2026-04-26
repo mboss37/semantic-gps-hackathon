@@ -26,7 +26,7 @@ export const GeoFenceForm = ({
     </div>
     <div className="grid gap-2">
       <Label className="text-xs text-muted-foreground">
-        Allowed region codes (one per line — compared to x-agent-region)
+        Allowed region codes (one per line, compared to x-agent-region)
       </Label>
       <Textarea
         rows={4}

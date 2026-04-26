@@ -1,4 +1,4 @@
-// write_freeze — kill switch an org can flip during incidents or audits.
+// write_freeze, kill switch an org can flip during incidents or audits.
 // Either freezes a named subset of write tools (tool_names) or the whole
 // surface (tool_names omitted). Passes through when disabled.
 

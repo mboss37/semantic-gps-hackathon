@@ -14,7 +14,7 @@ export const VerifiedHandler = () => {
   useEffect(() => {
     if (!verified) return;
 
-    toast.success('Email verified — welcome to Semantic GPS');
+    toast.success('Email verified, welcome to Semantic GPS');
     const timeout = setTimeout(() => {
       router.replace('/dashboard');
     }, 2000);

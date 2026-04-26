@@ -39,7 +39,7 @@ next-env.d.ts
 *.pem
 .vercel
 
-# Claude Code — ephemeral state + per-developer settings
+# Claude Code, ephemeral state + per-developer settings
 .claude/state/*
 !.claude/state/.gitkeep
 .claude/settings.local.json

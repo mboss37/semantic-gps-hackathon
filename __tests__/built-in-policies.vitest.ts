@@ -7,7 +7,7 @@ import {
 } from '@/lib/policies/built-in';
 
 // Pure-function tests for the three request-metadata policies added in
-// WP-G.5. No DB, no manifest — just exercise the runners directly.
+// WP-G.5. No DB, no manifest, just exercise the runners directly.
 
 describe('runBasicAuth', () => {
   it('allows a valid Basic credential header', () => {

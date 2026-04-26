@@ -276,7 +276,7 @@ describe('executeRoute rollback', () => {
     const compensationToolNames = evts.map((e) => e.payload.compensation_tool);
     expect(compensationToolNames).toEqual(['sf.delete_contact', 'sf.delete_account']);
 
-    // Compensations are called with the original result — verify the args
+    // Compensations are called with the original result, verify the args
     // the dispatcher saw for delete_contact include accountId from step 2's
     // result, not step 3's args.
     const deleteContactCall = executeToolMock.mock.calls.find(
@@ -316,7 +316,7 @@ describe('executeRoute rollback', () => {
 
     expect(result.ok).toBe(false);
 
-    // Forward input_mapping — step 2 reads $steps.account.id. Without the
+    // Forward input_mapping, step 2 reads $steps.account.id. Without the
     // unwrap this would have been undefined and step 2 would have failed
     // or been called with accountId: undefined.
     const createContactCall = executeToolMock.mock.calls.find(
@@ -324,7 +324,7 @@ describe('executeRoute rollback', () => {
     );
     expect((createContactCall?.[2] as { accountId: unknown }).accountId).toBe('acc_env');
 
-    // Rollback via compensated_by — delete_contact gets its own result's
+    // Rollback via compensated_by, delete_contact gets its own result's
     // accountId (con_env → acc_env), proving the envelope unwrap also
     // covers intermediate captures used by the rollback walk.
     const deleteContactCall = executeToolMock.mock.calls.find(
@@ -343,7 +343,7 @@ describe('executeRoute rollback', () => {
   it('marks a completed step without a compensated_by edge as skipped', async () => {
     // Remove create_account → delete_account edge. Step 1 completes but has
     // no compensation. Step 2 fails, triggering rollback. Since step 2 never
-    // completed, only step 1 is considered for rollback — which has no edge.
+    // completed, only step 1 is considered for rollback, which has no edge.
     const relsWithoutAccountComp = compensationRels.filter((r) => r.from_tool_id !== T.createAccount);
     const manifest = buildManifest({
       route_steps: twoStepRoute,
@@ -376,7 +376,7 @@ describe('executeRoute rollback', () => {
     });
     // Failing step has no rollback annotation at all.
     expect(result.steps[1]?.rollback).toBeUndefined();
-    // No delete_* calls — nothing to dispatch.
+    // No delete_* calls, nothing to dispatch.
     expect(execCallNames().filter((n) => n.startsWith('sf.delete_'))).toHaveLength(0);
   });
 

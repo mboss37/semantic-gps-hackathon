@@ -14,14 +14,14 @@
 -- user-visible noise. The user never sees, rotates, or deletes them directly.
 --
 -- Plaintext-on-row decision (design rationale)
---   - Standard user tokens still follow the hash-only model — plaintext is
+--   - Standard user tokens still follow the hash-only model, plaintext is
 --     returned by POST and discarded. `kind='user'` rows must never set
 --     `token_plaintext`, enforced by the CHECK below.
 --   - System tokens have no user to "show once" to, and must stay reusable
 --     across requests/restarts. Storing the plaintext alongside the row keeps
 --     a single stable token per org; rotating would re-break the "no new
 --     tokens per click" invariant.
---   - Security posture: the service role key can already read any row — the
+--   - Security posture: the service role key can already read any row, the
 --     system-token plaintext lives behind the same trust boundary. RLS +
 --     explicit `kind='user'` filters on the dashboard loader + API prevent it
 --     from ever reaching a user browser.

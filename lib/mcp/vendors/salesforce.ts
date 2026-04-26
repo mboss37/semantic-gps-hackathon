@@ -4,7 +4,7 @@ import { VendorError } from '@/lib/mcp/vendors/errors';
 
 // Salesforce MCP vendor seam. Owns OAuth client-credentials token minting +
 // REST dispatch for the 6 curated SF tools. Credentials come from env vars
-// (`SF_LOGIN_URL` / `SF_CLIENT_ID` / `SF_CLIENT_SECRET`) — this module ships
+// (`SF_LOGIN_URL` / `SF_CLIENT_ID` / `SF_CLIENT_SECRET`), this module ships
 // alongside the gateway today and can be extracted to its own deploy later
 // with zero gateway-side changes.
 //
@@ -30,7 +30,7 @@ type TokenCacheEntry = {
   instance_url: string;
 };
 
-// Module-level token cache. Single-process — every serverless cold start
+// Module-level token cache. Single-process, every serverless cold start
 // mints a fresh token. Cache key is the login_url so future multi-tenant
 // extraction (per-org creds) plugs in cleanly.
 const tokenCache = new Map<string, TokenCacheEntry>();
@@ -134,7 +134,7 @@ type CallInit = {
   body?: Record<string, unknown>;
 };
 
-// Generic SF REST call — 401 single-retry (refresh token), 5xx single-retry.
+// Generic SF REST call, 401 single-retry (refresh token), 5xx single-retry.
 // 204 returns body: null. Non-2xx maps to VendorError with status preserved.
 const sfCall = async (
   creds: SalesforceCreds,

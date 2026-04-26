@@ -248,7 +248,7 @@ export const PolicyRow = ({
         <div>
           <Label className="text-xs text-muted-foreground">Assignments</Label>
           {assignments.length === 0 ? (
-            <p className="mt-1 text-xs text-muted-foreground">Not attached — policy is dormant.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Not attached, policy is dormant.</p>
           ) : (
             <ul className="mt-2 flex flex-col gap-1">
               {assignments.map((a) => (

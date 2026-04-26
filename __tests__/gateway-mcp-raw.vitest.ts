@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Manifest } from '@/lib/manifest/cache';
 
-// Playground A/B hero — ungoverned MCP surface. Asserts the /api/mcp/raw
+// Playground A/B hero, ungoverned MCP surface. Asserts the /api/mcp/raw
 // endpoint strips the control plane:
 //   - tools/list emits origin names, no display rewriting, no _meta.relationships
 //   - tools/call dispatches but never fires policy pre/post hooks
 //   - TRel extensions + execute_route return -32601 method_not_found
-// Still requires bearer auth — "ungoverned" means no policy stack, NOT "open
+// Still requires bearer auth, "ungoverned" means no policy stack, NOT "open
 // to the world".
 
 vi.mock('@/lib/supabase/service', async () => {
@@ -130,7 +130,7 @@ vi.mock('@/lib/policies/enforce', async () => {
   };
 });
 
-// Force the mock path so we don't need a real upstream — keeps the test
+// Force the mock path so we don't need a real upstream, keeps the test
 // deterministic while still exercising tools/call end-to-end.
 process.env.REAL_PROXY_ENABLED = '0';
 
@@ -170,7 +170,7 @@ type ToolEntry = {
 };
 
 describe('ungoverned MCP surface /api/mcp/raw', () => {
-  it('rejects unauthenticated calls — bearer still required', async () => {
+  it('rejects unauthenticated calls, bearer still required', async () => {
     const request = new Request('http://localhost/api/mcp/raw', {
       method: 'POST',
       headers: {
@@ -191,7 +191,7 @@ describe('ungoverned MCP surface /api/mcp/raw', () => {
     const tools = body.result?.tools as ToolEntry[] | undefined;
     expect(tools).toBeDefined();
 
-    // Origin name must win — display_name never leaks on the raw surface.
+    // Origin name must win, display_name never leaks on the raw surface.
     const search = tools?.find((t) => t.name === 'searchCustomers');
     expect(search).toBeDefined();
     expect(search?.description).toBe('origin description for search');
@@ -210,7 +210,7 @@ describe('ungoverned MCP surface /api/mcp/raw', () => {
     // raw must drop it entirely.
     expect(search?._meta).toBeUndefined();
 
-    // Builtin echo is always bare — sanity check the baseline.
+    // Builtin echo is always bare, sanity check the baseline.
     const echo = tools?.find((t) => t.name === 'echo');
     expect(echo?._meta).toBeUndefined();
   });

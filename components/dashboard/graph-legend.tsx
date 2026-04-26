@@ -12,12 +12,12 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-// Canonical 8 TRel edge types — see `relationships.relationship_type` CHECK
+// Canonical 8 TRel edge types, see `relationships.relationship_type` CHECK
 // constraint in `docs/ARCHITECTURE.md` for the canonical enum.
-// Colors are also consumed by the React Flow edge styling in the graph page —
+// Colors are also consumed by the React Flow edge styling in the graph page -
 // keep the two in sync. Sprint 27: each type has a Lucide icon + a short
 // label so the relationships row renders a single colored icon-with-caption
-// per edge — no unicode connector strings (which rendered with inconsistent
+// per edge, no unicode connector strings (which rendered with inconsistent
 // weight/centering across types).
 
 export type EdgeStyle = {
@@ -89,7 +89,7 @@ export const EDGE_STYLES: Record<string, EdgeStyle> = {
 
 // Non-canonical edge key, used only when a `compensated_by` edge is actively
 // lit up by a rollback cascade in the viz (Sprint 8 WP-I.2). Not a relationship
-// type — keep it out of the 8-type legend row.
+// type, keep it out of the 8-type legend row.
 export const ROLLBACK_HIGHLIGHT_STYLE = {
   stroke: '#f43f5e',
   label: 'rollback',

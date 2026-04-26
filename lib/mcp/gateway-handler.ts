@@ -7,7 +7,7 @@ import { createStatelessServer } from '@/lib/mcp/stateless-server';
 import { createServiceClient } from '@/lib/supabase/service';
 
 // Shared request plumbing for the three scoped gateway routes. Each route
-// wraps the handler with a scope builder — the plumbing (trace-id, transport,
+// wraps the handler with a scope builder, the plumbing (trace-id, transport,
 // header/IP extraction, bearer auth, lifecycle) lives here so route files
 // stay ~10 lines.
 
@@ -30,7 +30,7 @@ const collectHeaders = (request: Request): Record<string, string> => {
 
 // JSON-RPC error envelope that tells the client exactly what went wrong.
 // `reason` is a stable machine-readable tag; `message` is human. Never puts
-// secrets or stack traces in `data` — only tagged categories.
+// secrets or stack traces in `data`, only tagged categories.
 type ErrorKind =
   | { status: 401; code: number; reason: 'missing_authorization'; message: string }
   | { status: 401; code: number; reason: 'invalid_token'; message: string }
@@ -85,7 +85,7 @@ export const buildGatewayHandler = (
     // Sprint 29: trace_id can be supplied by the caller via `?trace_id=<uuid>`
     // so a batched orchestrator (Playground today, future cron/queue contexts
     // later) can stamp every internal MCP call from one logical operation
-    // with the same id. Strict UUID format — anything else falls back to a
+    // with the same id. Strict UUID format, anything else falls back to a
     // fresh per-request UUID so we never log a forged or malformed value.
     const url = new URL(request.url);
     const requestedTraceId = url.searchParams.get('trace_id');
@@ -95,10 +95,10 @@ export const buildGatewayHandler = (
         ? requestedTraceId
         : randomUUID();
 
-    // Sprint 15 diagnostic hook — capture request provenance on auth failures
+    // Sprint 15 diagnostic hook, capture request provenance on auth failures
     // so audit rows answer "who called /api/mcp unauthenticated?" in one
     // query. Pure metadata; payload_redacted passes through redactPayload
-    // anyway so tokens in headers (there shouldn't be any here — auth failed)
+    // anyway so tokens in headers (there shouldn't be any here, auth failed)
     // stay scrubbed.
     const authPayload = {
       reason: 'missing_authorization',
@@ -183,7 +183,7 @@ export const buildGatewayHandler = (
 
     // WP-G.4: expose the authenticated org id to policy runners. rate_limit
     // keys identity on `x-org-id` > `client_ip` > 'anon'. Sourced from the
-    // resolved gateway token (D.2), not the scope builder — every scope tier
+    // resolved gateway token (D.2), not the scope builder, every scope tier
     // (org/domain/server) sees the same caller identity.
     headers['x-org-id'] = tokenResult.organization_id;
 

@@ -14,8 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Semantic GPS — MCP Control Plane',
-  description: 'Govern, observe, and navigate agentic workflows.',
+  title: {
+    default: 'Semantic GPS · Mission control for AI agents',
+    template: '%s · Semantic GPS',
+  },
+  description:
+    'Semantic GPS sits between AI agents and MCP-connected business systems with policy management, audit logs, monitoring, and Tool Relationship mapping.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

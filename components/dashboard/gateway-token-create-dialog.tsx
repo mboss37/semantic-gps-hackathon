@@ -20,7 +20,7 @@ import { Label } from '@/components/ui/label';
 // Sprint 7 WP-A.6: two-step create flow. Step 1 captures a friendly name;
 // step 2 reveals the plaintext ONCE and blocks escape/backdrop dismissal so
 // a stray click can't torch the only copy. The plaintext leaves memory as
-// soon as the dialog closes — no local state, no toast echo.
+// soon as the dialog closes, no local state, no toast echo.
 
 type CreatedToken = { id: string; name: string; plaintext: string; created_at: string };
 
@@ -44,7 +44,7 @@ export const GatewayTokenCreateDialog = ({
   };
 
   const onOpenChange = (next: boolean) => {
-    // Step 2 is plaintext-critical — only the explicit "I've saved it" path
+    // Step 2 is plaintext-critical, only the explicit "I've saved it" path
     // may dismiss. Radix fires onOpenChange for Esc, backdrop, X button, and
     // programmatic close alike, so we gate all of them here.
     if (!next && created) return;
@@ -93,7 +93,7 @@ export const GatewayTokenCreateDialog = ({
       toast.success('Token copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error('Clipboard copy failed — select + copy manually');
+      toast.error('Clipboard copy failed, select + copy manually');
     }
   };
 
@@ -139,7 +139,7 @@ export const GatewayTokenCreateDialog = ({
             <DialogHeader>
               <DialogTitle>Token created</DialogTitle>
               <DialogDescription>
-                This token will never be shown again — save it now.
+                This token will never be shown again, save it now.
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-3">

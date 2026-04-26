@@ -9,7 +9,7 @@ import { discoverRelationships } from '@/lib/mcp/trel-handlers';
 // That call generated `method='auth' status='unauthorized'` rows on every
 // Workflow Graph page load because the browser couldn't include a gateway
 // bearer token. This action reads the manifest + runs the TRel handler
-// directly — same data, zero HTTP roundtrip, zero audit noise. Matches the
+// directly, same data, zero HTTP roundtrip, zero audit noise. Matches the
 // pattern used by every other dashboard page (lib/servers/fetch.ts,
 // lib/monitoring/fetch.ts, lib/routes/fetch.ts).
 
