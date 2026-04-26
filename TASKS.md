@@ -178,7 +178,38 @@
 
 ## Current:
 
-_(empty: pull next sprint from `BACKLOG.md`)_
+**Sprint 28: Route authoring MVP — de-risk on `feat/route-authoring` (READY TO MERGE)**
+
+All six WPs shipped on `feat/route-authoring`. 970 insertions, 11 files,
+356/2/0 tests, typecheck + lint + next build all clean, visual QA passed
+end-to-end via Playwright (login → list → import dialog → load sample →
+import → success → detail → copy as JSON → import error paths).
+
+- [x] **WP-28.1** POST /api/routes (JSON import) — `dd13a57`. 4 files,
+      lib/schemas/route-import.ts + lib/routes/import.ts + handler + 12 unit
+      tests on the pure import function with mocked Supabase client. Sprint
+      27 PostgREST single-object embed lesson reused.
+- [x] **WP-28.2** DELETE /api/routes/[id] — `ff1fd40`. Mirrors relationships
+      DELETE pattern. 404 (not 403) on cross-org/missing routes to avoid
+      leaking existence. route_steps cascade via FK.
+- [x] **WP-28.3** Routes list import dialog UI — `b71c4db`. shadcn Dialog +
+      Textarea + Load sample button + Cancel/Import. Replaces the disabled
+      "Create route Soon" placeholder. formatApiError special-cases
+      duplicate, tool-not-found, and invalid-body with user-actionable hints.
+- [x] **WP-28.4** Routes detail Copy as JSON button — `3b4fc7c`. Extended
+      fetchRouteDetail with fallback_input_mapping +
+      fallback_rollback_input_mapping (round-trip-complete). Export omits
+      empty optionals + domain_id. Closes the import/export loop.
+- [x] **WP-28.5** Tests + reviewer + Playwright QA. Each WP individually
+      reviewed and Approved by `code-reviewer`. Visual QA captured 8
+      screenshots through the full happy + error paths.
+- [x] **WP-28.6** BACKLOG entry for v2 — Route Author UI v2 spec landed in
+      BACKLOG.md P1 with full scope (visual editor, DSL autocomplete, step
+      reordering, PATCH endpoint, compensator coverage validation,
+      `(org, name)` UNIQUE constraint, docs page).
+
+**Merge readiness:** all conditions met. Branch is `origin/feat/route-authoring`
+at `3b4fc7c`. Main at `1963101`. Awaiting merge decision.
 
 ## Session Log
 - 2026-04-26: Sprints 26+27 wrapped together. Sprint 26 = 11-commit dashboard UI refactor (servers + relationships + routes + connect + policies + tokens + chrome) over Sat night → Sun early AM, originally tagged 26-28 in commits, consolidated as one bulk TASKS.md entry. Sprint 27 = this session's audit work: per-Run trace_id refactor + audit Server column + audit detail visual hierarchy + WP-26.1 polling→DASHBOARD_REFRESH_EVENT listener (Monitoring pattern reuse). Key lesson: don't reinvent neighbor patterns. First WP-26.1 draft built generalized `useRealtimeMcpEvents` hook + Datadog Live Tail UX (Pause button, buffered count, auto-pause on scroll); user redirected to existing pattern → ~50 lines deleted, zero new chrome. PostgREST to-one-FK-as-array TS-types-lie gotcha caught when Server column rendered empty. 3 memories. 344/2/0 tests.

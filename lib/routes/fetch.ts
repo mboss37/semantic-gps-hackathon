@@ -20,6 +20,8 @@ export type RouteStepDetail = {
   tool_server_name: string | null;
   input_mapping: Record<string, unknown>;
   rollback_input_mapping: Record<string, unknown> | null;
+  fallback_input_mapping: Record<string, unknown> | null;
+  fallback_rollback_input_mapping: Record<string, unknown> | null;
   output_capture_key: string | null;
   fallback_route_id: string | null;
   fallback_route_name: string | null;
@@ -64,6 +66,8 @@ type StepRow = {
   tool_id: string;
   input_mapping: Record<string, unknown>;
   rollback_input_mapping: Record<string, unknown> | null;
+  fallback_input_mapping: Record<string, unknown> | null;
+  fallback_rollback_input_mapping: Record<string, unknown> | null;
   output_capture_key: string | null;
   fallback_route_id: string | null;
   rollback_tool_id: string | null;
@@ -151,7 +155,7 @@ export const fetchRouteDetail = async (
   const stepsRes = await supabase
     .from('route_steps')
     .select(
-      'id, route_id, step_order, tool_id, input_mapping, rollback_input_mapping, output_capture_key, fallback_route_id, rollback_tool_id',
+      'id, route_id, step_order, tool_id, input_mapping, rollback_input_mapping, fallback_input_mapping, fallback_rollback_input_mapping, output_capture_key, fallback_route_id, rollback_tool_id',
     )
     .eq('route_id', routeId)
     .order('step_order');
@@ -221,6 +225,8 @@ export const fetchRouteDetail = async (
         tool_server_name: toolServer?.name ?? null,
         input_mapping: s.input_mapping ?? {},
         rollback_input_mapping: s.rollback_input_mapping,
+        fallback_input_mapping: s.fallback_input_mapping,
+        fallback_rollback_input_mapping: s.fallback_rollback_input_mapping,
         output_capture_key: s.output_capture_key,
         fallback_route_id: s.fallback_route_id,
         fallback_route_name: fallbackRoute?.name ?? null,
