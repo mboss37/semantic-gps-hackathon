@@ -192,7 +192,16 @@
 
 ## Current:
 
-_(hackathon shipped — post-hackathon work in `BACKLOG.md` P2)_
+**Sprint 30: TRel description-enrichment + protocol stake (Mon Apr 27 onward):**
+
+Goal: convert the latent `_meta.trel` graph into model-visible behavior by folding the relationship vocabulary into tool descriptions every MCP client already forwards verbatim. Plant a public protocol stake (`docs/PROTOCOL.md`) and engage with the open MCP community discussion about tool-relationship metadata. VISION.md updated pre-sprint to declare the standardization goal publicly.
+
+- WP-30.0 Comment on the open MCP community discussion ([modelcontextprotocol/modelcontextprotocol#943](https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/943)) referencing Semantic GPS as a working reference implementation; plant the flag without proposing a SEP yet
+- WP-30.1 `lib/manifest/format-description.ts` pure formatter: takes (tool, outgoingEdges, parentRoutes) → enriched description with top-3 outgoing edges + 1 route membership, type-prefixed (`Rollback:`, `Fallback:`, `After this:`); ~70 LOC + ~80 LOC pure-function tests
+- WP-30.2 Wire formatter into `lib/mcp/stateless-server.ts:99` so `tools/list` emits enriched descriptions; `display_description` manual override still wins; ~30 LOC + integration test that asserts `tools/list` against an org with relationships returns enriched descriptions and an empty-graph org returns originals
+- WP-30.3 `_meta.trel` schema lock in `lib/mcp/trel-schema.ts`: registered-prefix namespace, edge type vocabulary, edge object Zod shape; the file that becomes the SEP's normative reference; ~50 LOC + schema tests
+- WP-30.4 Empirical metric `graph-adherence rate`: SQL view + `/api/monitoring/graph-adherence` endpoint returning % of tool-call sequences that follow a known TRel edge, partitioned by `governed=true|false`. The number that proves description enrichment moves model behavior; ~120 LOC
+- WP-30.5 Draft `docs/PROTOCOL.md` (proto-SEP): the `_meta.trel` shape, edge taxonomy with semantics, governance positioning under MCP's registered-prefix extension model, reference-impl link, prior-art citations (OpenAPI `x-`, GraphQL Federation). The doc that the SEP will eventually be a near-verbatim port of
 
 ## Session Log
 - 2026-04-27: Hackathon shipped. Hosted demo seeded (3 MCPs + 14 tools + 2 routes + 4 policies + 17 audit events). Demo video recorded + uploaded. Submission filed via CV platform. Root cleanup (Slides-Brief.md + intro deck + punchlist removed). BACKLOG.md P0 section cleared.

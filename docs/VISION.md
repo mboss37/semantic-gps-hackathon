@@ -102,6 +102,34 @@ The `agent_identity_required` policy is the enforcement edge for this pattern: v
 
 The honest framing: Semantic GPS is operational infrastructure that makes the Act's record-keeping, human-oversight, and risk-management obligations achievable for the AI provider and deployer. Compliance ownership stays with the operator; we make the operational layer not-impossible.
 
+## The protocol play: TRel as an MCP extension standard
+
+Semantic GPS is the reference implementation of **TRel** (Tool Relationships), a declarative graph layer over MCP that lets agents discover safe workflow paths instead of guessing. Today TRel ships as `_meta.trel.*` on every tool returned by `tools/list`, plus the JSON-RPC extension methods `discover_relationships`, `find_workflow_path`, `validate_workflow`, and `evaluate_goal` on the same MCP transport. The edge vocabulary covers the patterns enterprise sagas actually need: `produces_input_for`, `requires_before`, `suggests_after`, `alternative_to`, `compensated_by`, `fallback_to`.
+
+The mechanism is shipped, but the consumer side is latent. Standard MCP clients (Claude Desktop, Cursor, Anthropic's `mcp_servers` Beta connector) drop `_meta` fields on the floor and don't know to call extension methods on their own. The graph is real; most agents don't see it. Sprint 30 closes that gap by folding the graph into the field every existing client already forwards verbatim to the model: the tool description itself.
+
+### Goal: TRel becomes a recognized MCP extension
+
+Not by lobbying maintainers ahead of traction. By doing what OpenAPI `x-` extensions and GraphQL Federation did: ship a working implementation, build adopters, then converge the spec to where practice already is. Apollo Federation became standard because `@apollo/gateway` was already in production at scale; the spec body adopted what already existed. Same arc here.
+
+The realistic ceiling for an 18-month one-engineer arc is **`_meta.trel` as a registered-prefix extension** in the MCP spec — comparable to how `x-amazon-apigateway-*` is recognized in OpenAPI without being a core schema change. That's enough to make Semantic GPS a *de facto* standard. Becoming a top-level field in the spec itself is a stretch goal contingent on Anthropic's roadmap, not solo effort.
+
+### Engagement plan with the official MCP spec repo
+
+1. **Now** (no-cost flag-planting): comment on the open community discussion at [modelcontextprotocol/modelcontextprotocol#943](https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/943) referencing Semantic GPS as a working reference implementation. The discussion already proposed tool-relationship metadata; the maintainer pushback was philosophical ("prefer fewer different fields and less explicit structure"). A `_meta.trel` namespace under the spec's existing registered-prefix extension model addresses that critique directly without adding new top-level surface.
+2. **After Sprint 30 ships**: open a new MCP exploratory Discussion proposing the `_meta.trel` schema, with the description-enrichment telemetry from Semantic GPS demonstrating measurable model-behavior lift. Reference impl + real numbers, no protocol change asked yet.
+3. **After 3+ independent implementers adopt the shape**: file a formal Spec Enhancement Proposal (SEP) under the proposed Tool Composition Working Group named in the [2026 MCP roadmap](https://blog.modelcontextprotocol.io/posts/2026-mcp-roadmap/). Scope: the `_meta.trel.*` data shape only — edge types, edge object schema, namespace reservation. Defer orchestration methods (`execute_route`, `find_workflow_path`, etc.) to a follow-up SEP; metadata is a six-month adoption arc, orchestration is a two-year cross-server-transaction debate.
+
+### What we will not do
+
+- **No premature pull request** against the spec repo. Single-author PRs without runtime traction get closed citing #943's prior pushback. The PR card is the last move, not the first.
+- **No vendor-direct lobbying of Anthropic.** MCP governance moved under the Linux Foundation / Agentic AI Foundation; bypassing the WG signals misreading the room and burns credibility with neutral maintainers.
+- **No bundling of orchestration with metadata.** Standardizing the data shape is hard enough; bundling the saga semantics (`execute_route`, rollback inputs, fallback edges) adds two years of debate the current proposal does not need.
+
+### Why Semantic GPS is well-positioned for this
+
+The repo is already the most complete public TRel implementation: 6 edge types implemented end-to-end, 12 governance policies built around graph traversal, saga orchestration with explicit per-step rollback + fallback input mappings, and a Playground that proves the raw-vs-governed contrast under identical Opus 4.7 prompts. The hackathon-day artifacts (live deployment, demo video, public repo, MIT license) are the credibility the SEP will eventually cite. Sprint 30 turns a working implementation into a referenceable one.
+
 ## Future architecture: control plane + deploy-anywhere data plane
 
 The hackathon build is one Next.js app doing two jobs: the **control plane** (UI, policy authoring, audit, manifest cache) AND the **data plane** (the gateway proxying live tool calls to whatever MCP servers a customer registers).
