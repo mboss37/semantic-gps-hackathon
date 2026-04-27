@@ -282,3 +282,48 @@ describe('stateless-server description enrichment (WP-30.2)', () => {
     expect(echo?.description).not.toContain('— Workflow context —');
   });
 });
+
+describe('stateless-server execute_route synthetic tool (WP-31.1)', () => {
+  it('exposes execute_route on tools/list when the manifest has routes', async () => {
+    manifestToServe = enrichedManifest;
+    const res = await rpc({ jsonrpc: '2.0', id: 7, method: 'tools/list', params: {} });
+    const body = await readJson(res);
+    const tools = body.result?.tools as ToolEntry[] | undefined;
+
+    const execRoute = tools?.find((t) => t.name === 'execute_route');
+    expect(execRoute).toBeDefined();
+    // Description must list the route name so the model can call by name.
+    expect(execRoute?.description).toContain('Customer Lookup Saga');
+    expect(execRoute?.description).toContain('Available routes');
+  });
+
+  it('omits execute_route from tools/list when the manifest has no routes', async () => {
+    manifestToServe = emptyGraphManifest;
+    const res = await rpc({ jsonrpc: '2.0', id: 8, method: 'tools/list', params: {} });
+    const body = await readJson(res);
+    const tools = body.result?.tools as ToolEntry[] | undefined;
+
+    const execRoute = tools?.find((t) => t.name === 'execute_route');
+    expect(execRoute).toBeUndefined();
+  });
+
+  it('returns a tool-result error with known-route hint when route_name is unknown', async () => {
+    manifestToServe = enrichedManifest;
+    const res = await rpc({
+      jsonrpc: '2.0',
+      id: 9,
+      method: 'tools/call',
+      params: {
+        name: 'execute_route',
+        arguments: { route_name: 'nonexistent_route', inputs: {} },
+      },
+    });
+    const body = await readJson(res);
+    const result = body.result as
+      | { isError?: boolean; content?: Array<{ type: string; text: string }> }
+      | undefined;
+    expect(result?.isError).toBe(true);
+    expect(result?.content?.[0]?.text).toContain("route 'nonexistent_route' not found");
+    expect(result?.content?.[0]?.text).toContain('Customer Lookup Saga');
+  });
+});
