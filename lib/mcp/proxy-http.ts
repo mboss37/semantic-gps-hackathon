@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { ServerRow, ToolRow } from '@/lib/manifest/cache';
+import { runMcpHandshake } from '@/lib/mcp/handshake';
 import { decodeAuthConfig, type AuthConfig } from '@/lib/servers/auth';
 import { safeFetch, SsrfBlockedError } from '@/lib/security/ssrf-guard';
 import { createServiceClient } from '@/lib/supabase/service';
@@ -80,11 +81,30 @@ export const proxyHttp = async (
     return { ok: false, error: 'auth_decode_failed' };
   }
 
-  const headers: Record<string, string> = {
+  const baseHeaders: Record<string, string> = {
     'content-type': 'application/json',
     accept: 'application/json, text/event-stream',
   };
-  if (auth.type === 'bearer') headers.authorization = `Bearer ${auth.token}`;
+  if (auth.type === 'bearer') baseHeaders.authorization = `Bearer ${auth.token}`;
+
+  // Per-call MCP spec handshake. Strict upstreams (MuleSoft Anypoint and
+  // anything built on the spec-aligned SDK session middleware) require an
+  // initialize → mcp-session-id round trip before any tools/call. Permissive
+  // upstreams (our in-process vendor MCPs, Hyperterminal-style services) skip
+  // straight to tools/call as before. SSRF errors propagate and are mapped
+  // to ssrf_blocked below; any other failure inside the handshake degrades
+  // to a direct call so we never regress the permissive path.
+  let sessionId: string | null = null;
+  try {
+    ({ sessionId } = await runMcpHandshake(server.origin_url, baseHeaders, TIMEOUT_MS));
+  } catch (e) {
+    if (e instanceof SsrfBlockedError) return { ok: false, error: 'ssrf_blocked' };
+    sessionId = null;
+  }
+
+  const headers = sessionId
+    ? { ...baseHeaders, 'mcp-session-id': sessionId }
+    : baseHeaders;
 
   const payload = {
     jsonrpc: '2.0' as const,

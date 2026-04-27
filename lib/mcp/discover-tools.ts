@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { runMcpHandshake } from '@/lib/mcp/handshake';
 import { safeFetch, SsrfBlockedError } from '@/lib/security/ssrf-guard';
 
 const McpToolSchema = z.object({
@@ -42,13 +43,24 @@ export const discoverTools = async (
   auth: DiscoverAuth = { type: 'none' },
 ): Promise<DiscoverResult> => {
   try {
-    const headers: Record<string, string> = {
+    const baseHeaders: Record<string, string> = {
       'content-type': 'application/json',
       accept: 'application/json, text/event-stream',
     };
     if (auth.type === 'bearer') {
-      headers.authorization = `Bearer ${auth.token}`;
+      baseHeaders.authorization = `Bearer ${auth.token}`;
     }
+
+    // MCP spec handshake. Strict servers (e.g. MuleSoft Anypoint MCP) reject
+    // any method before `initialize` with HTTP 200 + an empty SSE body that
+    // our parser can't make sense of. Permissive servers either don't issue a
+    // session id or accept calls without it; either path returns sessionId:
+    // null and we fall through to a direct tools/list call as before.
+    const { sessionId } = await runMcpHandshake(originUrl, baseHeaders);
+
+    const headers = sessionId
+      ? { ...baseHeaders, 'mcp-session-id': sessionId }
+      : baseHeaders;
 
     const res = await safeFetch(originUrl, {
       method: 'POST',
