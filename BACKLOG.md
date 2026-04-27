@@ -1,6 +1,14 @@
 # Backlog
 
 > When a WP is pulled into a sprint, remove it from here. Shipped work lives in `TASKS.md`.
+>
+> **Sprint 30 deferral rule:** Anything cut from Sprint 30 (TRel description-enrichment + protocol stake) lands in the `## P0: Sprint 30 deferrals` section below with rationale, not into P1/P2. P0 items are the immediate next-sprint pull. Subagents that cut scope mid-WP MUST log the deferral here in the same edit.
+
+---
+
+## P0: Sprint 30 deferrals
+
+_(empty — populate as Sprint 30 WPs cut scope)_
 
 ---
 
