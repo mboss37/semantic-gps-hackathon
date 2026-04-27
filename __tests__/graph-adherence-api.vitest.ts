@@ -55,18 +55,58 @@ const makeStubSupabase = (pairs: PairRow[], rels: RelationshipRow[]) => {
     from: (table: string) => {
       if (table === 'graph_adherence_pairs') {
         let filtered = [...pairs];
-        const chain = {
+        let descBy: keyof PairRow | null = null;
+        let limit: number | null = null;
+        const finalize = () => {
+          let out = [...filtered];
+          if (descBy !== null) {
+            const key = descBy;
+            out.sort((a, b) => {
+              const av = a[key] as string;
+              const bv = b[key] as string;
+              return av < bv ? 1 : av > bv ? -1 : 0;
+            });
+          }
+          if (limit !== null) out = out.slice(0, limit);
+          return Promise.resolve({ data: out, error: null });
+        };
+        const chain: {
+          select: () => typeof chain;
+          eq: (col: string, value: unknown) => typeof chain;
+          gte: (col: string, value: unknown) => typeof chain;
+          order: (
+            col: string,
+            opts?: { ascending?: boolean },
+          ) => typeof chain;
+          limit: (n: number) => Promise<{ data: PairRow[]; error: null }>;
+          then: (
+            onFulfilled: (v: { data: PairRow[]; error: null }) => unknown,
+          ) => Promise<unknown>;
+        } = {
           select: () => chain,
-          eq: (col: string, value: unknown) => {
-            filtered = filtered.filter((r) => r[col as keyof PairRow] === value);
+          eq: (col, value) => {
+            filtered = filtered.filter(
+              (r) => r[col as keyof PairRow] === value,
+            );
             return chain;
           },
-          gte: (col: string, value: unknown) => {
+          gte: (col, value) => {
             filtered = filtered.filter(
               (r) => (r[col as keyof PairRow] as string) >= (value as string),
             );
-            return Promise.resolve({ data: filtered, error: null });
+            return chain;
           },
+          order: (col, opts) => {
+            if (opts?.ascending === false) descBy = col as keyof PairRow;
+            return chain;
+          },
+          limit: (n) => {
+            limit = n;
+            return finalize();
+          },
+          // Awaiting the chain without `.limit()` (legacy callsites or future
+          // tests) still resolves cleanly via the same finalize().
+          then: (onFulfilled) => finalize().then(onFulfilled),
         };
         return chain;
       }

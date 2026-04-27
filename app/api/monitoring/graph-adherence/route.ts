@@ -92,11 +92,18 @@ export const GET = async (req: Request): Promise<Response> => {
 
     // Pull pairs from the view; RLS filters to caller's org. We still
     // pass `.eq('organization_id', ...)` belt-and-braces (CLAUDE.md rule).
+    // .limit(10000) caps the worst-case payload on busy orgs (Vercel's 300s
+    // function timeout would catch runaway queries anyway, but bounding the
+    // SELECT keeps memory + serialization predictable). Ordered descending
+    // so the most recent pairs win when truncated; older pairs are
+    // recoverable by tightening the `range` window.
     const { data: pairsData, error: pairsErr } = await supabase
       .from('graph_adherence_pairs')
       .select('from_tool_id, to_tool_id, governed')
       .eq('organization_id', organization_id)
-      .gte('to_created_at', startIso);
+      .gte('to_created_at', startIso)
+      .order('to_created_at', { ascending: false })
+      .limit(10000);
     if (pairsErr) {
       console.error(
         '[graph-adherence] pairs query failed',
