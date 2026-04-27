@@ -21,6 +21,14 @@ import type { RouteRow, RouteStepRow, RelationshipRow } from '@/lib/manifest/cac
 
 export const EXECUTE_ROUTE_TOOL_NAME = 'execute_route';
 
+// Cap the route list embedded in the synthetic tool's description for
+// orgs that have grown many routes. ~100 chars per line × 25 routes
+// keeps the description under ~3 KB, leaving room for the saga
+// semantics preamble + example. Excess routes still execute fine; they
+// just don't appear in the model-visible enumeration. Callers can
+// always pass `route_id` for any route that exists.
+const MAX_LISTED_ROUTES = 25;
+
 type RouteSummary = {
   name: string;
   step_count: number;
@@ -70,7 +78,12 @@ export const buildExecuteRouteToolDescriptor = (
 ): { name: string; description: string; inputSchema: Record<string, unknown> } | null => {
   if (routes.length === 0) return null;
   const summaries = routes.map((r) => summarizeRoute(r, steps, relationships));
-  const routeLines = summaries.map(formatRouteLine).join('\n');
+  const truncated = summaries.length > MAX_LISTED_ROUTES;
+  const visibleSummaries = truncated ? summaries.slice(0, MAX_LISTED_ROUTES) : summaries;
+  const overflowLine = truncated
+    ? `\n• … and ${summaries.length - MAX_LISTED_ROUTES} more (callers can pass route_id directly for any registered route).`
+    : '';
+  const routeLines = visibleSummaries.map(formatRouteLine).join('\n') + overflowLine;
   const description = [
     'Execute a multi-step saga orchestrated by Semantic GPS. Pass `route_name` (or `route_id`) and the literal `inputs` for the first step; later steps pull from a per-run capture bag.',
     '',
@@ -79,7 +92,7 @@ export const buildExecuteRouteToolDescriptor = (
     'Available routes:',
     routeLines,
     '',
-    "Example: { route_name: '" + summaries[0].name + "', inputs: { /* first-step args */ } }",
+    `Example: { route_name: '${visibleSummaries[0].name}', inputs: { /* first-step args */ } }`,
   ].join('\n');
 
   const inputSchema: Record<string, unknown> = {
@@ -101,6 +114,10 @@ export const buildExecuteRouteToolDescriptor = (
           'Literal inputs bound into the first step of the saga. Later steps pull from the per-run capture bag via the `$inputs` / `$steps` DSL.',
       },
     },
+    // Push the route_name | route_id constraint to the wire so JSON-Schema-
+    // checking clients catch malformed args before dispatch. Resolver still
+    // tolerates both (preferring route_name) for clients that ignore oneOf.
+    oneOf: [{ required: ['route_name'] }, { required: ['route_id'] }],
     additionalProperties: false,
   };
 

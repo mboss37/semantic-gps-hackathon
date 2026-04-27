@@ -41,8 +41,14 @@ describe('TREL_EDGE_TYPES', () => {
       new URL('../lib/manifest/cache.ts', import.meta.url),
     );
     const cacheSource = readFileSync(cachePath, 'utf8');
-    const unionMatch = cacheSource.match(
-      /relationship_type:\s*([\s\S]*?);/,
+    // Strip line comments before union-extraction so a stray `;` inside a
+    // comment in the union block can't truncate the regex early. Block
+    // comments are uncommon mid-union; the additional `(?:\|\s*'[a-z_]+'\s*)+`
+    // shape further constrains the match to actual union members rather
+    // than free-form text.
+    const sourceWithoutLineComments = cacheSource.replace(/\/\/[^\n]*/g, '');
+    const unionMatch = sourceWithoutLineComments.match(
+      /relationship_type:\s*((?:\|\s*'[a-z_]+'\s*)+);/,
     );
     expect(unionMatch).not.toBeNull();
     const unionBlock = unionMatch?.[1] ?? '';

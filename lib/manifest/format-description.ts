@@ -39,6 +39,11 @@ const SCOPE_CAPS: Record<ManifestScope['kind'], ScopeCaps> = {
   server: { edges: 8, routes: Number.POSITIVE_INFINITY },
 };
 
+// Per-tool description budget. ~300 tokens per tool, so a 50-tool org-
+// scope manifest adds ~15k tokens to the `tools/list` response — under
+// the model's context budget with headroom for the prompt + history.
+// Empirically chosen: tighter caps drop high-signal saga edges; looser
+// caps bloat the system prompt without proportional behavior gains.
 const MAX_TOTAL_CHARS = 1200;
 const TRUNCATION_SUFFIX = ' …';
 
