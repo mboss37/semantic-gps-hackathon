@@ -1,6 +1,20 @@
 # Backlog
 
 > When a WP is pulled into a sprint, remove it from here. Shipped work lives in `TASKS.md`.
+>
+> **Sprint 30 deferral rule:** Anything cut from Sprint 30 (TRel description-enrichment + protocol stake) lands in the `## P0: Sprint 30 deferrals` section below with rationale, not into P1/P2. P0 items are the immediate next-sprint pull. Subagents that cut scope mid-WP MUST log the deferral here in the same edit.
+
+---
+
+## P0: Sprint 30 deferrals
+
+- **Proto-SEP drafting + publication.** Deferred until WP-30 telemetry shows model-behavior lift on the hosted demo and at least one external org adopts the `_meta.trel` shape. Trigger conditions intentionally tight: spec-first proposals from a single implementer with no runtime adoption get closed (Discussion #943 precedent). The schema lock at `lib/mcp/trel-schema.ts` is the canonical reference any future submission will cite verbatim.
+- **`stateless-server.ts` file-size split.** Now 438 lines, over the 400-line cap. Functions still under 50 each; clean extract is `tools/list` builder + TRel handler block into `lib/mcp/handlers/list-tools.ts` + `lib/mcp/handlers/trel.ts`, keeping `createStatelessServer` as the wiring shell. ~150 LOC moved, no behavior change.
+- **`graph_adherence_pairs` query unbounded.** `app/api/monitoring/graph-adherence/route.ts:95-99` selects without a LIMIT. Add `.limit(10000)` for safety on busy orgs (and likely `.order('to_created_at', { ascending: false })` so the most recent pairs win when truncated).
+- **`MAX_TOTAL_CHARS = 1200` rationale comment.** `lib/manifest/format-description.ts:42` is a magic number. One-line comment ("~300 tokens, keeps `tools/list` under ~50KB across 50 tools at scope=org") would help future readers calibrate.
+- **Drift-guard regex defensive nit.** `__tests__/trel-schema.vitest.ts:44` uses non-greedy `;` matching to extract the `relationship_type` union from `cache.ts`. Would truncate early if a `;` appears inside a comment within the union block. Not load-bearing today; pin a stricter parse (or import the type via TypeScript reflection if vitest gains support) if `cache.ts` ever grows comments mid-union.
+- **Hosted migration push.** `supabase/migrations/20260427030000_graph_adherence_view.sql` applies cleanly on local; hosted push is gated on the `feat/trel-description-enrichment → main` merge. Run `pnpm supabase db push` immediately after merge to keep local↔hosted parity. The migration is no-op safe pre-merge (the view + endpoint never get hit by hosted traffic until the route file lands on main).
+- **Graph-adherence dashboard card (WP-30.4 stretch).** API endpoint `/api/monitoring/graph-adherence` and `graph_adherence_pairs` view shipped Sprint 30. The optional KPI card on `/dashboard/monitoring` rendering governed vs raw rates side-by-side was cut to keep WP-30.4 inside the review-bandwidth budget. Pure UI work: read both buckets, render two big numbers + delta, ~80 LOC component. Files: `components/dashboard/graph-adherence-card.tsx` (new), `components/dashboard/monitoring-dashboard.tsx` (insert above call-volume section). The metric is already visible to anyone curling the API; demo can quote the numbers verbatim from a curl receipt while the card lands post-submission.
 
 ---
 
