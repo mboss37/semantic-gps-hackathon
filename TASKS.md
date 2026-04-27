@@ -192,6 +192,12 @@
 
 ## Current:
 
+**Sprint 31: Close the TRel loop — execute_route as a tools/list tool (Mon Apr 27):**
+
+Sprint 30 enrichment recommends `execute_route('<route_name>')` in every tool description; standard MCP clients (Claude Code, Cursor, Anthropic `mcp_servers` connector) only call what's in `tools/list`. Empirically caught in the post-merge Claude Code probe — agent quoted the recommendation verbatim, then asked "but it isn't in the tool list, how do I call it?" Sprint 31 closes that loop.
+
+- WP-31.1 Synthetic `execute_route` tool surfaced on `tools/list` (governed only). New `lib/mcp/execute-route-tool.ts` exports `EXECUTE_ROUTE_TOOL_NAME`, `buildExecuteRouteToolDescriptor` (description lists every available route by name + step count + rollback/fallback guards), `resolveExecuteRouteParams` (route_name OR route_id → route_id, with typed errors). `lib/mcp/stateless-server.ts` injects the descriptor when manifest has routes, short-circuits `tools/call execute_route` to dispatch through the existing `executeRoute()` runtime with the same `policyCtxBuilder` pattern as the JSON-RPC method (audit + policy + rollback + fallback all reused). Native `ExecuteRouteRequestSchema` JSON-RPC method stays for backward compat. 22 unit + integration tests pin the wire contract.
+
 **Sprint 30: TRel description-enrichment + protocol stake (Mon Apr 27 onward):**
 
 Goal: convert the latent `_meta.trel` graph into model-visible behavior by folding the relationship vocabulary into tool descriptions every MCP client already forwards verbatim. Lock the wire-format schema (`lib/mcp/trel-schema.ts`) so any future SEP submission has a canonical normative reference. VISION.md updated pre-sprint to declare the standardization goal publicly.

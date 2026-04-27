@@ -13,6 +13,11 @@ import {
 } from '@/lib/manifest/format-description';
 import { evaluateGoal } from '@/lib/mcp/evaluate-goal';
 import { executeRoute, type PolicyContextBuilder } from '@/lib/mcp/execute-route';
+import {
+  EXECUTE_ROUTE_TOOL_NAME,
+  buildExecuteRouteToolDescriptor,
+  resolveExecuteRouteParams,
+} from '@/lib/mcp/execute-route-tool';
 import { buildCatalog, executeTool } from '@/lib/mcp/tool-dispatcher';
 import { discoverRelationships, findWorkflowPath } from '@/lib/mcp/trel-handlers';
 import { TREL_EDGE_TYPES } from '@/lib/mcp/trel-schema';
@@ -153,13 +158,31 @@ export const createStatelessServer = ({
       return base;
     });
 
+    // Sprint 31 WP-31.1: surface a synthetic `execute_route` tool so standard
+    // MCP clients can invoke saga orchestration through the same `tools/call`
+    // surface they use for any other tool. Sprint 30 description enrichment
+    // recommends `execute_route('<name>')` to the model; without this shim
+    // the recommendation is a dead end — clients cannot call arbitrary
+    // JSON-RPC methods, only what is in `tools/list`. The native
+    // `ExecuteRouteRequestSchema` JSON-RPC method below stays for backward
+    // compat with custom orchestrators. Skipped on ungoverned surfaces +
+    // when no routes exist (nothing to execute).
+    if (governed) {
+      const syntheticExecuteRoute = buildExecuteRouteToolDescriptor(
+        manifest.routes,
+        manifest.route_steps,
+        manifest.relationships,
+      );
+      if (syntheticExecuteRoute) tools.push(syntheticExecuteRoute);
+    }
+
     logMCPEvent({
       trace_id: traceId,
       organization_id: scope.organization_id,
       method: 'tools/list',
       status: 'ok',
       latency_ms: Math.round(performance.now() - started),
-      payload: { tool_count: catalog.length, governed },
+      payload: { tool_count: tools.length, governed },
     });
     return { tools };
   });
@@ -170,6 +193,63 @@ export const createStatelessServer = ({
     const catalog = buildCatalog(manifest);
     const name = req.params.name;
     const args = (req.params.arguments ?? {}) as Record<string, unknown>;
+
+    // Sprint 31 WP-31.1: short-circuit `execute_route` to the saga runner
+    // before catalog lookup. The synthetic tool is governed-only by design
+    // (raw surfaces never expose orchestration). On the ungoverned path the
+    // tool is not in the catalog, so the existing tool-not-found branch
+    // returns a clean error.
+    if (governed && name === EXECUTE_ROUTE_TOOL_NAME) {
+      const resolved = resolveExecuteRouteParams(args, manifest.routes);
+      if (!resolved.ok) {
+        logMCPEvent({
+          trace_id: traceId,
+          organization_id: scope.organization_id,
+          tool_name: name,
+          method: 'tools/call',
+          status: 'origin_error',
+          latency_ms: Math.round(performance.now() - started),
+          payload: { reason: resolved.error, governed },
+        });
+        return {
+          isError: true,
+          content: [{ type: 'text', text: resolved.error }],
+        };
+      }
+      const policyCtxBuilder: PolicyContextBuilder = (entry, resolvedArgs) => ({
+        server_id: entry.server_id,
+        tool_id: entry.tool_id,
+        tool_name: entry.name,
+        args: resolvedArgs,
+        headers,
+        client_ip: clientIp,
+      });
+      const result = await executeRoute(
+        { route_id: resolved.route_id, inputs: resolved.inputs },
+        manifest,
+        policyCtxBuilder,
+        { traceId, organizationId: scope.organization_id },
+      );
+      logMCPEvent({
+        trace_id: traceId,
+        organization_id: scope.organization_id,
+        tool_name: name,
+        method: 'tools/call',
+        status: result.ok ? 'ok' : 'origin_error',
+        latency_ms: Math.round(performance.now() - started),
+        payload: {
+          route_id: resolved.route_id,
+          step_count: result.steps.length,
+          halted_at_step: result.halted_at_step,
+          rationale: result.rationale,
+          governed,
+        },
+      });
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        structuredContent: result,
+      };
+    }
 
     // WP-G.6: `tools/list` surfaces `display_name` when set, so `tools/call`
     // must accept EITHER origin name or display_name. Origin name still wins
