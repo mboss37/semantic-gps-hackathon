@@ -8,6 +8,13 @@
 
 - **BYOK Playground.** Today's `/api/playground/run` runs against the platform's `ANTHROPIC_API_KEY`, so wallet exposure is gated by the per-org hourly cap (`lib/playground/rate-limit.ts`). Real fix: let users supply their own provider key per workspace (Anthropic, OpenAI, Google, OpenRouter, etc.), shifting wallet risk to them and removing the spam vector entirely. Multi-model A/B falls out for free. Files: `app/dashboard/settings` for key entry (encrypted via `lib/crypto/encrypt.ts`), provider abstraction in `lib/playground/providers/`, model picker in workbench, drop the `playground_runs` rate-limit table once BYOK is the only path.
 
+- **MCP handshake follow-ups.** Hotfix `45bf6e0` shipped spec-compliant `initialize` → `mcp-session-id` → `notifications/initialized` flow in `lib/mcp/handshake.ts`, called per-request from `discover-tools.ts` + `proxy-http.ts`. Five small follow-ups from the code-reviewer pass, all explicitly deferred:
+  - **Per-request handshake memoization.** A 5-step saga route currently fires 5 init handshakes against the same upstream. Add `WeakMap<originUrl, Promise<HandshakeResult>>` scoped to one gateway request handler so all steps share one handshake. ~15 lines, no cross-region concern. File: new `lib/mcp/handshake-cache.ts`, called from `gateway-handler.ts` request scope.
+  - **Comment the `sessionId: null` on init JSON-RPC error path** in `lib/mcp/handshake.ts` so future maintainers don't try to "fix" the deliberately dropped session id. Strict servers may have already invalidated it.
+  - **Move `queuePermissiveInit` into `beforeEach`** in `__tests__/discover-tools.vitest.ts`. Currently a foot-gun: a new test author who copy-pastes an existing test and forgets the helper gets a confusing "tools/list got the init mock instead" failure mode.
+  - **Extract `mockFetch` helper to `__tests__/_helpers/mock-fetch.ts`.** Now duplicated across `discover-tools.vitest.ts` and `mcp-handshake.vitest.ts`. A third callsite is likely within a sprint.
+  - **Protocol version negotiation fallback.** `lib/mcp/handshake.ts` hardcodes `2025-03-26`. Spec-strict servers MAY refuse unknown versions; add a fallback to `2024-11-05` on a version-mismatch error. Mule tolerated `2025-03-26` so not blocking today.
+
 ## P2: After hackathon
 
 Signals ambition to judges who browse deep. Full vision in [`docs/VISION.md`](./docs/VISION.md).
