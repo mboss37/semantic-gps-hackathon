@@ -130,6 +130,26 @@ The realistic ceiling for an 18-month one-engineer arc is **`_meta.trel` as a re
 
 The repo is already the most complete public TRel implementation: 6 edge types implemented end-to-end, 12 governance policies built around graph traversal, saga orchestration with explicit per-step rollback + fallback input mappings, and a Playground that proves the raw-vs-governed contrast under identical Opus 4.7 prompts. The hackathon-day artifacts (live deployment, demo video, public repo, MIT license) are the credibility the SEP will eventually cite. Sprint 30 turns a working implementation into a referenceable one.
 
+## Known gaps and what's next
+
+Honest accounting of what the hackathon-day cut leaves on the table. Each of these is named here so credibility-evaluators can see the gap is recognized + roadmap'd, not invisible. Implementations land in subsequent sprints; the named direction is the contract.
+
+### Performance and concurrency
+
+The hosted gateway has not yet been load-tested. No P99 latency targets, no published benchmarks, no concurrency ceiling — by design at this stage, since all numbers we'd publish today would either flatter or embarrass us once real traffic lands. The intended pattern is industry-standard (per-upstream circuit breakers, bounded request queues with shed-load on saturation, connection pooling, backpressure on the policy-evaluator hot path), inspired by Envoy / Linkerd resilience defaults. First benchmark suite + concrete targets land alongside the first external adopter.
+
+### Operational observability
+
+Today, `mcp_events` is the compliance ledger — durable, RLS-isolated, retention-policy-ready for EU AI Act Article 12. It is **not** an operations surface. Distinguishing the two is the next step: OpenTelemetry spans + Prometheus RED metrics (rate, errors, duration) per endpoint + structured logs to an OTel collector, so customer ops teams can stitch gateway behavior into Datadog / Honeycomb / Grafana without screen-scraping `mcp_events`. The existing per-Run `trace_id` will propagate as W3C `traceparent` headers across saga steps to make external trace stitching work end-to-end.
+
+### Threat model
+
+Mitigations exist for the obvious attack surface today (SSRF guard on every outbound fetch, AES-256-GCM at rest for stored credentials, Postgres RLS on every tenant table, prompt-injection policy with default patterns, SHA-256 hashed bearer tokens). What does not yet exist is a formal artifact: trust boundaries diagrammed, attack-surface taxonomy enumerated, mitigation/gap matrix maintained, responsible-disclosure policy declared. [`SECURITY.md`](../SECURITY.md) and [`docs/THREAT-MODEL.md`](./THREAT-MODEL.md) ship in the same sprint as this update; both are intentionally lean and will deepen as the threat surface grows.
+
+### Failure modes and resilience testing
+
+Saga rollback (per-step `rollback_input_mapping`) and fallback edges (`fallback_to`, `fallback_input_mapping`, `fallback_rollback_input_mapping`) are shipped today and exercised end-to-end. What is not yet shipped: formal failure-mode documentation (downstream MCP returning 5xx mid-saga, network partition during compensator execution, DB unavailability during policy evaluation), and chaos validation against those modes. Temporal's published chaos test outputs are the bar this work aims for; Jepsen-style adversarial testing of the saga + rollback layer is on the roadmap, not in the artifact yet.
+
 ## Future architecture: control plane + deploy-anywhere data plane
 
 The hackathon build is one Next.js app doing two jobs: the **control plane** (UI, policy authoring, audit, manifest cache) AND the **data plane** (the gateway proxying live tool calls to whatever MCP servers a customer registers).
