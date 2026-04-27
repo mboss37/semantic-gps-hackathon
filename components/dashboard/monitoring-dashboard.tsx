@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { GraphAdherenceCard } from '@/components/dashboard/graph-adherence-card';
 import { MonitoringBlocksChart } from '@/components/dashboard/monitoring-blocks-chart';
 import { MonitoringKpiStrip, type MonitoringKpisProps } from '@/components/dashboard/monitoring-kpi-strip';
 import { MonitoringPiiChart } from '@/components/dashboard/monitoring-pii-chart';
@@ -129,6 +130,10 @@ export const MonitoringDashboard = () => {
 
       <section className="@container/main">
         <MonitoringKpiStrip {...(data?.kpis ?? ZERO_KPIS)} />
+      </section>
+
+      <section className="@container/main">
+        <GraphAdherenceCard range={range} />
       </section>
 
       <section className="flex flex-col gap-2">
