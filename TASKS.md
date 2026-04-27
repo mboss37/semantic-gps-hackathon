@@ -192,6 +192,15 @@
 
 ## Current:
 
+**Sprint 32: Credibility — gap-acknowledgment + threat-model artifacts (Mon Apr 27):**
+
+External feedback on VISION.md flagged operational gaps (load/concurrency, OTel beyond audit, formal threat model, chaos/failure modes) and named the credibility-multiplicative work needed for the next phase. Doc-only sprint. Lean cuts per topic — name the gap + roadmap intent, no specific technical commitments we cannot defend yet.
+
+- WP-32.1 VISION.md `## Known gaps and what's next` section: 4 lean subsections (Performance & concurrency, Operational observability, Threat model, Failure modes & resilience). Each names the gap, names the canonical pattern we'll adopt (Envoy/Linkerd resilience defaults, OTel + W3C `traceparent`, Temporal-grade chaos validation), and parks the implementation as post-traction work. No P99 numbers, no commitment dates — those land with first benchmarks + first external adopter.
+- WP-32.2 `SECURITY.md` (responsible-disclosure policy, scope, contact, timeline) + `docs/THREAT-MODEL.md` (5 trust boundaries + 10-row attack-surface matrix with mitigation present / gap / customer responsibility per row + roadmap by quarter).
+- WP-32.3 Light audit pass mapping existing controls to threat-model rows. Confirmed: SSRF guard (`lib/security/ssrf-guard.ts`), AES-256-GCM (`lib/crypto/encrypt.ts`), RLS via `jwt_org_id()`, SHA-256 token hashing, `injection_guard` policy, `redactPayload`, `security_invoker=on` on graph-adherence view, append-only audit. No code changes; all references in THREAT-MODEL.md cite real files.
+- WP-32.4 Discussion post drafted for `modelcontextprotocol/specification` (delivered to Mihael for posting from his GitHub account). Frames `_meta.trel` as a working reference implementation under the registered-prefix extension model (OpenAPI `x-` analogue), references the live deployment + repo, does not file a SEP. Timestamps the claim; no premature signaling.
+
 **Sprint 31: Close the TRel loop — execute_route as a tools/list tool (Mon Apr 27):**
 
 Sprint 30 enrichment recommends `execute_route('<route_name>')` in every tool description; standard MCP clients (Claude Code, Cursor, Anthropic `mcp_servers` connector) only call what's in `tools/list`. Empirically caught in the post-merge Claude Code probe — agent quoted the recommendation verbatim, then asked "but it isn't in the tool list, how do I call it?" Sprint 31 closes that loop.
