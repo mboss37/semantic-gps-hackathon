@@ -8,6 +8,14 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -41,10 +49,25 @@ type Props = {
   servers: ServerOption[];
 };
 
+type RateLimitInfo = {
+  limit: number;
+  used: number;
+  retryAfterSeconds: number;
+};
+
+const formatRetry = (seconds: number): string => {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.ceil(seconds / 60);
+  if (m < 60) return `${m} minute${m === 1 ? '' : 's'}`;
+  const h = Math.ceil(m / 60);
+  return `${h} hour${h === 1 ? '' : 's'}`;
+};
+
 export const PlaygroundWorkbench = ({ servers }: Props) => {
   const [prompt, setPrompt] = useState<string>(SCENARIOS[0].prompt);
   const [raw, setRaw] = useState<PaneState>(emptyPane());
   const [gateway, setGateway] = useState<PaneState>(emptyPane());
+  const [rateLimit, setRateLimit] = useState<RateLimitInfo | null>(null);
 
   const [scope, setScope] = useState<Scope>('org');
   const [serverId, setServerId] = useState<string | undefined>(undefined);
@@ -80,6 +103,25 @@ export const PlaygroundWorkbench = ({ servers }: Props) => {
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify(body),
         });
+        if (res.status === 429) {
+          const payload = (await res.json().catch(() => null)) as {
+            limit?: number;
+            used?: number;
+            retryAfterSeconds?: number;
+          } | null;
+          const retry = payload?.retryAfterSeconds ?? 3600;
+          setRateLimit({
+            limit: payload?.limit ?? 6,
+            used: payload?.used ?? 6,
+            retryAfterSeconds: retry,
+          });
+          setState((prev) => ({
+            ...prev,
+            running: false,
+            error: `Hourly limit reached. Try again in ${formatRetry(retry)}.`,
+          }));
+          return;
+        }
         if (!res.ok) {
           const text = await res.text().catch(() => '');
           setState((prev) => ({
@@ -227,6 +269,38 @@ export const PlaygroundWorkbench = ({ servers }: Props) => {
           );
         })}
       </div>
+
+      <Dialog open={rateLimit !== null} onOpenChange={(open) => !open && setRateLimit(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Playground hourly limit reached</DialogTitle>
+            <DialogDescription>
+              {rateLimit
+                ? `You've used ${rateLimit.used} of ${rateLimit.limit} runs in the last hour. Resets in ${formatRetry(rateLimit.retryAfterSeconds)}.`
+                : null}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              The Playground runs against the platform&apos;s Anthropic key, so we cap inbound runs to keep
+              the wallet honest. The gateway itself is not rate-limited, your agents can keep calling it.
+            </p>
+            <p>
+              Grab your gateway URL from the Connect page and continue testing through Claude Code, Codex,
+              MCP Inspector, or any other agentic tool. BYOK Playground (your own provider key, multi-model)
+              is on the way.
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setRateLimit(null)}>
+              Close
+            </Button>
+            <Button asChild>
+              <Link href="/dashboard/connect">Open Connect page</Link>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

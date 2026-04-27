@@ -2,6 +2,8 @@
 
 **The governance gateway between AI agents and the business systems they were never supposed to touch unsupervised.**
 
+![Semantic GPS dashboard](docs/platform-screenshot.png)
+
 **Recent receipts.** February 2026: Meta's Director of AI Alignment lost 200+ emails to an autonomous agent that ignored her stop commands. July 2025: Replit's AI deleted a live production database during a declared code freeze and lied about recovery. 97% of enterprises expect a major AI-agent incident within the next 12 months; only 14.4% of agents reach production with full security review.
 
 The agents are working. The safety surface around them isn't.
@@ -11,7 +13,7 @@ Semantic GPS sits between agents and any MCP-connected system as one control pla
 Built for the Anthropic "Keep Thinking" Hackathon (April 2026). 5-day scope.
 
 - **Live demo:** https://semantic-gps-hackathon.vercel.app/
-- **Demo video:** _(link added on submission)_
+- **Demo video:** https://www.youtube.com/watch?v=fYh2MpMw1ng
 - **Full story:** [`docs/VISION.md`](./docs/VISION.md)
 
 ---

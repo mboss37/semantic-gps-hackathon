@@ -102,16 +102,107 @@ The `agent_identity_required` policy is the enforcement edge for this pattern: v
 
 The honest framing: Semantic GPS is operational infrastructure that makes the Act's record-keeping, human-oversight, and risk-management obligations achievable for the AI provider and deployer. Compliance ownership stays with the operator; we make the operational layer not-impossible.
 
-## Where it goes
+## Future architecture: control plane + deploy-anywhere data plane
 
-The current build is one Next.js app doing two jobs: the control plane (UI, policy authoring, audit, manifest cache) AND the data plane (the gateway proxying live tool calls to whatever MCP servers a customer registers).
+The hackathon build is one Next.js app doing two jobs: the **control plane** (UI, policy authoring, audit, manifest cache) AND the **data plane** (the gateway proxying live tool calls to whatever MCP servers a customer registers).
 
-That's the right wedge. It's not the right shape at scale. The architecture this points at:
+That is the right wedge. It is not the right shape at enterprise scale. Semantic GPS should evolve into an enterprise control plane plus a deploy-anywhere MCP data plane.
 
-- **Rust data plane, deploy-anywhere.** Cloudflare Workers, Kubernetes sidecar, customer VPC, air-gapped. Tool calls never leave the customer's network. Latency stays low; compliance stays happy.
-- **Multi-region Next.js control plane.** Where the customer's admins sit. Compiles signed Navigation Bundles for the data plane to pull. One control plane, many data planes.
+### Why one mega-MCP does not scale
+
+Exposing one governed MCP endpoint that aggregates every server a customer has registered works for a small demo or a small org. It breaks at 100+ MCPs:
+
+- The aggregated manifest becomes too large for agents to reason over well.
+- Tool names, descriptions, and relationships become noisy across unrelated business domains.
+- A sales agent does not need finance, engineering, HR, and security operations tools.
+- Policy ownership becomes unclear because different departments own different rules.
+- Audit trails become harder to scope to the team or workflow that matters.
+- A misconfigured client token has a much larger blast radius.
+- Latency and context overhead grow as every client receives too much tool surface.
+
+The better enterprise shape is not "one MCP to rule them all." It is a **scoped endpoint model** served by a control plane that compiles bundles for many data planes.
+
+### Control plane vs data plane
+
+**Control plane** is where humans configure and govern. It owns: MCP server registration, OpenAPI import, domains, tool relationships, route definitions, policy authoring, shadow→enforce rollout, audit search, monitoring, tenant + user administration. Stays a Next.js app. Runs as SaaS, in multiple regions, or in a customer-controlled environment when residency demands it.
+
+**Data plane** is the runtime gateway agents call. It owns: MCP-compatible endpoint serving, manifest loading, policy enforcement, route validation, `execute_route`, fallback execution, compensating rollback, audit emission, local credential handling. The future data plane should be a Rust service deployable anywhere: customer VPC, Kubernetes sidecar, edge worker, private cloud, or air-gapped environment.
+
+Agents connect to the data plane. The data plane exposes governed MCP endpoints. The control plane never sits in the live request path.
+
+### Domain MCPs as the enterprise boundary
+
+A **domain** is a business-owned slice of the tool graph: Sales, Marketing, Customer Support, Finance, Engineering, Security Operations, HR. Each domain exposes its own governed MCP endpoint:
+
+- `/mcp/domain/sales`
+- `/mcp/domain/marketing`
+- `/mcp/domain/support`
+- `/mcp/domain/security-ops`
+
+Each agent connects to the tool surface it actually needs. A sales agent gets Salesforce, enrichment, contract, quoting, customer-comms tools. It never sees payroll, incident response, or production-deploy tools. Domain MCPs are the most important enterprise abstraction Semantic GPS introduces.
+
+### Three endpoint scopes
+
+| Scope | Endpoint | Use cases |
+|---|---|---|
+| **Org** | `/mcp` | Platform admins, discovery, internal testing, catalog inspection. Not the default production endpoint. |
+| **Domain** | `/mcp/domain/<slug>` | Default production-facing unit. Business-specific agents, least-privilege exposure, domain-owned policy rollout, scoped audit + monitoring, cleaner agent planning. |
+| **Server** | `/mcp/server/<id>` | Strict least privilege. Debugging, isolated rollout, vendor-specific testing, high-risk tools that should never mix into a broader manifest. |
+
+All three are already wired in the current gateway (Sprint 5 D.1). Domain CRUD is the missing piece between today's MVP and the production shape.
+
+### Navigation Bundles
+
+The control plane compiles **signed, versioned bundles** per endpoint scope. Each bundle contains: visible servers, visible tools, relationship graph, route definitions, policy assignments, policy versions, semantic presentation metadata, scope identity.
+
+The data plane pulls or receives these bundles and serves governed MCP endpoints from them. Connected environments poll for bundle updates. Air-gapped environments move bundles manually. The operational model becomes:
+
+1. Author centrally.
+2. Approve changes.
+3. Compile a signed bundle.
+4. Deploy enforcement close to the systems.
+
+### Deployment shapes for the data plane
+
+| Shape | Right for |
+|---|---|
+| **SaaS-hosted** | Startups, demos, low-sensitivity workflows, fast onboarding. |
+| **Customer VPC** | Regulated enterprises, private APIs, strict data residency, internal-only MCP servers. |
+| **Kubernetes sidecar / gateway** | Platform teams, service-mesh shapes, internal developer platforms. |
+| **Edge data plane** | Low-latency global enforcement, public API protection, region-specific routing. |
+| **Air-gapped** | Defense, finance, utilities, government. |
+
+In every shape, the customer points Claude, Cursor, MCP Inspector, custom agents, or any MCP client at the governed MCP endpoint served by the data plane.
+
+### Example: 100 MCPs across an enterprise
+
+Bad model: one giant MCP endpoint, hundreds of tools, every agent sees too much, policies are hard to reason about.
+
+Better model:
+
+- Sales domain MCP — 12 MCPs
+- Marketing domain MCP — 9 MCPs
+- Support domain MCP — 15 MCPs
+- Finance domain MCP — 8 MCPs
+- Engineering domain MCP — 20 MCPs
+- Security Operations domain MCP — 10 MCPs
+- Org MCP for platform operators (admin + catalog only)
+- Per-server MCPs for high-risk or isolated systems
+
+Each domain has its own policies, routes, audit views, and rollout lifecycle. Smaller, clearer manifests give agents better planning signal too.
+
+### Adjacent unlocks
+
 - **Protocol-agnostic surface.** MCP today, A2A tomorrow. Routes are the abstraction; transports plug in.
 - **Semantic Definition Store.** Decouple "what a Lead is" from "how Salesforce represents a Lead." Agents reason in the customer's domain language; the gateway translates.
+
+### Guiding principle
+
+Semantic GPS governs the call, not the customer system.
+
+- Agents stay in the agentic layer.
+- Customer MCPs stay in the data access layer.
+- Semantic GPS is the gateway boundary between them.
 
 Today's wedge is a working slice. Tomorrow's surface is the deploy-anywhere governance plane every enterprise agent platform will need.
 

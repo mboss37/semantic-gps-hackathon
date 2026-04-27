@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { requireAuth, UnauthorizedError } from '@/lib/auth';
 import { modelPlayground } from '@/lib/config/models';
 import { mintPlaygroundToken } from '@/lib/mcp/playground-token';
+import { reservePlaygroundSlot } from '@/lib/playground/rate-limit';
 
 // Playground A/B run endpoint. Both panes use Anthropic's beta `mcp_servers`
 // connector so the only variable between them is the URL, `raw` hits the
@@ -241,8 +242,34 @@ export const POST = async (request: Request): Promise<Response> => {
     return json(400, { error: 'serverId is required when scope=server' });
   }
 
+  // Env check BEFORE reserving a slot, otherwise a missing platform key on
+  // prod would silently consume rate-limit slots for every visitor.
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return json(500, { error: 'anthropic_api_key_missing' });
+
+  // Wallet protection: cap Anthropic-billed runs per org per hour. Reserved
+  // before the model call so an aborted run still consumes its slot. Failure
+  // to reserve = fail closed; we never call Anthropic without accounting.
+  const slot = await reservePlaygroundSlot(organization_id);
+  if (!slot.allowed) {
+    return new Response(
+      JSON.stringify({
+        error: 'rate_limit',
+        limit: slot.limit,
+        used: slot.used,
+        resetAt: slot.resetAt,
+        retryAfterSeconds: slot.retryAfterSeconds,
+        windowHours: 1,
+      }),
+      {
+        status: 429,
+        headers: {
+          'content-type': 'application/json',
+          'retry-after': String(slot.retryAfterSeconds),
+        },
+      },
+    );
+  }
 
   const anthropic = new Anthropic({ apiKey });
   const encoder = new TextEncoder();

@@ -26,19 +26,25 @@ type ContentBlock =
       is_error?: boolean;
     };
 
-const { requireAuthMock, mintTokenMock, betaStreamMock, selectMaybeSingleMock } = vi.hoisted(
-  () => ({
+const { requireAuthMock, mintTokenMock, betaStreamMock, selectMaybeSingleMock, reserveSlotMock } =
+  vi.hoisted(() => ({
     requireAuthMock: vi.fn(),
     mintTokenMock: vi.fn(),
     betaStreamMock: vi.fn(),
     selectMaybeSingleMock: vi.fn(),
-  }),
-);
+    reserveSlotMock: vi.fn(),
+  }));
 
 vi.mock('@/lib/auth', async () => {
   const actual = await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth');
   return { ...actual, requireAuth: requireAuthMock };
 });
+
+vi.mock('@/lib/playground/rate-limit', () => ({
+  PLAYGROUND_LIMIT_PER_HOUR: 6,
+  PLAYGROUND_WINDOW_MS: 60 * 60 * 1000,
+  reservePlaygroundSlot: reserveSlotMock,
+}));
 
 // Service-client stub so the token mint path never hits a real DB.
 // `mintPlaygroundToken` first SELECTs an existing kind=system row and reuses
@@ -148,6 +154,13 @@ beforeEach(() => {
   betaStreamMock.mockReset();
   selectMaybeSingleMock.mockReset();
   selectMaybeSingleMock.mockResolvedValue({ data: null, error: null });
+  reserveSlotMock.mockReset();
+  reserveSlotMock.mockResolvedValue({
+    allowed: true,
+    used: 1,
+    limit: 6,
+    resetAt: Date.now() + 60 * 60 * 1000,
+  });
 });
 
 const { POST } = await import('@/app/api/playground/run/route');
@@ -448,5 +461,39 @@ describe('POST /api/playground/run', () => {
       mcp_servers: Array<{ authorization_token?: string }>;
     };
     expect(callArgs.mcp_servers[0].authorization_token).toBe('sgps_existing-reuse-token');
+  });
+
+  it('returns 429 with structured payload + Retry-After when the org is over the hourly cap', async () => {
+    requireAuthMock.mockResolvedValueOnce({
+      user: { id: 'u1' },
+      organization_id: 'org-rl',
+      role: 'admin',
+      supabase: {},
+    });
+    reserveSlotMock.mockResolvedValueOnce({
+      allowed: false,
+      used: 6,
+      limit: 6,
+      resetAt: Date.now() + 1800 * 1000,
+      retryAfterSeconds: 1800,
+    });
+
+    const res = await post({ prompt: 'spam', mode: 'gateway' });
+    expect(res.status).toBe(429);
+    expect(res.headers.get('retry-after')).toBe('1800');
+    const body = (await res.json()) as {
+      error: string;
+      limit: number;
+      used: number;
+      retryAfterSeconds: number;
+    };
+    expect(body.error).toBe('rate_limit');
+    expect(body.limit).toBe(6);
+    expect(body.used).toBe(6);
+    expect(body.retryAfterSeconds).toBe(1800);
+
+    // Anthropic must NOT be invoked when the slot is denied.
+    expect(betaStreamMock).not.toHaveBeenCalled();
+    expect(mintTokenMock).not.toHaveBeenCalled();
   });
 });

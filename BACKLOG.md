@@ -4,9 +4,9 @@
 
 ---
 
-## P0: Must ship before Saturday EOD
+## P1: Post-submission, soon
 
-Hard code freeze: **Sun Apr 26 12:00 CET**. Everything below lands Sat or doesn't land.
+- **BYOK Playground.** Today's `/api/playground/run` runs against the platform's `ANTHROPIC_API_KEY`, so wallet exposure is gated by the per-org hourly cap (`lib/playground/rate-limit.ts`). Real fix: let users supply their own provider key per workspace (Anthropic, OpenAI, Google, OpenRouter, etc.), shifting wallet risk to them and removing the spam vector entirely. Multi-model A/B falls out for free. Files: `app/dashboard/settings` for key entry (encrypted via `lib/crypto/encrypt.ts`), provider abstraction in `lib/playground/providers/`, model picker in workbench, drop the `playground_runs` rate-limit table once BYOK is the only path.
 
 ## P2: After hackathon
 
