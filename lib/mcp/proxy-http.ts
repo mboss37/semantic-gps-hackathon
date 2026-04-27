@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { ServerRow, ToolRow } from '@/lib/manifest/cache';
 import { runMcpHandshake } from '@/lib/mcp/handshake';
+import { getOrRunHandshake, type HandshakeCache } from '@/lib/mcp/handshake-cache';
 import { decodeAuthConfig, type AuthConfig } from '@/lib/servers/auth';
 import { safeFetch, SsrfBlockedError } from '@/lib/security/ssrf-guard';
 import { createServiceClient } from '@/lib/supabase/service';
@@ -20,6 +21,10 @@ export type ProxyResult = ProxyOk | ProxyErr;
 export type ProxyContext = {
   serverId: string;
   traceId: string;
+  // When provided (e.g. by `executeRoute`), every step against the same
+  // origin reuses one captured session id instead of re-handshaking. Single
+  // `tools/call` requests omit it - one handshake per request is fine.
+  handshakeCache?: HandshakeCache;
 };
 
 const JsonRpcResponseSchema = z.object({
@@ -94,9 +99,16 @@ export const proxyHttp = async (
   // straight to tools/call as before. SSRF errors propagate and are mapped
   // to ssrf_blocked below; any other failure inside the handshake degrades
   // to a direct call so we never regress the permissive path.
+  //
+  // When `ctx.handshakeCache` is set (saga step from `execute_route`), the
+  // first step against this origin pays the round trip; siblings reuse the
+  // cached Promise. SSRF errors still propagate through the cached promise
+  // so a poisoned origin fails-closed every reuse.
   let sessionId: string | null = null;
   try {
-    ({ sessionId } = await runMcpHandshake(server.origin_url, baseHeaders, TIMEOUT_MS));
+    ({ sessionId } = ctx.handshakeCache
+      ? await getOrRunHandshake(ctx.handshakeCache, server.origin_url, baseHeaders, TIMEOUT_MS)
+      : await runMcpHandshake(server.origin_url, baseHeaders, TIMEOUT_MS));
   } catch (e) {
     if (e instanceof SsrfBlockedError) return { ok: false, error: 'ssrf_blocked' };
     sessionId = null;

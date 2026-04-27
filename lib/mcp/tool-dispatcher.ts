@@ -1,4 +1,5 @@
 import type { Manifest, ServerRow, ToolRow } from '@/lib/manifest/cache';
+import type { HandshakeCache } from '@/lib/mcp/handshake-cache';
 import { proxyHttp } from '@/lib/mcp/proxy-http';
 import { proxyOpenApi } from '@/lib/mcp/proxy-openapi';
 
@@ -108,6 +109,10 @@ export const buildCatalog = (manifest: Manifest): ToolCatalogEntry[] => {
 
 export type ExecuteContext = {
   traceId: string;
+  // Saga callers (`executeRoute` / `executeRollback`) pass a shared cache
+  // so multi-step routes reuse one MCP session per origin. Single
+  // `tools/call` invocations omit it.
+  handshakeCache?: HandshakeCache;
 };
 
 // Real proxies are now the default path. Setting `REAL_PROXY_ENABLED=0`
@@ -150,7 +155,11 @@ export const executeTool = async (
     return { ok: false, result: { error: result.error, status: result.status }, error: result.error, status: result.status };
   }
   if (server.transport === 'http-streamable') {
-    const result = await proxyHttp(tool, args, { serverId: server.id, traceId: ctx.traceId });
+    const result = await proxyHttp(tool, args, {
+      serverId: server.id,
+      traceId: ctx.traceId,
+      handshakeCache: ctx.handshakeCache,
+    });
     if (result.ok) return { ok: true, result: result.result, upstreamLatencyMs: result.latencyMs };
     return { ok: false, result: { error: result.error, status: result.status }, error: result.error, status: result.status };
   }

@@ -16,6 +16,12 @@ import { safeFetch, SsrfBlockedError } from '@/lib/security/ssrf-guard';
 // init call, missing session header, parse failure) it returns
 // `sessionId: null` so callers can fall back to direct calls. Net effect:
 // strict servers start working, permissive servers behave exactly as before.
+//
+// Protocol version negotiation: a strict server pinned to an older spec may
+// reject our primary version with a JSON-RPC error mentioning "version" or
+// "protocol". We retry once with the older `2024-11-05` revision before
+// giving up. The trigger is intentionally narrow (text match on the error
+// message) so unrelated init errors don't double the round-trip cost.
 
 const InitializeResponseSchema = z.object({
   jsonrpc: z.literal('2.0'),
@@ -30,11 +36,21 @@ const InitializeResponseSchema = z.object({
   error: z.object({ code: z.number(), message: z.string() }).optional(),
 });
 
-const PROTOCOL_VERSION = '2025-03-26';
+export const PRIMARY_PROTOCOL_VERSION = '2025-03-26';
+export const FALLBACK_PROTOCOL_VERSION = '2024-11-05';
+const PROTOCOL_VERSIONS: readonly string[] = [
+  PRIMARY_PROTOCOL_VERSION,
+  FALLBACK_PROTOCOL_VERSION,
+];
 
 export type HandshakeResult = {
   sessionId: string | null;
 };
+
+type InitOutcome =
+  | { kind: 'success'; sessionId: string | null }
+  | { kind: 'noop' }
+  | { kind: 'version-mismatch' };
 
 const parseJsonOrSse = (text: string, contentType: string): unknown => {
   if (contentType.includes('text/event-stream')) {
@@ -45,11 +61,15 @@ const parseJsonOrSse = (text: string, contentType: string): unknown => {
   return JSON.parse(text);
 };
 
-export const runMcpHandshake = async (
+const looksLikeVersionMismatch = (message: string): boolean =>
+  /version|protocol/i.test(message);
+
+const attemptInit = async (
   originUrl: string,
   baseHeaders: Record<string, string>,
-  timeoutMs = 10_000,
-): Promise<HandshakeResult> => {
+  protocolVersion: string,
+  timeoutMs: number,
+): Promise<InitOutcome> => {
   let res: Response;
   try {
     res = await safeFetch(originUrl, {
@@ -60,7 +80,7 @@ export const runMcpHandshake = async (
         id: 'init',
         method: 'initialize',
         params: {
-          protocolVersion: PROTOCOL_VERSION,
+          protocolVersion,
           capabilities: {},
           clientInfo: { name: 'semantic-gps', version: '1.0' },
         },
@@ -69,12 +89,12 @@ export const runMcpHandshake = async (
     });
   } catch (e) {
     if (e instanceof SsrfBlockedError) throw e;
-    return { sessionId: null };
+    return { kind: 'noop' };
   }
 
   if (!res.ok) {
     await res.text().catch(() => '');
-    return { sessionId: null };
+    return { kind: 'noop' };
   }
 
   const sessionId = res.headers.get('mcp-session-id');
@@ -88,13 +108,45 @@ export const runMcpHandshake = async (
       const parsed = InitializeResponseSchema.safeParse(
         parseJsonOrSse(text, res.headers.get('content-type') ?? ''),
       );
-      if (parsed.success && parsed.data.error) return { sessionId: null };
+      if (parsed.success && parsed.data.error) {
+        // Deliberately drop the captured session id on a JSON-RPC init error.
+        // Strict servers (Mule) may have already invalidated the session at
+        // the moment they responded with the error; reusing it on follow-up
+        // calls would produce confusing 4xx/5xx responses. Falling back to a
+        // session-less direct call is the safe path the catch site expects.
+        return looksLikeVersionMismatch(parsed.data.error.message)
+          ? { kind: 'version-mismatch' }
+          : { kind: 'noop' };
+      }
     } catch {
       // unparseable body is fine, we only care about the session id header
     }
   }
 
-  if (!sessionId) return { sessionId: null };
+  return { kind: 'success', sessionId };
+};
+
+export const runMcpHandshake = async (
+  originUrl: string,
+  baseHeaders: Record<string, string>,
+  timeoutMs = 10_000,
+): Promise<HandshakeResult> => {
+  let sessionId: string | null = null;
+  let initialized = false;
+  for (const version of PROTOCOL_VERSIONS) {
+    const out = await attemptInit(originUrl, baseHeaders, version, timeoutMs);
+    if (out.kind === 'success') {
+      sessionId = out.sessionId;
+      initialized = true;
+      break;
+    }
+    if (out.kind === 'version-mismatch') continue;
+    // 'noop' (network err / non-200 / non-version JSON-RPC error): give up,
+    // a fallback retry against the same broken server is just wasted RTT.
+    break;
+  }
+
+  if (!initialized || !sessionId) return { sessionId: null };
 
   // Spec-mandated notification. Some strict servers (Mule) wait for it
   // before serving any further methods. Failure here is non-fatal, callers

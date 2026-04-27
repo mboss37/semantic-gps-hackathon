@@ -1,5 +1,6 @@
 import { logMCPEvent, redactPayload } from '@/lib/audit/logger';
 import type { Manifest, RelationshipRow, RouteStepRow, ToolRow } from '@/lib/manifest/cache';
+import type { HandshakeCache } from '@/lib/mcp/handshake-cache';
 import { buildCatalog, executeTool } from '@/lib/mcp/tool-dispatcher';
 import type {
   ExecuteRouteRollback,
@@ -43,6 +44,7 @@ export const executeRollback = async (
   inputs: Record<string, unknown>,
   captureBag: Record<string, CapturedStep>,
   ctx: ExecuteRouteCtx,
+  handshakeCache?: HandshakeCache,
 ): Promise<ExecuteRouteRollbackSummary> => {
   const catalog = buildCatalog(manifest);
   const summary: ExecuteRouteRollbackSummary = {
@@ -129,7 +131,7 @@ export const executeRollback = async (
     }
 
     try {
-      const exec = await executeTool(manifest, compEntry, compArgs, { traceId: ctx.traceId });
+      const exec = await executeTool(manifest, compEntry, compArgs, { traceId: ctx.traceId, handshakeCache });
       if (exec.ok) {
         stepEntry.rollback = {
           attempted: true,

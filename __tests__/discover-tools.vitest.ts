@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { discoverTools } from '@/lib/mcp/discover-tools';
+import { getSafeFetchMock, mockFetch, queuePermissiveInit } from '@/__tests__/_helpers/mock-fetch';
 
 // safeFetch is SSRF-guarded; stub it out so tests don't need DNS.
 vi.mock('@/lib/security/ssrf-guard', () => ({
@@ -13,56 +15,17 @@ vi.mock('@/lib/security/ssrf-guard', () => ({
   },
 }));
 
-type ResponseHeaders = Record<string, string>;
-
-const mockFetch = (
-  body: BodyInit,
-  contentType: string,
-  status = 200,
-  extraHeaders: ResponseHeaders = {},
-) => {
-  const headers: ResponseHeaders = { 'content-type': contentType, ...extraHeaders };
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    headers: {
-      get: (name: string) => {
-        const key = Object.keys(headers).find((k) => k.toLowerCase() === name.toLowerCase());
-        return key ? headers[key] : null;
-      },
-    },
-    text: () => Promise.resolve(typeof body === 'string' ? body : ''),
-  };
-};
-
-type SafeFetchMock = ReturnType<typeof vi.fn>;
-
-const getSafeFetchMock = async (): Promise<SafeFetchMock> => {
-  const mod = await import('@/lib/security/ssrf-guard');
-  return mod.safeFetch as unknown as SafeFetchMock;
-};
-
-// Queue a permissive `initialize` response: 200 OK, no `mcp-session-id`
-// header, body has no JSON-RPC error. The handshake returns sessionId: null
-// and the caller falls through to a direct tools/list call, mirroring how
-// our in-process vendor MCPs behave today.
-const queuePermissiveInit = (mock: SafeFetchMock): void => {
-  mock.mockResolvedValueOnce(
-    mockFetch(
-      JSON.stringify({
-        jsonrpc: '2.0',
-        id: 'init',
-        result: { protocolVersion: '2025-03-26', capabilities: {} },
-      }),
-      'application/json',
-    ),
-  );
-};
-
 describe('discoverTools', () => {
+  // Default to permissive init for every test. Strict-server tests below
+  // bypass this by calling `m.mockReset()` to clear the queued init and
+  // queuing their own three-call sequence (init + notifications +
+  // tools/list). Hoisting eliminates the foot-gun where a new test author
+  // copy-pastes a case and forgets to queue init, getting a confusing
+  // "tools/list got the init mock instead" failure mode.
   beforeEach(async () => {
     const m = await getSafeFetchMock();
     m.mockReset();
+    queuePermissiveInit(m);
   });
   afterEach(() => {
     vi.clearAllMocks();
@@ -70,7 +33,6 @@ describe('discoverTools', () => {
 
   it('returns tools from a plain JSON tools/list response', async () => {
     const mock = await getSafeFetchMock();
-    queuePermissiveInit(mock);
     mock.mockResolvedValueOnce(
       mockFetch(
         JSON.stringify({
@@ -103,7 +65,6 @@ describe('discoverTools', () => {
     })}\n\n`;
 
     const mock = await getSafeFetchMock();
-    queuePermissiveInit(mock);
     mock.mockResolvedValueOnce(mockFetch(sseBody, 'text/event-stream'));
 
     const result = await discoverTools('https://example.com/mcp', { type: 'none' });
@@ -113,7 +74,6 @@ describe('discoverTools', () => {
 
   it('sends Bearer header when auth is bearer', async () => {
     const mock = await getSafeFetchMock();
-    queuePermissiveInit(mock);
     mock.mockResolvedValueOnce(
       mockFetch(JSON.stringify({ jsonrpc: '2.0', id: 1, result: { tools: [] } }), 'application/json'),
     );
@@ -130,7 +90,6 @@ describe('discoverTools', () => {
 
   it('reports origin HTTP errors', async () => {
     const mock = await getSafeFetchMock();
-    queuePermissiveInit(mock);
     mock.mockResolvedValueOnce(mockFetch('', 'application/json', 502));
 
     const result = await discoverTools('https://example.com/mcp', { type: 'none' });
@@ -140,7 +99,6 @@ describe('discoverTools', () => {
 
   it('reports JSON-RPC errors from origin', async () => {
     const mock = await getSafeFetchMock();
-    queuePermissiveInit(mock);
     mock.mockResolvedValueOnce(
       mockFetch(
         JSON.stringify({ jsonrpc: '2.0', id: 1, error: { code: -32601, message: 'method not found' } }),
@@ -155,7 +113,6 @@ describe('discoverTools', () => {
 
   it('rejects responses that are not valid MCP shape', async () => {
     const mock = await getSafeFetchMock();
-    queuePermissiveInit(mock);
     mock.mockResolvedValueOnce(mockFetch(JSON.stringify({ hello: 'world' }), 'application/json'));
 
     const result = await discoverTools('https://example.com/mcp', { type: 'none' });
@@ -165,6 +122,10 @@ describe('discoverTools', () => {
 
   it('forwards the captured mcp-session-id on tools/list when the upstream issues one', async () => {
     const mock = await getSafeFetchMock();
+    // Strict-server case: clear the permissive init beforeEach queued so we
+    // can stage the full 3-step lifecycle (init + notifications + tools/list)
+    // explicitly. The reset still leaves vi mocking active.
+    mock.mockReset();
     // Init returns 200 + session id header + initialize result + sets up
     // the strict-server lifecycle that Mule and spec-aligned SDKs enforce.
     mock.mockResolvedValueOnce(
@@ -207,7 +168,6 @@ describe('discoverTools', () => {
 
   it('skips the session header when the upstream does not issue one', async () => {
     const mock = await getSafeFetchMock();
-    queuePermissiveInit(mock);
     mock.mockResolvedValueOnce(
       mockFetch(
         JSON.stringify({ jsonrpc: '2.0', id: 1, result: { tools: [] } }),

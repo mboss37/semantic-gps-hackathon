@@ -1,6 +1,7 @@
 import { logMCPEvent, redactPayload } from '@/lib/audit/logger';
 import type { Manifest, RelationshipRow, RouteStepRow, ToolRow } from '@/lib/manifest/cache';
 import { executeRollback } from '@/lib/mcp/execute-rollback';
+import { createHandshakeCache, type HandshakeCache } from '@/lib/mcp/handshake-cache';
 import { resolveInputMapping, findCatalogEntry, unwrapMcpEnvelope, type CapturedStep, type ExecuteRouteCtx } from '@/lib/mcp/route-utils';
 import { buildCatalog, executeTool, type ToolCatalogEntry } from '@/lib/mcp/tool-dispatcher';
 import type {
@@ -207,12 +208,13 @@ const runExecPhase = async (
   manifest: Manifest,
   started: number,
   ctx: ExecuteRouteCtx,
+  handshakeCache: HandshakeCache,
 ): Promise<{
   stepResult: ExecuteRouteStep;
   postResult: unknown;
   exec: Awaited<ReturnType<typeof executeTool>>;
 }> => {
-  const exec = await executeTool(manifest, entry, args, { traceId: ctx.traceId });
+  const exec = await executeTool(manifest, entry, args, { traceId: ctx.traceId, handshakeCache });
   const post = runPostCallPolicies({ ...policyCtx, result: exec.result }, manifest);
   const stepResult = emitExecStep(step, tool, args, exec, post, pre, started, ctx);
   return { stepResult, postResult: post.result, exec };
@@ -231,6 +233,7 @@ const attemptFallback = async (
   policyCtxBuilder: PolicyContextBuilder,
   ctx: ExecuteRouteCtx,
   captureBag: Record<string, CapturedStep>,
+  handshakeCache: HandshakeCache,
 ): Promise<ExecuteRouteStep> => {
   const { step, tool: primaryTool } = pair;
   const originalError = primaryStep.error ?? 'origin_error';
@@ -312,6 +315,7 @@ const attemptFallback = async (
     manifest,
     fallbackStarted,
     ctx,
+    handshakeCache,
   );
 
   if (fallbackStep.status === 'ok') {
@@ -379,6 +383,7 @@ const runSingleStep = async (
   captureBag: Record<string, CapturedStep>,
   policyCtxBuilder: PolicyContextBuilder,
   ctx: ExecuteRouteCtx,
+  handshakeCache: HandshakeCache,
 ): Promise<ExecuteRouteStep> => {
   const started = performance.now();
   const { step, tool } = pair;
@@ -410,6 +415,7 @@ const runSingleStep = async (
     manifest,
     started,
     ctx,
+    handshakeCache,
   );
 
   if (stepResult.status === 'ok') {
@@ -432,6 +438,7 @@ const runSingleStep = async (
     policyCtxBuilder,
     ctx,
     captureBag,
+    handshakeCache,
   );
 };
 
@@ -488,6 +495,9 @@ export const executeRoute = async (
   const catalog = buildCatalog(manifest);
   const captureBag: Record<string, CapturedStep> = {};
   const steps: ExecuteRouteStep[] = [];
+  // One handshake per upstream origin for the whole saga. Shared with
+  // executeRollback so compensators reuse the same captured session ids.
+  const handshakeCache = createHandshakeCache();
 
   for (const pair of plan.steps) {
     const resolved = resolveEntry(pair, catalog);
@@ -498,7 +508,7 @@ export const executeRoute = async (
         rationale: resolved.rationale,
       };
       if (autoRollbackOnHalt && steps.length > 1) {
-        halted.rollback_summary = await executeRollback(steps, plan.steps, manifest, params.inputs, captureBag, ctx);
+        halted.rollback_summary = await executeRollback(steps, plan.steps, manifest, params.inputs, captureBag, ctx, handshakeCache);
       }
       return halted;
     }
@@ -511,12 +521,13 @@ export const executeRoute = async (
       captureBag,
       policyCtxBuilder,
       ctx,
+      handshakeCache,
     );
     steps.push(stepResult);
     if (stepResult.status !== 'ok') {
       const halted = haltedResult(params.route_id, steps, stepResult);
       if (autoRollbackOnHalt && steps.length > 1) {
-        halted.rollback_summary = await executeRollback(steps, plan.steps, manifest, params.inputs, captureBag, ctx);
+        halted.rollback_summary = await executeRollback(steps, plan.steps, manifest, params.inputs, captureBag, ctx, handshakeCache);
       }
       return halted;
     }
