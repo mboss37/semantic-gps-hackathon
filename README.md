@@ -15,7 +15,7 @@ Built for the Anthropic "Keep Thinking" Hackathon (April 2026). 5-day scope.
 - **Live demo:** https://semantic-gps-hackathon.vercel.app/
 - **Demo video:** https://www.youtube.com/watch?v=fYh2MpMw1ng
 - **Full story:** [`docs/VISION.md`](./docs/VISION.md)
-- **Security policy:** [`SECURITY.md`](./SECURITY.md) · threat model: [`docs/THREAT-MODEL.md`](./docs/THREAT-MODEL.md)
+- **Security:** [`SECURITY.md`](./SECURITY.md)
 
 ---
 

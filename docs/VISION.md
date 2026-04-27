@@ -144,7 +144,7 @@ Today, `mcp_events` is the compliance ledger — durable, RLS-isolated, retentio
 
 ### Threat model
 
-Mitigations exist for the obvious attack surface today (SSRF guard on every outbound fetch, AES-256-GCM at rest for stored credentials, Postgres RLS on every tenant table, prompt-injection policy with default patterns, SHA-256 hashed bearer tokens). What does not yet exist is a formal artifact: trust boundaries diagrammed, attack-surface taxonomy enumerated, mitigation/gap matrix maintained, responsible-disclosure policy declared. [`SECURITY.md`](../SECURITY.md) and [`docs/THREAT-MODEL.md`](./THREAT-MODEL.md) ship in the same sprint as this update; both are intentionally lean and will deepen as the threat surface grows.
+Mitigations exist for the obvious attack surface today (SSRF guard on every outbound fetch, AES-256-GCM at rest for stored credentials, Postgres RLS on every tenant table, prompt-injection policy with default patterns, SHA-256 hashed bearer tokens). What does not yet exist as a public artifact is a formal threat-model document: trust boundaries diagrammed, attack-surface taxonomy enumerated, mitigation/gap matrix maintained. The internal version of that thinking lives in working notes; it publishes as a public document once there are customers who'd benefit from disclosing to. The public artifact today is [`SECURITY.md`](../SECURITY.md) — a one-page reporting channel for anyone who finds a real issue in the meantime.
 
 ### Failure modes and resilience testing
 
