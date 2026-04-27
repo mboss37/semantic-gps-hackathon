@@ -6,10 +6,16 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { logMCPEvent, redactPayload } from '@/lib/audit/logger';
 import { loadManifest, type ManifestScope } from '@/lib/manifest/cache';
+import {
+  buildRoutesByToolId,
+  formatToolDescription,
+  type FormatToolDescriptionEdge,
+} from '@/lib/manifest/format-description';
 import { evaluateGoal } from '@/lib/mcp/evaluate-goal';
 import { executeRoute, type PolicyContextBuilder } from '@/lib/mcp/execute-route';
 import { buildCatalog, executeTool } from '@/lib/mcp/tool-dispatcher';
 import { discoverRelationships, findWorkflowPath } from '@/lib/mcp/trel-handlers';
+import { TREL_EDGE_TYPES } from '@/lib/mcp/trel-schema';
 import {
   DiscoverRelationshipsRequestSchema,
   EvaluateGoalRequestSchema,
@@ -84,6 +90,12 @@ export const createStatelessServer = ({
     const displayNameById = new Map<string, string>();
     for (const t of manifest.tools) displayNameById.set(t.id, t.display_name ?? t.name);
 
+    // Sprint 30 WP-30.2: pre-compute parent-route memberships per tool so the
+    // description formatter can fold "Part of route: ..." badges into the
+    // standard description field. Standard MCP clients drop `_meta` entirely;
+    // the description is the only field with provably 100% client coverage.
+    const routesByToolId = buildRoutesByToolId(manifest);
+
     const tools = catalog.map((t) => {
       // WP-G.6 semantic rewriting: if the manifest row carries
       // `display_name` / `display_description`, surface those on `tools/list`
@@ -92,28 +104,50 @@ export const createStatelessServer = ({
       // contracts stay stable. Ungoverned surfaces stay with origin identity.
       const manifestRow = manifestRowById.get(t.tool_id);
       const displayName = governed ? (manifestRow?.display_name ?? t.name) : t.name;
-      const displayDescription = governed
-        ? (manifestRow?.display_description ?? t.description)
-        : t.description;
+
+      // Schema-lock guard: only emit edge types the `_meta.trel` SEP draft
+      // declares. The DB CHECK constraint accepts the broader internal set
+      // (incl. linter-only `mutually_exclusive` / `validates`); those types
+      // are deliberately scoped out of the wire shape and must never reach
+      // a client. Any drift between the DB taxonomy and the wire schema is
+      // closed here.
+      const wireTypeSet = TREL_EDGE_TYPES as readonly string[];
+      const outgoing: FormatToolDescriptionEdge[] = governed
+        ? manifest.relationships
+            .filter((r) => r.from_tool_id === t.tool_id)
+            .filter((r) => wireTypeSet.includes(r.relationship_type))
+            .map((r): FormatToolDescriptionEdge | null => {
+              const to = displayNameById.get(r.to_tool_id);
+              if (!to) return null;
+              return { to, type: r.relationship_type, description: r.description };
+            })
+            .filter((r): r is FormatToolDescriptionEdge => r !== null)
+        : [];
+
+      // Sprint 30: only enrich when (a) governed, (b) there's no manual
+      // `display_description` override (manual override always wins),
+      // (c) the tool has a manifest row to anchor the graph against.
+      // Builtin echo + ungoverned surfaces fall through to origin description.
+      const manualOverride = governed ? manifestRow?.display_description ?? null : null;
+      const parentRoutes = governed ? routesByToolId.get(t.tool_id) ?? [] : [];
+      const description =
+        governed && !manualOverride && manifestRow
+          ? formatToolDescription({
+              tool: { name: displayName, description: t.description },
+              outgoingEdges: outgoing,
+              parentRoutes,
+              scope: scope.kind,
+            })
+          : (manualOverride ?? t.description);
 
       const base: { name: string; description: string; inputSchema: Record<string, unknown>; _meta?: Record<string, unknown> } = {
         name: displayName,
-        description: displayDescription,
+        description,
         inputSchema: t.input_schema,
       };
 
-      if (governed) {
-        const outgoing = manifest.relationships
-          .filter((r) => r.from_tool_id === t.tool_id)
-          .map((r) => ({
-            to: displayNameById.get(r.to_tool_id) ?? null,
-            type: r.relationship_type,
-            description: r.description,
-          }))
-          .filter(
-            (r): r is { to: string; type: typeof r.type; description: string } => r.to !== null,
-          );
-        if (outgoing.length > 0) base._meta = { relationships: outgoing };
+      if (governed && outgoing.length > 0) {
+        base._meta = { relationships: outgoing };
       }
 
       return base;

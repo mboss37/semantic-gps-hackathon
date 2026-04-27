@@ -8,7 +8,8 @@
 
 ## P0: Sprint 30 deferrals
 
-_(empty — populate as Sprint 30 WPs cut scope)_
+- **Proto-SEP drafting + publication.** Deferred until WP-30 telemetry shows model-behavior lift on the hosted demo and at least one external org adopts the `_meta.trel` shape. Trigger conditions intentionally tight: spec-first proposals from a single implementer with no runtime adoption get closed (Discussion #943 precedent). The schema lock at `lib/mcp/trel-schema.ts` is the canonical reference any future submission will cite verbatim.
+- **Graph-adherence dashboard card (WP-30.4 stretch).** API endpoint `/api/monitoring/graph-adherence` and `graph_adherence_pairs` view shipped Sprint 30. The optional KPI card on `/dashboard/monitoring` rendering governed vs raw rates side-by-side was cut to keep WP-30.4 inside the review-bandwidth budget. Pure UI work: read both buckets, render two big numbers + delta, ~80 LOC component. Files: `components/dashboard/graph-adherence-card.tsx` (new), `components/dashboard/monitoring-dashboard.tsx` (insert above call-volume section). The metric is already visible to anyone curling the API; demo can quote the numbers verbatim from a curl receipt while the card lands post-submission.
 
 ---
 
