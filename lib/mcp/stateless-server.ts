@@ -6,34 +6,26 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { logMCPEvent, redactPayload } from '@/lib/audit/logger';
 import { loadManifest, type ManifestScope } from '@/lib/manifest/cache';
-import {
-  buildRoutesByToolId,
-  formatToolDescription,
-  type FormatToolDescriptionEdge,
-} from '@/lib/manifest/format-description';
-import { evaluateGoal } from '@/lib/mcp/evaluate-goal';
 import { executeRoute, type PolicyContextBuilder } from '@/lib/mcp/execute-route';
 import {
   EXECUTE_ROUTE_TOOL_NAME,
-  buildExecuteRouteToolDescriptor,
   resolveExecuteRouteParams,
 } from '@/lib/mcp/execute-route-tool';
+import { buildToolsListResponse } from '@/lib/mcp/handlers/list-tools';
+import { registerGovernedHandlers } from '@/lib/mcp/handlers/trel';
 import { buildCatalog, executeTool } from '@/lib/mcp/tool-dispatcher';
-import { discoverRelationships, findWorkflowPath } from '@/lib/mcp/trel-handlers';
-import { TREL_EDGE_TYPES } from '@/lib/mcp/trel-schema';
-import {
-  DiscoverRelationshipsRequestSchema,
-  EvaluateGoalRequestSchema,
-  ExecuteRouteRequestSchema,
-  FindWorkflowPathRequestSchema,
-  ValidateWorkflowRequestSchema,
-} from '@/lib/mcp/trel-schemas';
-import { validateWorkflow } from '@/lib/mcp/validate-workflow';
 import { runPostCallPolicies, runPreCallPolicies } from '@/lib/policies/enforce';
 
 // Low-level Server so tools/list + tools/call can merge the builtin echo with
 // whatever the manifest contains at request time. Still stateless: every call
 // rebuilds, connects, handles, disposes.
+//
+// The bulk of `tools/list` lives in `handlers/list-tools.ts` (pure builder)
+// and the four TRel extension methods + native `execute_route` JSON-RPC
+// handler live in `handlers/trel.ts`. This file is the wiring shell: it
+// creates the SDK Server, registers the two MCP standard handlers
+// (`tools/list` + `tools/call`), conditionally registers the governed
+// handler block, and sets the error sink.
 
 const SERVER_INFO = {
   name: 'semantic-gps-gateway',
@@ -79,112 +71,16 @@ export const createStatelessServer = ({
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     const started = performance.now();
     const manifest = await loadManifest(scope);
-    const catalog = buildCatalog(manifest);
-
-    // Build a tool-id -> manifest row map once so every lookup (outgoing
-    // edges + semantic rewriting) is O(1). `_meta.relationships` is the TRel
-    // sidecar that lets callers (Claude + orchestrators) see adjacency hints
-    // without a second round-trip through `discover_relationships`. Skipped
-    // on ungoverned surfaces, raw MCPs don't expose graph context.
-    const manifestRowById = new Map<string, typeof manifest.tools[number]>();
-    for (const t of manifest.tools) manifestRowById.set(t.id, t);
-
-    // Display name for outgoing edge targets: use `display_name` when set,
-    // fall back to the origin `name`, keeps edge labels consistent with the
-    // rewriting layer below.
-    const displayNameById = new Map<string, string>();
-    for (const t of manifest.tools) displayNameById.set(t.id, t.display_name ?? t.name);
-
-    // Sprint 30 WP-30.2: pre-compute parent-route memberships per tool so the
-    // description formatter can fold "Part of route: ..." badges into the
-    // standard description field. Standard MCP clients drop `_meta` entirely;
-    // the description is the only field with provably 100% client coverage.
-    const routesByToolId = buildRoutesByToolId(manifest);
-
-    const tools = catalog.map((t) => {
-      // WP-G.6 semantic rewriting: if the manifest row carries
-      // `display_name` / `display_description`, surface those on `tools/list`
-      // instead of the origin name/description. Dispatch in `tools/call`
-      // still looks up by origin `name` (see buildCatalog), so upstream
-      // contracts stay stable. Ungoverned surfaces stay with origin identity.
-      const manifestRow = manifestRowById.get(t.tool_id);
-      const displayName = governed ? (manifestRow?.display_name ?? t.name) : t.name;
-
-      // Schema-lock guard: only emit edge types the `_meta.trel` SEP draft
-      // declares. The DB CHECK constraint accepts the broader internal set
-      // (incl. linter-only `mutually_exclusive` / `validates`); those types
-      // are deliberately scoped out of the wire shape and must never reach
-      // a client. Any drift between the DB taxonomy and the wire schema is
-      // closed here.
-      const wireTypeSet = TREL_EDGE_TYPES as readonly string[];
-      const outgoing: FormatToolDescriptionEdge[] = governed
-        ? manifest.relationships
-            .filter((r) => r.from_tool_id === t.tool_id)
-            .filter((r) => wireTypeSet.includes(r.relationship_type))
-            .map((r): FormatToolDescriptionEdge | null => {
-              const to = displayNameById.get(r.to_tool_id);
-              if (!to) return null;
-              return { to, type: r.relationship_type, description: r.description };
-            })
-            .filter((r): r is FormatToolDescriptionEdge => r !== null)
-        : [];
-
-      // Sprint 30: only enrich when (a) governed, (b) there's no manual
-      // `display_description` override (manual override always wins),
-      // (c) the tool has a manifest row to anchor the graph against.
-      // Builtin echo + ungoverned surfaces fall through to origin description.
-      const manualOverride = governed ? manifestRow?.display_description ?? null : null;
-      const parentRoutes = governed ? routesByToolId.get(t.tool_id) ?? [] : [];
-      const description =
-        governed && !manualOverride && manifestRow
-          ? formatToolDescription({
-              tool: { name: displayName, description: t.description },
-              outgoingEdges: outgoing,
-              parentRoutes,
-              scope: scope.kind,
-            })
-          : (manualOverride ?? t.description);
-
-      const base: { name: string; description: string; inputSchema: Record<string, unknown>; _meta?: Record<string, unknown> } = {
-        name: displayName,
-        description,
-        inputSchema: t.input_schema,
-      };
-
-      if (governed && outgoing.length > 0) {
-        base._meta = { relationships: outgoing };
-      }
-
-      return base;
-    });
-
-    // Sprint 31 WP-31.1: surface a synthetic `execute_route` tool so standard
-    // MCP clients can invoke saga orchestration through the same `tools/call`
-    // surface they use for any other tool. Sprint 30 description enrichment
-    // recommends `execute_route('<name>')` to the model; without this shim
-    // the recommendation is a dead end — clients cannot call arbitrary
-    // JSON-RPC methods, only what is in `tools/list`. The native
-    // `ExecuteRouteRequestSchema` JSON-RPC method below stays for backward
-    // compat with custom orchestrators. Skipped on ungoverned surfaces +
-    // when no routes exist (nothing to execute).
-    if (governed) {
-      const syntheticExecuteRoute = buildExecuteRouteToolDescriptor(
-        manifest.routes,
-        manifest.route_steps,
-        manifest.relationships,
-      );
-      if (syntheticExecuteRoute) tools.push(syntheticExecuteRoute);
-    }
-
+    const response = buildToolsListResponse({ manifest, scope, governed });
     logMCPEvent({
       trace_id: traceId,
       organization_id: scope.organization_id,
       method: 'tools/list',
       status: 'ok',
       latency_ms: Math.round(performance.now() - started),
-      payload: { tool_count: tools.length, governed },
+      payload: { tool_count: response.tools.length, governed },
     });
-    return { tools };
+    return response;
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
@@ -390,118 +286,7 @@ export const createStatelessServer = ({
     return server;
   }
 
-  server.setRequestHandler(DiscoverRelationshipsRequestSchema, async (req) => {
-    const started = performance.now();
-    const manifest = await loadManifest(scope);
-    const result = await discoverRelationships(req.params, manifest);
-    logMCPEvent({
-      trace_id: traceId,
-      organization_id: scope.organization_id,
-      method: 'discover_relationships',
-      status: 'ok',
-      latency_ms: Math.round(performance.now() - started),
-      payload: {
-        params: req.params,
-        node_count: result.nodes.length,
-        edge_count: result.edges.length,
-      },
-    });
-    return result;
-  });
-
-  server.setRequestHandler(FindWorkflowPathRequestSchema, async (req) => {
-    const started = performance.now();
-    const manifest = await loadManifest(scope);
-    const result = await findWorkflowPath(req.params, manifest);
-    logMCPEvent({
-      trace_id: traceId,
-      organization_id: scope.organization_id,
-      method: 'find_workflow_path',
-      status: 'ok',
-      latency_ms: Math.round(performance.now() - started),
-      payload: { params: req.params, path_length: result.path.length, rationale: result.rationale },
-    });
-    return result;
-  });
-
-  server.setRequestHandler(ValidateWorkflowRequestSchema, async (req) => {
-    const started = performance.now();
-    const manifest = await loadManifest(scope);
-    const result = await validateWorkflow(req.params, manifest);
-    logMCPEvent({
-      trace_id: traceId,
-      organization_id: scope.organization_id,
-      method: 'validate_workflow',
-      status: 'ok',
-      latency_ms: Math.round(performance.now() - started),
-      payload: {
-        params: req.params,
-        valid: result.valid,
-        issue_count: result.issues.length,
-        graph_coverage: result.graph_coverage,
-      },
-    });
-    return result;
-  });
-
-  server.setRequestHandler(EvaluateGoalRequestSchema, async (req) => {
-    const started = performance.now();
-    const manifest = await loadManifest(scope);
-    const result = await evaluateGoal(req.params, manifest);
-    logMCPEvent({
-      trace_id: traceId,
-      organization_id: scope.organization_id,
-      method: 'evaluate_goal',
-      status: 'ok',
-      latency_ms: Math.round(performance.now() - started),
-      payload: {
-        goal: req.params.goal,
-        candidate_count: result.candidates.length,
-      },
-    });
-    return result;
-  });
-
-  server.setRequestHandler(ExecuteRouteRequestSchema, async (req) => {
-    const started = performance.now();
-    const manifest = await loadManifest(scope);
-    // Per-step policy context thread the gateway-level headers + client IP so
-    // request-metadata policies (basic_auth, client_id, ip_allowlist, future
-    // rate_limit) see the same caller identity whether the call arrives via
-    // tools/call or via execute_route.
-    const policyCtxBuilder: PolicyContextBuilder = (entry, resolvedArgs) => ({
-      server_id: entry.server_id,
-      tool_id: entry.tool_id,
-      tool_name: entry.name,
-      args: resolvedArgs,
-      headers,
-      client_ip: clientIp,
-    });
-    const result = await executeRoute(req.params, manifest, policyCtxBuilder, {
-      traceId,
-      organizationId: scope.organization_id,
-    });
-    logMCPEvent({
-      trace_id: traceId,
-      organization_id: scope.organization_id,
-      method: 'execute_route',
-      status: result.ok ? 'ok' : 'origin_error',
-      latency_ms: Math.round(performance.now() - started),
-      payload: {
-        route_id: req.params.route_id,
-        step_count: result.steps.length,
-        halted_at_step: result.halted_at_step,
-        rationale: result.rationale,
-      },
-    });
-    // MCP transport expects a content array for non-builtin responses. Wrap
-    // the structured result as a JSON text block so clients can parse it
-    // consistently with tools/call returns.
-    return {
-      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-      structuredContent: result,
-    };
-  });
+  registerGovernedHandlers(server, { traceId, scope, headers, clientIp });
 
   server.onerror = (err: Error) => {
     // McpError here is a method-not-found or protocol-level fault, audit and move on.
