@@ -51,3 +51,8 @@ next-env.d.ts
 # Stray Playwright screenshots written to repo root during dev sessions.
 # Subfolder PNGs (public/, etc.) stay tracked.
 /*.png
+
+# Private working notes — drafts NOT for public consumption (proto-SEP,
+# MCP Discussion drafts, internal strategy memos). Anything under
+# `_private/` stays local. Never push.
+_private/
